@@ -1,0 +1,27 @@
+>> plot_MPC_results
+
+===== RESUMEN POSTPROCESO MPC =====
+Distancia mínima al debris: 382.255 m
+Distancia segura dsafe0:    200.000 m
+d_safe primer paso:        [200.076, 200.480] m
+d_safe max horizonte:      [201.618, 203.165] m
+Instante distancia mínima:  221.000 s
+Máximo |u_x|: 0.068491 m/s^2
+Máximo |u_y|: 0.088000 m/s^2
+Máximo |u_z|: 0.066781 m/s^2
+Límite u_max: 0.088000 m/s^2
+Error final posición: 28.379917 m
+Máximo error posición: 451.397237 m
+===================================
+
+>> configuracion instrument decision
+
+% --- Parameters ----------------------------------------------------------
+T_gnss_on   = 60;   % [s] GNSS ON period before switching to Kalman
+T_kalman_on = 60;   % [s] Kalman ON period before returning to GNSS
+max_NIS     = 2;   % NIS threshold for forced return to GNSS (aprox 400m error)
+n_sat_min   = 4;    % minimum satellites for a valid fix  (Table 3.1)
+PDOP_max    = 6;    % PDOP limit                          (Table 3.1)
+HPE_max     = 5;    % horizontal position error limit [m] (Table 3.1)
+VPE_max     = 5;    % vertical   position error limit [m] (Table 3.1)
+Ts          = 1;    % [s] execution sample time of this decision block

@@ -1,7 +1,16 @@
 %% Ejecución modelo Simulink
 % Vamos a meter en primer lugar los datos de la órbita, así como datos varios 
 % del satélite:
-clear all; clc; close all;
+clc; close all;
+
+% Baraja la semilla aleatoria usando el reloj interno de tu ordenador
+rng('shuffle');
+
+%------------------------ ASIGNACIÓN SUBCARPETAS --------------------------
+% Añadir todas las subcarpetas del directorio actual al Path de MATLAB
+carpeta_actual = pwd;
+addpath(genpath(carpeta_actual));
+%--------------------------------------------------------------------------
 
 preservedModelName = "";
 preservedStopTime = [];
@@ -47,14 +56,27 @@ ref=1.3; %reflectancia
 area=15; %m^2
 start_date=juliandate(datetime(2024, 1, 11));%Fecha
 end_date=juliandate(datetime(2024, 2, 11));
-tf=10;%(end_date-start_date)*24*60*60e-4/5; % Tiempo de simulación
+tf=4000; % Tiempo de simulación nominal seguro [s]
+
+requestedStopTime = [];
 if exist("codexStopTime", "var") && ~isempty(codexStopTime)
+    requestedStopTime = double(codexStopTime);
+elseif exist("modelName", "var") && strlength(string(modelName)) > 0
+    requestedStopTime = getModelStopTimeSeconds(modelName);
+else
+    requestedStopTime = getOpenModelStopTimeSeconds();
+end
+
+if ~isempty(requestedStopTime)
     % Keep the nominal/reference trajectory available for the whole
     % simulation. Otherwise the MPC clamps to the last reference sample and
     % the relative state grows artificially once the run outlasts the
     % precomputed nominal timeline.
-    tf = max(tf, double(codexStopTime));
+    tf = max(tf, requestedStopTime);
+    codexStopTime = requestedStopTime;
 end
+
+clear requestedStopTime
 k_p=5;
 k_d=20;
 %% Filtro de Kalman
@@ -100,6 +122,12 @@ var_alt   = sigma_alt^2; % Varianza de la altitud (100 m^2)
 % Le dice al filtro cuánto debe dudar de las medidas de los sensores.
 % (Construida dinámicamente usando las varianzas definidas arriba)
 
+% Kalman synthetic sensor tuning. Keep these overrides close to R_matrix so
+% the values used by the UKF are explicit and not hidden in comments above.
+sigma_pos = 100;   % [m]
+sigma_alt = 50;    % [m]
+var_pos = sigma_pos^2;
+var_alt = sigma_alt^2;
 R_matrix = diag([var_pos, var_pos, var_pos, var_alt]);
 
 
@@ -109,12 +137,22 @@ R_matrix = diag([var_pos, var_pos, var_pos, var_alt]);
 % las fuerzas no modeladas (drag, radiación solar, armónicos altos).
 % Q_pos = 1e-2, Q_vel = 1e-4
 
-Q_matrix = diag([10, 10, 10, 1, 1, 1]);%Errores tochos del modelado 
+%Q_matrix = diag([10, 10, 10, 1, 1, 1]);%Errores tochos del modelado 
 
 %Q_matrix = diag([1e-6, 1e-6, 1e-6, 1e-8, 1e-8, 1e-8]); %Errores
 %matemáticos casi nulos
 %Q_matrix = diag([1e-2, 1e-2, 1e-2, 1e-4, 1e-4, 1e-4]); %Medio medio
 
+Q_matrix = diag([1, 1, 1, 1e-2, 1e-2, 1e-2]); %Es coherente con var_IMU
+
+% ------------------- Caracterización GNSS en el filtro ------------------
+% Definimos aquí el ruido del GNSS para meterlo en el UNSCENTED KALMAN
+% FILTER como segunda medida
+sigma_pos_gnss = 5;   % Error de posición del GNSS en metros
+sigma_vel_gnss = 0.1; % Error de velocidad del GNSS en m/s
+
+R_gnss = diag([sigma_pos_gnss^2, sigma_pos_gnss^2, sigma_pos_gnss^2, ...
+               sigma_vel_gnss^2, sigma_vel_gnss^2, sigma_vel_gnss^2]);
 
 % =========================================================================
 % 4. INCERTIDUMBRE INICIAL DEL FILTRO
@@ -123,8 +161,9 @@ Q_matrix = diag([10, 10, 10, 1, 1, 1]);%Errores tochos del modelado
 % Define lo "perdido" que está el filtro en el segundo 0 respecto a la verdad.
 % Asumimos un error inicial de 1 km en posición y 10 m/s en velocidad.
 % Posición: (1000 m)^2 = 1e6
-% Velocidad: (10 m/s)^2 = 100
+% Velocidad: (10 m/s)^2 = 100 
 P0_kalman = diag([1e6, 1e6, 1e6, 100, 100, 100]);
+%P0_kalman = zeros(6,6);
 
 % NOTA: Recuerda definir también 'x0_kalman' (tu estado inicial estimado) 
 % en tu código, sumándole el error inicial a tu estado verdadero.
@@ -153,8 +192,8 @@ P0_kalman = diag([1e6, 1e6, 1e6, 100, 100, 100]);
 % ejemplo, errores $\sigma_x =10m\;\;$y $\sigma_v =1\frac{m}{s}\;$. Esto lo podremos 
 % modificar cuando tengamos las especificaciones y margenes finales.
 
-sigma_x=10;
-sigma_v=1;
+sigma_x=100;%10;
+sigma_v=50;%1;
 s=[sigma_x,sigma_x,sigma_x,sigma_v,sigma_v,sigma_v];
 S=diag(s);
 
@@ -163,7 +202,7 @@ S=diag(s);
 
 S_inv=inv(S);
 S_T_inv=inv(S');
-max_cov=10;
+max_cov=2000;
 %% 
 % La max_cov puede modificarse también.
 
@@ -180,12 +219,24 @@ end
 
 %% Selección de fuente de referencia
 
-% Forzamos que la referencia venga del archivo GNSS .dat
-referenceSourceMode = "gnss";
+% Default for the GNSS sensor architecture: the .dat file characterizes the
+% sensor, not the trajectory that the MPC must follow.
+referenceSourceMode = "nominal";
+referencePropModel = "j2-rk4";
+if ispref("codex", "referenceSourceMode")
+    referenceSourceMode = string(getpref("codex", "referenceSourceMode"));
+    rmpref("codex", "referenceSourceMode");
+end
 
-% Parámetros coherentes con GNSS
-Np = 50;     % Horizon length para GNSS
-h  = 3;     % Sample time GNSS = 1 s
+if ispref("codex", "referencePropModel")
+    referencePropModel = string(getpref("codex", "referencePropModel"));
+    rmpref("codex", "referencePropModel");
+end
+
+% Parametros del MPC/referencia. El muestreo real del sensor GNSS se carga
+% desde el fichero .dat en prepare_gnss_sensor_workspace.
+Np = 125;     % Horizon length para GNSS
+h  = 3;      % Sample time de la referencia MPC [s]
 
 %% MPC tuning
 
@@ -196,18 +247,18 @@ if ispref("codex", "mpcTuneConfig")
 end
 
 % Cost matrices
-% Tuned default: slightly stronger state tracking and milder delta-u penalty
-% to obtain a tighter but still feasible debris encounter.
-Q_step = 1e-2*[0.03 0.03 0.03 0.0015 0.0015 0.0015];
-%Q_step = 1e-1*[0.05 0.05 0.05 0.005 0.005 0.005]; dsafe = 100m
+Q_step = 1e-7*[ ...
+    5  5  5 ...      
+    10  10  10 ];
 
-R_step = 2e2*[10 10 10]; 
-%R_step = 2e2*[10 10 10]; 
+R_step = 3e3*[ ...
+    2  1.5  1.2 ];
 
-S_step = 4*[100 100 100];
-%S_step = [100 100 100]; 
+S_step = 1e4*[ ...
+    2  5  8 ];
 
-slackWeight = 1e3;
+
+slackWeight = 1e5;
 
 if isfield(mpcTuneConfig, "Q_step")
     Q_step = mpcTuneConfig.Q_step(:).';
@@ -239,7 +290,7 @@ S = diag(repmat(S_step, 1, Np));
 
 % Constraints as column vectors!!
 
-u_max = F_control/m_sat;     % [m/s^2] = 5000/10000 = 0.05
+u_max = 0.05;%F_control/m_sat;     % [m/s^2] = 5000/10000 = 0.05
 
 if isfield(mpcTuneConfig, "u_max")
     u_max = mpcTuneConfig.u_max;
@@ -272,85 +323,194 @@ deltaUmax = repmat(deltaU_max, Np, 1);
 % Nominal orbit parameters
 mu = 3.986004418e14;   % [m^3/s^2] Earth gravitational parameter
 
-gnssMeta = struct();
-%if contains(targetModelName, "GNSS", "IgnoreCase", true)
-%    [ts_pos_gnss_eci, ts_vel_gnss_eci, ts_Q_gnss_eci, gnssMeta] = codex_load_gnss_timeseries_eci(start_date);
-%    x0_gnss = [ts_pos_gnss_eci.Data(1,:).'; ts_vel_gnss_eci.Data(1,:).'];
-%    gnssCoe = codex_state_to_coe(x0_gnss, mu);
+%% GNSS sensor profile
+% New default: the dataset characterizes the GNSS sensor. The patched
+% Simulink model samples the real plant state every gnss_sample_time seconds
+% and adds these noise/covariance signals. Legacy ts_pos/ts_vel are still
+% exported only to keep the old replay subsystem executable for comparison.
+
+%[gnssSensor, gnssProfile] = prepare_gnss_sensor_workspace( ...
+%    "Filename", "cov_perturb_POS_s6a_Y24D011_fixed.dat", ...
+%    "StartDateJulian", start_date, ...
+%    "AssignToBase", false);
+
+% 1. Definimos la ruta absoluta al archivo UNA SOLA VEZ
+carpeta_datos = fullfile(pwd, '.mat y .dat');
+ruta_archivo  = fullfile(carpeta_datos, 'cov_perturb_POS_s6a_Y24D011_fixed.dat');
+
+% 2. Llamada a la función del GNSS (usando la variable ruta_archivo)
+[gnssSensor, gnssProfile] = prepare_gnss_sensor_workspace( ...
+    "Filename", ruta_archivo, ...
+    "StartDateJulian", start_date, ...
+    "AssignToBase", false);
+
+%% Override GNSS noise with raw .dat file values
+% prepare_gnss_sensor_workspace uses running averages that hide degradation
+% events. We replace ts_gnss_pos_noise_eci with the actual epoch-by-epoch
+% position errors from the .dat file so NIS sees the real spikes.
+
+fid  = fopen('cov_perturb_POS_s6a_Y24D011_fixed.dat', 'r');
+raw  = textscan(fid, repmat('%f',1,17), 'HeaderLines', 1);
+fclose(fid);
+
+t_dat = raw{1};          % seconds [0:10:86390]
+npe   = raw{13};         % North position error [m]
+epe   = raw{12};         % East  position error [m]
+upe   = raw{14};         % Up    position error [m]
+
+% Use raw NPE/EPE/UPE as position noise (approximate ECI)
+% Magnitude is correct: 19.2m at t=850s will fire NIS
+pos_noise_raw = [npe, epe, upe];
+
+% Build velocity noise as finite difference of position noise
+dt = 10;  % file step [s]
+vel_noise_raw = [gradient(npe,dt), gradient(epe,dt), gradient(upe,dt)];
+
+% Build R diagonal from squared errors (epoch-by-epoch, not averaged)
+% R must be FIXED nominal covariance, NOT the instantaneous squared error.
+% If R and noise come from the same values, NIS = 3 always regardless of
+% spike magnitude — the innovation and covariance cancel each other out.
 %
-%    % Keep a single GNSS source of truth in the workspace so later
-%    % initialization steps do not rebuild a different branch.
-%    ts_pos_ecef = gnssMeta.ts_pos_ecef;
-%    ts_vel_ecef = gnssMeta.ts_vel_ecef;
-%    ts_Q_ecef = gnssMeta.ts_Q_ecef;
-%    ts_pos = ts_pos_gnss_eci;
-%    ts_vel = ts_vel_gnss_eci;
-%    ts_Q = ts_Q_gnss_eci;
-%    codex_gnss_state_source = "dataset";
-%    lamda_init = 1;
-%
-%    % For the GNSS model, align the plant/reference orbit with the same
-%    % absolute state used by the direct GNSS branch.
-%    a = gnssCoe.a;
-%    ecc = gnssCoe.ecc;
-%    inc = gnssCoe.inc;
-%    RAAN = gnssCoe.RAAN;
-%    w = gnssCoe.argp;
-%    theta = gnssCoe.nu;
-%    x_ini = x0_gnss(1:3);
-%    v_ini = x0_gnss(4:6);
-%    x0_kalman = x0_gnss;
-%end
+% Use the RMS of quiet nominal periods (t=30s to t=500s, NSV>=13)
+% as the constant expected measurement noise.
+
+nominal_idx = t_dat >= 30 & t_dat <= 500;
+sig_n_nom = rms(npe(nominal_idx));   % ≈ 0.3m
+sig_e_nom = rms(epe(nominal_idx));   % ≈ 0.1m
+sig_u_nom = rms(upe(nominal_idx));   % ≈ 0.4m
+sig_v_nom = 0.01;                    % small velocity noise [m/s]
+
+R_nominal = diag([sig_n_nom^2, sig_e_nom^2, sig_u_nom^2, ...
+                  sig_v_nom^2, sig_v_nom^2, sig_v_nom^2]);
+
+fprintf('R_nominal diagonal: [%.4f %.4f %.4f %.6f]\n', ...
+    R_nominal(1,1), R_nominal(2,2), R_nominal(3,3), R_nominal(4,4));
+
+% Use same constant R for all epochs
+R_flat = zeros(length(t_dat), 36);
+R_nominal_flat = R_nominal(:).';
+for k = 1:length(t_dat)
+    R_flat(k,:) = R_nominal_flat;
+end
+
+% Verify NIS will fire at t=850s
+nu_850 = [pos_noise_raw(86,:), 0, 0, 0]';
+NIS_check = nu_850' * (R_nominal \ nu_850);
+fprintf('NIS check at t=850s with fixed R: %.1f  (threshold=16.81)\n', NIS_check);
+fprintf('Will fire: %d\n', NIS_check > 16.81);
+
+% Override the smoothed timeseries
+ts_gnss_pos_noise_eci    = timeseries(pos_noise_raw, t_dat);
+ts_gnss_vel_noise_eci    = timeseries(vel_noise_raw, t_dat);
+ts_gnss_R_state_eci_flat = timeseries(R_flat, t_dat);
+
+fprintf('Raw GNSS noise override applied.\n');
+fprintf('  |noise| at t=840s: %.3fm  (expect ~0.2m nominal)\n', ...
+    norm(pos_noise_raw(85,:)));
+fprintf('  |noise| at t=850s: %.3fm  (expect ~19m spike)\n',  ...
+    norm(pos_noise_raw(86,:)));
+fprintf('  trace(R) at t=850s: %.4f m^2  (expect >>1)\n', ...
+    trace(reshape(R_flat(86,:),6,6)));
+
+gnssMeta = gnssProfile.meta;
+gnss_sensor_mode = gnssSensor.mode;
+gnss_sample_time = gnssSensor.sample_time;
+lamda_init = 1;
+%ts_gnss_pos_noise_eci = gnssSensor.ts_pos_noise_eci;
+%ts_gnss_vel_noise_eci = gnssSensor.ts_vel_noise_eci;
+%ts_gnss_R_state_eci_flat = gnssSensor.ts_R_state_eci_flat;
+ts_gnss_valid = gnssSensor.ts_valid;
+ts_gnss_sol  = timeseries(raw{7},  t_dat);
+ts_gnss_nsv  = timeseries(raw{9},  t_dat);
+ts_gnss_hpe  = timeseries(raw{10}, t_dat);
+ts_gnss_vpe  = timeseries(raw{11}, t_dat);
+ts_gnss_pdop = timeseries(raw{17}, t_dat);
+
+ts_gnss_sol  = setinterpmethod(ts_gnss_sol,  'zoh');
+ts_gnss_nsv  = setinterpmethod(ts_gnss_nsv,  'zoh');
+ts_gnss_hpe  = setinterpmethod(ts_gnss_hpe,  'zoh');
+ts_gnss_vpe  = setinterpmethod(ts_gnss_vpe,  'zoh');
+ts_gnss_pdop = setinterpmethod(ts_gnss_pdop, 'zoh');
+R_gnss_state_matrix = reshape(median(gnssProfile.R_state_eci_flat, 1), 6, 6);
+R_gnss_state_matrix = 0.5 * (R_gnss_state_matrix + R_gnss_state_matrix.');
+R_gnss_state_matrix = R_gnss_state_matrix + 1e-9 * eye(6);
+
+% Legacy replay variables used by the unpatched GNSS subsystem.
+ts_pos = gnssProfile.ts_pos_eci;
+ts_vel = gnssProfile.ts_vel_eci;
+ts_Q = gnssProfile.ts_R_state_eci_flat;
+codex_gnss_state_source = "plant_sensor";
+
+fprintf("\nGNSS sensor profile loaded:\n");
+fprintf("mode              = %s\n", string(gnss_sensor_mode));
+fprintf("sample time        = %.3f s\n", gnss_sample_time);
+fprintf("samples            = %d\n", numel(gnssSensor.t));
+fprintf("covariance source  = %s\n\n", string(gnssMeta.source));
+
 
 %% Generation of the reference
 
-% Saltar primeros puntos GNSS/ECI para evitar artefactos de borde
-skip_ref_steps = 10;       % con h = 3 s, empieza 30 s mas tarde
+Ntimesteps = ceil(tf/h) + Np + 1;
 
-Ntimesteps_nominal = ceil(tf/h) + Np + 1;
-Ntimesteps_raw     = Ntimesteps_nominal + skip_ref_steps;
+if strcmpi(referenceSourceMode, "gnss")
+    % Optional legacy mode: use the GNSS .dat as a replayed reference.
+    % This is intentionally not the default for the sensor architecture.
+    skip_ref_steps = 10;       % con h = 3 s, empieza 30 s mas tarde
+    Ntimesteps_raw = Ntimesteps + skip_ref_steps;
 
-[r_p_full_raw, x_ref_hist_raw, t_ref_raw, referenceMeta] = ...
-    get_nominal_trajectory_from_gnss(h, Ntimesteps_raw, "referenceTrajectory.mat");
+    [r_p_full_raw, x_ref_hist_raw, t_ref_raw, referenceMeta] = ...
+        get_nominal_trajectory_from_gnss(h, Ntimesteps_raw, "referenceTrajectory.mat");
 
-% Recortar los primeros puntos malos
-idx0 = skip_ref_steps + 1;
+    idx0 = skip_ref_steps + 1;
+    x_ref_hist = x_ref_hist_raw(:, idx0:end);
+    t_ref = t_ref_raw(idx0:end);
+    t_ref = t_ref - t_ref(1);
+    Ntimesteps = size(x_ref_hist, 2);
+    r_p_full = reshape(x_ref_hist, [], 1);
+    save("referenceTrajectory.mat", "r_p_full", "x_ref_hist", "t_ref", "referenceMeta");
 
-x_ref_hist = x_ref_hist_raw(:, idx0:end);
+    fprintf("\nReferencia GNSS recortada:\n");
+    fprintf("skip_ref_steps = %d\n", skip_ref_steps);
+    fprintf("tiempo saltado = %.3f s\n", skip_ref_steps*h);
+else
+    get_nominal_trajectory(h, Ntimesteps, "referenceTrajectory.mat", ...
+        "startDateJulian", start_date, ...
+        "a", a, "ecc", ecc, "incl", inc, "RAAN", RAAN, "argp", w, "nu", theta, "PropModel", referencePropModel);
 
-% Reiniciar tiempo de referencia en cero para Simulink/MPC
-t_ref = t_ref_raw(idx0:end);
-t_ref = t_ref - t_ref(1);
+    load("referenceTrajectory.mat", "r_p_full", "x_ref_hist", "t_ref");
 
-% Actualizar numero real de pasos
-Ntimesteps = size(x_ref_hist, 2);
+    referenceMeta = struct( ...
+        "source", referencePropModel, ...
+        "frame", "ECI", ...
+        "sample_time", h, ...
+        "t_ref_end", t_ref(end));
 
-% Reconstruir vector apilado para el MPC
-r_p_full = reshape(x_ref_hist, [], 1);
+    fprintf("\nReferencia nominal dinamica:\n");
+end
 
-% Guardar referencia ya recortada
-save("referenceTrajectory.mat", "r_p_full", "x_ref_hist", "t_ref", "referenceMeta");
-
-% Estado inicial coherente con la referencia recortada
+% Estado inicial coherente con la referencia
 x_ini = x_ref_hist(1:3,1);
 v_ini = x_ref_hist(4:6,1);
 
 x0_ref = [x_ini; v_ini];
-x0_kalman = x0_ref;
+kalman_initial_error = [1000; -750; 500; 0.75; -0.50; 0.25];
+x0_kalman = x0_ref + kalman_initial_error;
 X0 = x0_ref;
-x_estim = x0_ref;
+x_estim = x0_kalman;
 
-fprintf("\nReferencia GNSS recortada:\n");
-fprintf("skip_ref_steps = %d\n", skip_ref_steps);
-fprintf("tiempo saltado = %.3f s\n", skip_ref_steps*h);
 fprintf("Ntimesteps     = %d\n", Ntimesteps);
 fprintf("t_ref(end)     = %.3f s\n", t_ref(end));
 fprintf("norm r0        = %.6f km\n", norm(x_ini)/1000);
 fprintf("norm v0        = %.6f km/s\n\n", norm(v_ini)/1000);
+fprintf("Kalman initial position error = %.3f m\n", norm(kalman_initial_error(1:3)));
+fprintf("Kalman initial velocity error = %.3f m/s\n\n", norm(kalman_initial_error(4:6)));
 
 % Save reference trajectory to plot it in the data inspector of Simulink
 data_ref = x_ref_hist.';   % 500 x 6
 time_ref = t_ref(:);       % 500 x 1
+
+ref_ts = timeseries(data_ref, time_ref);
+ref_ts = setinterpmethod(ref_ts, "linear");
 
 ref_ts_x  = timeseries(data_ref(:,1), time_ref);
 ref_ts_y  = timeseries(data_ref(:,2), time_ref);
@@ -428,7 +588,7 @@ if ispref("codex", "debrisConfig")
     rmpref("codex", "debrisConfig");
 end
 
-t_debris = 240;              % [s]
+t_debris = 800;              % [s]
 rel_pos_debris_lvlh = [50; 0; 0];   % [m] closest-approach offset in LVLH
 rel_vel_debris_lvlh = [0; 10; 0];   % [m/s] tangential fly-by velocity in LVLH
 
@@ -452,8 +612,8 @@ load("debrisTrajectory.mat", "x_debris_hist", "r_debris_full", ...
 
 rk_debris = rk_debris_encounter;
 
-dsafe0 = 200;
-safetyCost = 0.015;
+dsafe0 = 150;
+safetyCost = 0.2;
 
 if isfield(mpcTuneConfig, "dsafe0")
     dsafe0 = mpcTuneConfig.dsafe0;
@@ -510,27 +670,28 @@ for k = 1:size(r_ref,2)
 end
 
 a_missing = a_ref - a_2body;
+u_ff_ref_hist = a_missing;
+missing_acc_norm = vecnorm(a_missing,2,1);
+useReferenceFeedforward = ~strcmpi(referenceSourceMode, "nominal") && ...
+    max(missing_acc_norm) <= 0.8*u_max;
 
-fprintf("\nCHECK REFERENCIA GNSS DINAMICA\n");
+fprintf("\nCHECK REFERENCIA DINAMICA\n");
 fprintf("mean |a_ref|     = %.6e m/s2\n", mean(vecnorm(a_ref,2,1)));
 fprintf("mean |a_2body|   = %.6e m/s2\n", mean(vecnorm(a_2body,2,1)));
-fprintf("mean |a_missing| = %.6e m/s2\n", mean(vecnorm(a_missing,2,1)));
-fprintf("max  |a_missing| = %.6e m/s2\n", max(vecnorm(a_missing,2,1)));
-fprintf("u_max            = %.6e m/s2\n\n", u_max);
+fprintf("mean |a_missing| = %.6e m/s2\n", mean(missing_acc_norm));
+fprintf("max  |a_missing| = %.6e m/s2\n", max(missing_acc_norm));
+fprintf("u_max            = %.6e m/s2\n", u_max);
+fprintf("feedforward ref  = %d\n\n", useReferenceFeedforward);
 
-figure;
-plot(t_ref, vecnorm(a_missing,2,1), "LineWidth", 1.2);
-grid on;
-xlabel("t [s]");
-ylabel("|a_{ref} - a_{2body}| [m/s^2]");
-title("Aceleracion faltante para seguir la referencia GNSS");
-
-%% Check de que la referencia viene del GNSS
+%% Check de la referencia
 
 fprintf("\n================ CHECK REFERENCIA ================\n");
 fprintf("referenceSourceMode = %s\n", string(referenceSourceMode));
 fprintf("h                   = %.6f s\n", h);
 fprintf("dt referencia       = %.6f s\n", t_ref(2)-t_ref(1));
+if exist("codexStopTime", "var")
+    fprintf("sim StopTime usado  = %.3f s\n", double(codexStopTime));
+end
 
 if exist("referenceMeta", "var")
     if isfield(referenceMeta, "source")
@@ -555,7 +716,7 @@ else
     warning("No existe referenceMeta. Revisa que get_nominal_trajectory_from_gnss devuelva el cuarto output.");
 end
 
-fprintf("\nPrimer estado referencia GNSS ECI:\n");
+fprintf("\nPrimer estado referencia ECI:\n");
 fprintf("r_ref = [%.6e %.6e %.6e] m\n", ...
     x_ref_hist(1,1), x_ref_hist(2,1), x_ref_hist(3,1));
 fprintf("v_ref = [%.6f %.6f %.6f] m/s\n", ...
@@ -567,6 +728,72 @@ fprintf("==================================================\n\n");
 clear codex_dsafe_log_time codex_dsafe_log_first codex_dsafe_log_max
 
 clear MPC_INOAS;
+
+%%
+function stopTimeSeconds = getModelStopTimeSeconds(modelName)
+    stopTimeSeconds = [];
+
+    try
+        modelName = string(modelName);
+        if strlength(modelName) == 0
+            return;
+        end
+
+        load_system(modelName);
+        stopExpr = string(get_param(modelName, "StopTime"));
+        stopValue = str2double(stopExpr);
+
+        if ~isfinite(stopValue)
+            try
+                stopValue = evalin("base", char(stopExpr));
+            catch
+                stopValue = [];
+            end
+        end
+
+        if isnumeric(stopValue) && isscalar(stopValue) && ...
+                isfinite(double(stopValue)) && double(stopValue) > 0
+            stopTimeSeconds = double(stopValue);
+        end
+    catch ME
+        warning("Could not infer Simulink StopTime from model '%s': %s", ...
+            string(modelName), ME.message);
+    end
+end
+
+function stopTimeSeconds = getOpenModelStopTimeSeconds()
+    stopTimeSeconds = [];
+
+    try
+        openModels = find_system("type", "block_diagram");
+    catch
+        return;
+    end
+
+    if isempty(openModels)
+        return;
+    end
+
+    preferredModels = ["MPCcontrolledSpacecraft_plant_gnss_kalman", ...
+        "MPCcontrolledSpacecraft_plant_gnss", ...
+        "MPCcontrolledSpacecraft"];
+
+    for k = 1:numel(preferredModels)
+        if any(strcmp(openModels, preferredModels(k)))
+            stopTimeSeconds = getModelStopTimeSeconds(preferredModels(k));
+            if ~isempty(stopTimeSeconds)
+                return;
+            end
+        end
+    end
+
+    for k = 1:numel(openModels)
+        stopTimeSeconds = getModelStopTimeSeconds(openModels{k});
+        if ~isempty(stopTimeSeconds)
+            return;
+        end
+    end
+end
 
 %%
 function [a, ecc, inc, RAAN, argp, theta] = rv2coe_from_state(r, v, mu)
