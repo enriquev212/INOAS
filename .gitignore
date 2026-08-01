@@ -1,6 +1,15 @@
-*.slxcs
-# Simulink / MATLAB temporales
+# MATLAB / Simulink generated files
 slprj/
 *.slxc
+*.slxcs
 *.asv
+*.autosave
+*.bak
+*.m~
+*.mat~
 .MATLABDriveTag
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+desktop.ini
