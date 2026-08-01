@@ -12,6 +12,9 @@ initialization script, and result post-processing.
    instrument-decision logic, and MPC controller during simulation.
 3. `plot_MPC_results.m` can be run after simulation to regenerate plots for the
    selected scenario setup.
+4. `tools/visualization/export_visualization_data.m` can be run after simulation
+   to export a compact `.mat` file for the optional Python visualization
+   workflow.
 
 ## Model Core
 

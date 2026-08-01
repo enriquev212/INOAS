@@ -15,6 +15,7 @@ else
 end
 addpath(repoRoot);
 addpath(genpath(fullfile(repoRoot, "matlab")));
+addpath(genpath(fullfile(repoRoot, "tools")));
 addpath(fullfile(repoRoot, "models"));
 
 preservedModelName = "";

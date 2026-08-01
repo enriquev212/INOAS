@@ -166,6 +166,7 @@ autonomy layer:
 |-- initialize_inoas_simulation.m
 |-- models/
 |-- matlab/
+|-- tools/visualization/
 |-- data/
 |-- docs/assets/
 ```
@@ -186,6 +187,8 @@ Key files:
   `matlab/load_gnss_sensor_profile.m` - GNSS profile and measurement-noise setup.
 - `matlab/instrument_decision.m` - GNSS/Kalman mode-selection logic.
 - `matlab/README.md` - short description of each MATLAB function.
+- `tools/visualization/` - optional MATLAB-to-Python workflow for generating
+  presentation-style PNG/GIF result assets from a completed simulation.
 - `data/` - active telemetry and precomputed MATLAB data used by the simulation.
 - `docs/assets/` - architecture figure, poster preview, final poster PDF, and
   selected visual playback assets.
@@ -263,6 +266,38 @@ decision thresholds required by the model.
 - XY, XZ, and YZ trajectory projections.
 - LVLH radial/tangential/normal tracking error with corresponding control effort.
 - Cumulative maneuver Delta-V and printed MPC performance summary.
+
+## Presentation Visualizations
+
+The repository also includes an optional export-and-render workflow for
+presentation-style assets. This is useful when the scenario, `StopTime`, or MPC
+horizon has changed and the GIF/figures should match the current simulation.
+
+After running Simulink, export a compact MATLAB data file:
+
+```matlab
+out = sim("inoas_model");
+export_visualization_data
+```
+
+Then generate the assets from the repository root:
+
+```powershell
+python tools\visualization\generate_visualization_assets.py
+```
+
+By default, the workflow writes to `results/visualization/`, which is ignored by
+Git because these files are generated from the selected simulation setup. The
+Python script creates:
+
+- `inoas_orbit_context.png`
+- `inoas_debris_distance.png`
+- `inoas_control_energy_summary.png`
+- `inoas_debris_avoidance.gif`
+- `inoas_visualization_summary.txt`
+
+Python dependencies for this optional step are `numpy`, `scipy`, `matplotlib`,
+and `Pillow`.
 
 ## Key Parameters
 

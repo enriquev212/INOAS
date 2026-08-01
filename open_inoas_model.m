@@ -34,6 +34,7 @@ end
 cd(projectRoot);
 addpath(projectRoot);
 addpath(genpath(fullfile(projectRoot, 'matlab')));
+addpath(genpath(fullfile(projectRoot, 'tools')));
 addpath(fullfile(projectRoot, 'models'));
 
 if bdIsLoaded(modelName)
