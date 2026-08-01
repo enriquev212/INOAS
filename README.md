@@ -114,6 +114,17 @@ These headline metrics are reported from the final project material. Scenario
 plots are not stored as fixed outputs in this repository because the MPC response
 depends on the selected setup, encounter geometry, tuning, and simulation horizon.
 
+<details>
+<summary>Debris-avoidance playback</summary>
+
+![Debris-avoidance playback](docs/assets/debris-avoidance-playback.gif)
+
+This qualitative playback comes from the final presentation material and shows
+the coordinated MPC avoidance maneuver, debris-relative geometry, safety radius,
+and control effort for the selected validation setup.
+
+</details>
+
 ## Technical Scope
 
 The technical work represented in this repository covers the navigation and
@@ -139,7 +150,7 @@ by each team member in their own CV, portfolio, or interview material.
 
 ```text
 .
-|-- Script_Concurso_Spacecraft_batch.m
+|-- initialize_inoas_simulation.m
 |-- models/
 |-- matlab/
 |-- data/
@@ -148,7 +159,7 @@ by each team member in their own CV, portfolio, or interview material.
 
 Key files:
 
-- `Script_Concurso_Spacecraft_batch.m` - initializes the MATLAB workspace before
+- `initialize_inoas_simulation.m` - initializes the MATLAB workspace before
   opening or simulating the Simulink model.
 - `models/MPCcontrolledSpacecraft_plant_gnss_kalman_decisionFinal.slx` - final
   integrated Simulink model.
@@ -158,7 +169,8 @@ Key files:
 - `matlab/instrument_decision.m` - GNSS/Kalman mode-selection logic.
 - `matlab/README.md` - short description of each MATLAB function.
 - `data/` - active telemetry and precomputed MATLAB data used by the simulation.
-- `docs/assets/` - architecture figure, poster preview, and final poster PDF.
+- `docs/assets/` - architecture figure, poster preview, final poster PDF, and
+  selected visual playback assets.
 
 The main dataset is resolved through `matlab/inoas_data_file.m`, so scripts and
 Simulink callbacks can refer to the GNSS `.dat` file by name while the file remains
@@ -178,7 +190,7 @@ Suggested workflow from the repository root:
 addpath(genpath(pwd));
 
 modelName = "MPCcontrolledSpacecraft_plant_gnss_kalman_decisionFinal";
-run("Script_Concurso_Spacecraft_batch.m");
+run("initialize_inoas_simulation.m");
 
 open_system(modelName);
 simOut = sim(modelName);

@@ -5,7 +5,7 @@ initialization script, and result post-processing.
 
 ## Main Execution Flow
 
-1. `Script_Concurso_Spacecraft_batch.m` prepares the base workspace: input file
+1. `initialize_inoas_simulation.m` prepares the base workspace: input file
    paths, physical scenario, Kalman/UKF tuning, GNSS sensor profile, nominal
    reference trajectory, debris encounter, and MPC parameters.
 2. The Simulink model reads those workspace variables and calls the estimator,
@@ -25,7 +25,7 @@ initialization script, and result post-processing.
   Filter. It propagates the spacecraft state between measurement updates.
 - `myMeasurementFcn.m` - Measurement function for the Kalman/UKF position
   observation model.
-- `medida_gnss_fcn.m` - GNSS measurement function used by the Simulink sensor
+- `gnss_measurement_fcn.m` - GNSS measurement function used by the Simulink sensor
   chain.
 
 ## Scenario Generation

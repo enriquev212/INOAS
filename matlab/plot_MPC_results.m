@@ -1,13 +1,13 @@
-%% plot_MPC_results_clean.m
-% Postproceso esencial de la simulación MPC orbital
+%% plot_MPC_results.m
+% Core post-processing for the orbital MPC simulation.
 
 close all;
 
 %% ============================================================
-% 1. CARGA DE DATOS
+% 1. LOAD DATA
 % ============================================================
 
-%% Referencia
+%% Reference
 x_ref = ref_ts_x.Data(:);
 y_ref = ref_ts_y.Data(:);
 z_ref = ref_ts_z.Data(:);
@@ -17,7 +17,7 @@ vx_ref = ref_ts_vx.Data(:);
 vy_ref = ref_ts_vy.Data(:);
 vz_ref = ref_ts_vz.Data(:);
 
-%% Estimado
+%% Estimated state
 est_log = out.logsout.get("Estimated_Pos_x").Values;
 t_est = est_log.Time;
 x_est_data = squeeze(est_log.Data);
@@ -26,7 +26,7 @@ x_est = x_est_data(:,1);
 y_est = x_est_data(:,2);
 z_est = x_est_data(:,3);
 
-%% Real
+%% True state
 real_log = out.logsout.get("X_perfect_sensor").Values;
 t_real = real_log.Time;
 x_real_data = squeeze(real_log.Data);
@@ -35,7 +35,7 @@ x_real = x_real_data(:,1);
 y_real = x_real_data(:,2);
 z_real = x_real_data(:,3);
 
-%% Control MPC
+%% MPC control
 u_log = get_logsout_signal(out.logsout, {"u_MPC", "u_discret"});
 t_u = u_log.Time;
 u_MPC = squeeze(u_log.Data);
@@ -58,7 +58,7 @@ else
     dsafe_horizon_max = [];
 end
 
-%% Interpolación de referencia sobre tiempo real
+%% Reference interpolation over simulation time
 x_ref_i  = interp1(t_ref, x_ref,  t_real, "pchip", "extrap");
 y_ref_i  = interp1(t_ref, y_ref,  t_real, "pchip", "extrap");
 z_ref_i  = interp1(t_ref, z_ref,  t_real, "pchip", "extrap");
@@ -107,7 +107,7 @@ else
 end
 
 %% ============================================================
-% 2. TRAYECTORIA 3D
+% 2. 3D TRAJECTORY
 % ============================================================
 
 figure;
@@ -121,7 +121,8 @@ if has_debris_traj
     plot3(x_debris, y_debris, z_debris, "r-", "LineWidth", 1.2);
     plot3(rk_debris_plot(1), rk_debris_plot(2), rk_debris_plot(3), "ro", ...
         "MarkerSize", 8, "MarkerFaceColor", "r");
-    legend("Referencia", "Real", "Estimado", "Trayectoria debris", "Debris en encuentro");
+    legend("Reference", "Truth", "Estimated", "Debris trajectory", ...
+        "Debris at encounter");
 elseif exist("rk_debris","var")
     plot3(rk_debris_plot(1), rk_debris_plot(2), rk_debris_plot(3), "ro", ...
         "MarkerSize", 8, "MarkerFaceColor", "r");
@@ -133,22 +134,22 @@ elseif exist("rk_debris","var")
              rk_debris_plot(3) + dsafe0*Zs, ...
              "FaceAlpha", 0.15, ...
              "EdgeColor", "none");
-        legend("Referencia", "Real", "Estimado", "Debris", "Zona segura");
+        legend("Reference", "Truth", "Estimated", "Debris", "Safe zone");
     else
-        legend("Referencia", "Real", "Estimado", "Debris");
+        legend("Reference", "Truth", "Estimated", "Debris");
     end
 else
-    legend("Referencia", "Real", "Estimado");
+    legend("Reference", "Truth", "Estimated");
 end
 
 xlabel("x [m]");
 ylabel("y [m]");
 zlabel("z [m]");
-title("Trayectoria orbital");
+title("Orbital trajectory");
 view(3);
 
 %% ============================================================
-% 3. POSICIÓN X/Y/Z
+% 3. X/Y/Z POSITION
 % ============================================================
 
 figure;
@@ -159,8 +160,8 @@ plot(t_est,  x_est,  "b", "LineWidth", 1.2);
 plot(t_real, x_ref_i, "k--", "LineWidth", 1.4);
 grid on;
 ylabel("x [m]");
-title("Posición X");
-legend("Real","Estimado","Referencia");
+title("X position");
+legend("Truth","Estimated","Reference");
 
 subplot(3,1,2);
 plot(t_real, y_real, "g", "LineWidth", 1.3); hold on;
@@ -168,8 +169,8 @@ plot(t_est,  y_est,  "b", "LineWidth", 1.2);
 plot(t_real, y_ref_i, "k--", "LineWidth", 1.4);
 grid on;
 ylabel("y [m]");
-title("Posición Y");
-legend("Real","Estimado","Referencia");
+title("Y position");
+legend("Truth","Estimated","Reference");
 
 subplot(3,1,3);
 plot(t_real, z_real, "g", "LineWidth", 1.3); hold on;
@@ -178,13 +179,13 @@ plot(t_real, z_ref_i, "k--", "LineWidth", 1.4);
 grid on;
 xlabel("t [s]");
 ylabel("z [m]");
-title("Posición Z");
-legend("Real","Estimado","Referencia");
+title("Z position");
+legend("Truth","Estimated","Reference");
 
-sgtitle("Seguimiento de posición");
+sgtitle("Position tracking");
 
 %% ============================================================
-% 4. ERROR DE POSICIÓN INERCIAL
+% 4. INERTIAL POSITION ERROR
 % ============================================================
 
 ex = x_real - x_ref_i;
@@ -201,7 +202,7 @@ plot(t_real, ey, "LineWidth", 1.3);
 plot(t_real, ez, "LineWidth", 1.3);
 grid on;
 ylabel("Error [m]");
-title("Error cartesiano de posición");
+title("Cartesian position error");
 legend("e_x","e_y","e_z");
 
 subplot(2,1,2);
@@ -209,10 +210,10 @@ plot(t_real, e_norm, "LineWidth", 1.5);
 grid on;
 xlabel("t [s]");
 ylabel("||e_r|| [m]");
-title("Norma del error de posición");
+title("Position-error norm");
 
 %% ============================================================
-% 5. CONTROL APLICADO EN INERCIAL
+% 5. APPLIED INERTIAL CONTROL
 % ============================================================
 
 figure;
@@ -224,7 +225,7 @@ grid on;
 
 xlabel("t [s]");
 ylabel("u [m/s^2]");
-title("Control aplicado por el MPC");
+title("MPC applied control");
 legend("u_x","u_y","u_z");
 
 if exist("u_max","var")
@@ -233,7 +234,7 @@ if exist("u_max","var")
 end
 
 %% ============================================================
-% 6. DISTANCIA AL DEBRIS
+% 6. DEBRIS DISTANCE
 % ============================================================
 
 if has_debris_traj || exist("rk_debris","var")
@@ -263,21 +264,24 @@ if has_debris_traj || exist("rk_debris","var")
 
         if exist("dsafe0","var")
             yline(dsafe0, "r--", "d_{safe,0}");
-            legend("Distancia al debris", "d_{safe} primer paso", "d_{safe} max horizonte", "d_{safe,0}");
+            legend("Debris distance", "d_{safe} first step", ...
+                "d_{safe} horizon max", "d_{safe,0}");
         else
-            legend("Distancia al debris", "d_{safe} primer paso", "d_{safe} max horizonte");
+            legend("Debris distance", "d_{safe} first step", ...
+                "d_{safe} horizon max");
         end
     elseif exist("dsafe0","var")
         yline(dsafe0, "r--", "d_{safe}");
-        legend("Distancia al debris", "Distancia segura");
+        legend("Debris distance", "Safe distance");
     else
-        legend("Distancia al debris");
+        legend("Debris distance");
     end
 
     grid on;
     xlabel("t [s]");
-    ylabel("Distancia [m]");
-    title(sprintf("Distancia al debris | mínima = %.3f m en t = %.2f s", dist_min, t_min));
+    ylabel("Distance [m]");
+    title(sprintf("Debris distance | minimum = %.3f m at t = %.2f s", ...
+        dist_min, t_min));
 
 end
 
@@ -288,19 +292,19 @@ if has_dsafe_log
 
     if exist("dsafe0", "var")
         yline(dsafe0, "r--", "d_{safe,0}");
-        legend("d_{safe} primer paso", "d_{safe} max horizonte", "d_{safe,0}");
+        legend("d_{safe} first step", "d_{safe} horizon max", "d_{safe,0}");
     else
-        legend("d_{safe} primer paso", "d_{safe} max horizonte");
+        legend("d_{safe} first step", "d_{safe} horizon max");
     end
 
     grid on;
     xlabel("t [s]");
-    ylabel("Distancia [m]");
-    title("Radio de seguridad dinamico usado por el MPC");
+    ylabel("Distance [m]");
+    title("Dynamic safety radius used by the MPC");
 end
 
 %% ============================================================
-% 7. PROYECCIONES 2D: XY, XZ, YZ
+% 7. 2D PROJECTIONS: XY, XZ, YZ
 % ============================================================
 
 figure;
@@ -325,16 +329,17 @@ if has_debris_traj
 elseif exist("rk_debris","var")
     plot(rk_debris_plot(1), rk_debris_plot(2), "ro", "MarkerFaceColor", "r");
     if exist("dsafe0","var") && dsafe0 > 0
-        plot(rk_debris_plot(1)+circle_x, rk_debris_plot(2)+circle_y, "r--", "LineWidth", 1.2);
+        plot(rk_debris_plot(1)+circle_x, rk_debris_plot(2)+circle_y, ...
+            "r--", "LineWidth", 1.2);
     end
 end
 xlabel("x [m]");
 ylabel("y [m]");
-title("Plano XY");
+title("XY plane");
 if has_debris_traj
-    legend("Referencia","Real","Estimado","Trayectoria debris","Debris en encuentro");
+    legend("Reference","Truth","Estimated","Debris trajectory","Debris at encounter");
 else
-    legend("Referencia","Real","Estimado","Debris","Zona segura");
+    legend("Reference","Truth","Estimated","Debris","Safe zone");
 end
 
 subplot(1,3,2);
@@ -348,12 +353,13 @@ if has_debris_traj
 elseif exist("rk_debris","var")
     plot(rk_debris_plot(1), rk_debris_plot(3), "ro", "MarkerFaceColor", "r");
     if exist("dsafe0","var") && dsafe0 > 0
-        plot(rk_debris_plot(1)+circle_x, rk_debris_plot(3)+circle_y, "r--", "LineWidth", 1.2);
+        plot(rk_debris_plot(1)+circle_x, rk_debris_plot(3)+circle_y, ...
+            "r--", "LineWidth", 1.2);
     end
 end
 xlabel("x [m]");
 ylabel("z [m]");
-title("Plano XZ");
+title("XZ plane");
 
 subplot(1,3,3);
 hold on; grid on; axis equal;
@@ -366,17 +372,18 @@ if has_debris_traj
 elseif exist("rk_debris","var")
     plot(rk_debris_plot(2), rk_debris_plot(3), "ro", "MarkerFaceColor", "r");
     if exist("dsafe0","var") && dsafe0 > 0
-        plot(rk_debris_plot(2)+circle_x, rk_debris_plot(3)+circle_y, "r--", "LineWidth", 1.2);
+        plot(rk_debris_plot(2)+circle_x, rk_debris_plot(3)+circle_y, ...
+            "r--", "LineWidth", 1.2);
     end
 end
 xlabel("y [m]");
 ylabel("z [m]");
-title("Plano YZ");
+title("YZ plane");
 
-sgtitle("Proyecciones cartesianas");
+sgtitle("Cartesian projections");
 
 %% ============================================================
-% 8. ERROR Y CONTROL EN FRAME LVLH
+% 8. ERROR AND CONTROL IN THE LVLH FRAME
 % ============================================================
 
 N = length(t_real);
@@ -429,8 +436,8 @@ subplot(3,1,2);
 plot(t_real, x_rel_lvlh(:,2), "LineWidth", 1.3); hold on;
 plot(t_u, u_MPC_lvlh(:,2)*1e4, "LineWidth", 1.1);
 grid on;
-ylabel("Tangencial");
-legend("error [m]", "u tangencial x10^4");
+ylabel("Tangential");
+legend("error [m]", "u tangential x10^4");
 
 subplot(3,1,3);
 plot(t_real, x_rel_lvlh(:,3), "LineWidth", 1.3); hold on;
@@ -440,14 +447,14 @@ xlabel("t [s]");
 ylabel("Normal");
 legend("error [m]", "u normal x10^4");
 
-sgtitle("Error relativo y control en frame LVLH");
+sgtitle("Relative error and control in the LVLH frame");
 
 %% =========================
 %  PERFORMANCE SUMMARY
 %  =========================
 
-% Asegúrate de que uR, uT, uN son aceleraciones reales [m/s^2],
-% no las señales ya multiplicadas por 1e4.
+% uR, uT, and uN must be real accelerations [m/s^2], not signals already
+% multiplied by 1e4.
 uR_real = u_MPC_lvlh(:,1);
 uT_real = u_MPC_lvlh(:,2);
 uN_real = u_MPC_lvlh(:,3);
@@ -482,37 +489,37 @@ figure;
 plot(t_real, cumtrapz(t_real, vecnorm(u_vec,2,2)), 'LineWidth', 1.5);
 grid on;
 xlabel('t [s]');
-ylabel('\DeltaV acumulado [m/s]');
-title('\DeltaV acumulado de la maniobra');
-
-
+ylabel('Cumulative DeltaV [m/s]');
+title('Cumulative maneuver DeltaV');
 
 %% ============================================================
-% 9. RESUMEN
+% 9. SUMMARY
 % ============================================================
 
-fprintf("\n===== RESUMEN POSTPROCESO MPC =====\n");
+fprintf("\n===== MPC POST-PROCESSING SUMMARY =====\n");
 
 if exist("dist_debris","var")
-    fprintf("Distancia mínima al debris: %.3f m\n", dist_min);
+    fprintf("Minimum debris distance: %.3f m\n", dist_min);
     if exist("dsafe0","var")
-        fprintf("Distancia segura dsafe0:    %.3f m\n", dsafe0);
+        fprintf("Safe distance dsafe0:    %.3f m\n", dsafe0);
     end
     if has_dsafe_log
-        fprintf("d_safe primer paso:        [%.3f, %.3f] m\n", min(dsafe_first), max(dsafe_first));
-        fprintf("d_safe max horizonte:      [%.3f, %.3f] m\n", min(dsafe_horizon_max), max(dsafe_horizon_max));
+        fprintf("d_safe first step:       [%.3f, %.3f] m\n", ...
+            min(dsafe_first), max(dsafe_first));
+        fprintf("d_safe horizon max:      [%.3f, %.3f] m\n", ...
+            min(dsafe_horizon_max), max(dsafe_horizon_max));
     end
-    fprintf("Instante distancia mínima:  %.3f s\n", t_min);
+    fprintf("Minimum-distance time:    %.3f s\n", t_min);
 end
 
-fprintf("Máximo |u_x|: %.6f m/s^2\n", max(abs(u_MPC(:,1))));
-fprintf("Máximo |u_y|: %.6f m/s^2\n", max(abs(u_MPC(:,2))));
-fprintf("Máximo |u_z|: %.6f m/s^2\n", max(abs(u_MPC(:,3))));
+fprintf("Maximum |u_x|: %.6f m/s^2\n", max(abs(u_MPC(:,1))));
+fprintf("Maximum |u_y|: %.6f m/s^2\n", max(abs(u_MPC(:,2))));
+fprintf("Maximum |u_z|: %.6f m/s^2\n", max(abs(u_MPC(:,3))));
 
 if exist("u_max","var")
-    fprintf("Límite u_max: %.6f m/s^2\n", u_max);
+    fprintf("u_max limit: %.6f m/s^2\n", u_max);
 end
 
-fprintf("Error final posición: %.6f m\n", e_norm(end));
-fprintf("Máximo error posición: %.6f m\n", max(e_norm));
+fprintf("Final position error: %.6f m\n", e_norm(end));
+fprintf("Maximum position error: %.6f m\n", max(e_norm));
 fprintf("===================================\n\n");
