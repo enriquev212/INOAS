@@ -1,9 +1,11 @@
 # Integrated Navigation and Orbital Awareness System (INOAS)
 
-Shared public repository for the INOAS navigation and collision-avoidance project
-developed for the
-[Student Aerospace Challenge 2025/2026](https://www.studentaerospacechallenge.eu/index.php/en)
-by the Supaero Astra Iberian Team, WP7: Reusable Propulsion / Maintenance.
+Shared public repository for the INOAS navigation and collision-avoidance
+project, developed by the Supaero Astra Iberian Team for WP7: Reusable
+Propulsion / Maintenance of the
+[Student Aerospace Challenge 2025/2026](https://www.studentaerospacechallenge.eu/index.php/en).
+The project was presented at the challenge final, Aerospace Challenge Day, at
+Paris-Le Bourget on June 25, 2026.
 
 INOAS studies how a LEO servicing spacecraft can reduce GNSS receiver duty cycle
 while keeping enough navigation accuracy and collision-avoidance authority for
