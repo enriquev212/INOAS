@@ -5,6 +5,7 @@
 
 fastMpcConfig = struct();
 fastMpcConfig.Np = 25;
+simulationStopTime = 120;
 
 setpref("inoas", "mpcTuneConfig", fastMpcConfig);
 

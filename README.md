@@ -161,6 +161,7 @@ portfolio, or interview material.
 .
 |-- open_inoas_model.m
 |-- open_inoas_fast.m
+|-- open_inoas_debris_demo.m
 |-- check_inoas_requirements.m
 |-- initialize_inoas_simulation.m
 |-- models/
@@ -175,6 +176,8 @@ Key files:
   initializing the workspace, and opening the top-level Simulink model.
 - `open_inoas_fast.m` - opens the same model with a reduced MPC horizon for
   quick installation and workflow checks.
+- `open_inoas_debris_demo.m` - opens the model with the same reduced MPC
+  horizon, but runs long enough to inspect the debris-avoidance encounter.
 - `check_inoas_requirements.m` - checks the required MATLAB products and
   ephemeris data files before running the model.
 - `initialize_inoas_simulation.m` - initializes the MATLAB workspace before
@@ -203,11 +206,27 @@ Requirements:
   Toolbox`, required by the orbital environment blocks.
 - Optimization Toolbox for the MPC optimization routine.
 
+Simulation modes:
+
+| Mode | Script | MPC horizon `Np` | Simulink `StopTime` | Purpose |
+| --- | --- | ---: | ---: | --- |
+| Fast validation | `open_inoas_fast` | 25 | 120 s | Check installation, dependencies, model loading, and logging. |
+| Debris demo | `open_inoas_debris_demo` | 25 | 950 s | Inspect the debris-avoidance maneuver around the configured encounter at 800 s. |
+| Full run | `open_inoas_model` | 125 | 4000 s | Reproduce the final validation setup and plots. |
+
 Fast validation workflow from the repository root:
 
 ```matlab
 open_inoas_fast
 out = sim("inoas_model");
+```
+
+Debris-avoidance demo workflow from the repository root:
+
+```matlab
+open_inoas_debris_demo
+out = sim("inoas_model");
+run("matlab/plot_MPC_results.m");
 ```
 
 Full workflow from the repository root:
