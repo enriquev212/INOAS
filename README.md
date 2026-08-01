@@ -15,7 +15,7 @@ margins.
 
 Project downloads:
 
-- [Download full-quality final presentation](https://github.com/enriquev212/INOAS/releases/download/inoas-portfolio-materials-v1/INOAS_full_quality_final_presentation.pptx)
+- [Final presentation PPTX](https://github.com/enriquev212/INOAS/releases/download/inoas-portfolio-materials-v1/INOAS_full_quality_final_presentation.pptx)
 - [Final poster PDF](docs/assets/final-poster-supaero-astra-iberian-team.pdf)
 
 <details>
@@ -110,25 +110,26 @@ From the final validation campaign:
 - Debris-avoidance maneuver cost was about **2.5 m/s Delta-V**, with **9.2 m/s**
   cumulative Delta-V over the 4000 s simulation.
 
-## My Contributions
+## Technical Scope
 
-My work focused on the navigation and autonomy layer:
+The technical work represented in this repository covers the navigation and
+autonomy layer:
 
-- Developed and integrated the GNSS simulation path using Sentinel-6A quality
+- Developing and integrating the GNSS simulation path using Sentinel-6A quality
   indicators and time-varying measurement covariance.
-- Worked on the UKF/Kalman navigation architecture for GNSS-on and GNSS-off
+- Building the UKF/Kalman navigation architecture for GNSS-on and GNSS-off
   operation.
-- Implemented and tuned instrument-decision logic based on GNSS health, NIS, and
+- Implementing and tuning instrument-decision logic based on GNSS health, NIS, and
   covariance growth.
-- Connected navigation confidence to the MPC debris-avoidance safety margin.
-- Produced diagnostic scripts, validation plots, architecture diagrams, and the
+- Connecting navigation confidence to the MPC debris-avoidance safety margin.
+- Producing diagnostic scripts, validation plots, architecture diagrams, and the
   final project communication material.
-- Contributed to the ongoing conference-paper adaptation toward a LEO CubeSat
+- Adapting the system toward the ongoing LEO CubeSat conference-paper
   formulation.
 
-This repository is a portfolio-oriented copy of a team project. The original commit
-history may include work integrated by other team members; the section above
-summarizes my technical contribution.
+This repository is a portfolio-oriented copy of a team project, prepared for public
+CV sharing by the project contributors. Individual roles can be detailed separately
+by each team member in their own CV, portfolio, or interview material.
 
 ## Repository Layout
 
