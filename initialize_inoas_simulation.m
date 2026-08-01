@@ -222,7 +222,7 @@ Ymax = repmat(Y_max, Np, 1);
 
 % Constraints on deltaU
 
-du_max = 0.007;              % [m/s^2] por paso
+du_max = 0.007;              % [m/s^2] per step
 
 if isfield(mpcTuneConfig, "du_max")
     du_max = mpcTuneConfig.du_max;

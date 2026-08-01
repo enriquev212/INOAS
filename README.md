@@ -209,6 +209,35 @@ Simulation modes:
 | Debris demo | `open_inoas_debris_demo` | 25 | 950 s | Inspect the debris-avoidance maneuver around the configured encounter at 800 s. |
 | Full run | `open_inoas_model` | 125 | 4000 s | Reproduce the final validation setup and plots. |
 
+Generated plots:
+
+- 3D orbital trajectory with reference, truth, estimated state, and debris path.
+- X/Y/Z position tracking against the nominal reference.
+- Cartesian position error and position-error norm.
+- MPC applied control acceleration with actuator limits.
+- Debris distance against the fixed and covariance-inflated safety radii.
+- Dynamic safety radius used by the MPC over the prediction horizon.
+- XY, XZ, and YZ trajectory projections.
+- LVLH radial/tangential/normal tracking error with corresponding control effort.
+- Cumulative maneuver Delta-V and printed MPC performance summary.
+
+Key parameters:
+
+| Parameter | Default value | Notes |
+| --- | ---: | --- |
+| MPC horizon `Np` | 125 | Full validation horizon; reduced to 25 by `open_inoas_fast` and `open_inoas_debris_demo`. |
+| Reference/MPC sample time `h` | 3 s | Reference trajectory and MPC discretization step. |
+| Sensor/estimator sample time `Ts` | 1 s | Main Simulink estimator and decision sample time. |
+| Full-run `StopTime` | 4000 s | Default validation duration. |
+| Debris encounter time `t_debris` | 800 s | Encounter inspected by the debris-demo mode. |
+| Debris relative offset | `[50, 0, 0] m` | Closest-approach offset in the LVLH frame. |
+| Debris relative velocity | `[0, 10, 0] m/s` | Tangential fly-by velocity in the LVLH frame. |
+| Baseline safety radius `dsafe0` | 150 m | Enlarged by the MPC covariance-aware safety margin. |
+| Control limit `u_max` | 0.05 m/s^2 | Per-axis acceleration bound. |
+| Control-rate limit `du_max` | 0.007 m/s^2 per step | Per-axis command increment bound. |
+| GNSS duty-cycle timers | 90 s / 10 s | GNSS-on and Kalman-propagation windows. |
+| GNSS health thresholds | 4 satellites, PDOP 6, HPE/VPE 5 m | Used by the instrument-decision state machine. |
+
 Fast validation workflow from the repository root:
 
 ```matlab
