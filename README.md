@@ -14,9 +14,8 @@ margins.
 
 ![Debris-avoidance playback](docs/assets/debris-avoidance-playback.gif)
 
-**Headline results:** **82% GNSS energy reduction** | **below 40 m** outage
-position error | **483.2 m** minimum debris separation vs **154 m** robust safety
-radius.
+**Headline results:** 82% GNSS energy reduction | below 40 m outage position
+error | 483.2 m minimum debris separation vs 154 m robust safety radius.
 
 ## Project Materials
 
