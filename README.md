@@ -13,7 +13,10 @@ margins.
 
 ![INOAS architecture](docs/assets/inoas-architecture.png)
 
-Project poster: [final poster PDF](docs/assets/final-poster-supaero-astra-iberian-team.pdf)
+Project material:
+
+- [Final presentation deck](docs/assets/inoas-final-presentation.pptx)
+- [Final poster PDF](docs/assets/final-poster-supaero-astra-iberian-team.pdf)
 
 <details>
 <summary>Poster preview</summary>
@@ -34,6 +37,26 @@ The validation uses Sentinel-6A precise orbit determination telemetry
 (`Y24D011`) at approximately 1347 km altitude, with representative scenarios for
 nominal tracking, GNSS signal outage, precision degradation, geometric drift, and
 rendezvous.
+
+## Conference Adaptation
+
+The project is currently being adapted into a paper for the **2027 IEEE Aerospace
+Conference**, held at the Yellowstone Conference Center in Big Sky, Montana,
+March 6-13, 2027.
+
+The abstract was accepted on **July 6, 2026**:
+
+- **Title:** Robust MPC-Based Collision Avoidance Guidance and Safe Duty-Cycled
+  GNSS Navigation for LEO CubeSats
+- **Session:** 12.01 Orbital, Surface and Payload/Instrument Mission Operations
+- **Paper number:** 2437
+- **Full paper deadline:** October 2, 2026
+
+For the conference version, the original Student Aerospace Challenge architecture
+is being adapted toward a LEO CubeSat scenario. This includes scaling the physical
+system and mission assumptions to better match CubeSat-class constraints while
+preserving the main contribution: robust MPC-based collision avoidance coupled with
+safe duty-cycled GNSS/UKF navigation.
 
 ## System Architecture
 
@@ -100,6 +123,8 @@ My work focused on the navigation and autonomy layer:
 - Connected navigation confidence to the MPC debris-avoidance safety margin.
 - Produced diagnostic scripts, validation plots, architecture diagrams, and the
   final project communication material.
+- Contributed to the ongoing conference-paper adaptation toward a LEO CubeSat
+  formulation.
 
 This repository is a portfolio-oriented copy of a team project. The original commit
 history may include work integrated by other team members; the section above
@@ -129,7 +154,8 @@ Key files:
 - `relatedFunctions/instrument_decision.m` - GNSS/Kalman mode-selection logic.
 - `.mat y .dat/` - telemetry and precomputed MATLAB data used by the simulation.
 - `PreviousNISresulta/` - previous result snapshots and validation plots.
-- `docs/assets/` - architecture diagram and final poster assets.
+- `docs/assets/` - poster-derived architecture diagram, final poster, and final
+  presentation deck.
 
 Some legacy folder names are intentionally preserved for now because the MATLAB and
 Simulink setup uses the current path layout.
