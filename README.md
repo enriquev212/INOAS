@@ -130,7 +130,7 @@ If you refer to this project or the conference adaptation, please use:
 
 ```bibtex
 @inproceedings{fernandezacero2027inoas,
-  title = {Robust MPC-Based Collision Avoidance Guidance and Safe Duty-Cycled GNSS Navigation for LEO CubeSats},
+  title = {Robust {MPC}-Based Collision Avoidance Guidance and Safe Duty-Cycled {GNSS} Navigation for {LEO} {CubeSats}},
   author = {Fernandez-Acero Campoamor, Alberto and Soler i Pla, Julia and Valverde Sacristan, Enrique and Xu, Chang and Yuste Pubill, Alvaro},
   booktitle = {Proceedings of the 2027 IEEE Aerospace Conference},
   address = {Big Sky, Montana, USA},
@@ -293,13 +293,6 @@ decision thresholds required by the model.
 - The estimator continues propagating during GNSS-off intervals, so control remains
   available even when GNSS is inactive or degraded.
 
-## License
-
-The source code is released under the MIT License; see [LICENSE](LICENSE).
-Project communication materials, including the poster, final presentation, and
-derived visual assets under `docs/assets/`, remain project-team materials unless
-separately authorized.
-
 ## Future Work
 
 - Complete the 6-DOF model with attitude-control integration.
@@ -310,8 +303,8 @@ separately authorized.
 ## Project Team and Acknowledgments
 
 This repository is maintained as the shared public version of the team project.
-The work was developed within the Student Aerospace Challenge at ISAE-SUPAERO by
-the Supaero Astra Iberian Team.
+The work was developed by the Supaero Astra Iberian Team (ISAE-SUPAERO students)
+for the Student Aerospace Challenge.
 
 Maintainer/contact: Enrique Valverde Sacristan
 ([enriquev212](https://github.com/enriquev212),
@@ -322,3 +315,10 @@ Maintainer/contact: Enrique Valverde Sacristan
 - Enrique Valverde Sacristan
 - Chang Xu
 - Alvaro Yuste Pubill
+
+## License
+
+The source code is released under the MIT License; see [LICENSE](LICENSE).
+Project communication materials, including the poster, final presentation, and
+derived visual assets under `docs/assets/`, remain project-team materials unless
+separately authorized.
