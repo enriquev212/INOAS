@@ -137,7 +137,7 @@ by each team member in their own CV, portfolio, or interview material.
 .
 |-- Script_Concurso_Spacecraft_batch.m
 |-- models/
-|-- src/
+|-- matlab/
 |-- data/
 |-- results/
 |-- docs/assets/
@@ -149,16 +149,15 @@ Key files:
   opening or simulating the Simulink model.
 - `models/MPCcontrolledSpacecraft_plant_gnss_kalman_decisionFinal.slx` - final
   integrated Simulink model.
-- `src/MPC_INOAS.m` - MPC tracking and debris-avoidance controller.
-- `src/gnss_data.m` and `src/load_gnss_sensor_profile.m`
-  - GNSS profile and measurement-noise setup.
-- `src/instrument_decision.m` - GNSS/Kalman mode-selection logic.
+- `matlab/MPC_INOAS.m` - MPC tracking and debris-avoidance controller.
+- `matlab/prepare_gnss_sensor_workspace.m` and
+  `matlab/load_gnss_sensor_profile.m` - GNSS profile and measurement-noise setup.
+- `matlab/instrument_decision.m` - GNSS/Kalman mode-selection logic.
 - `data/` - active telemetry and precomputed MATLAB data used by the simulation.
 - `results/final-validation/` - final validation plots and text summary.
-- `results/duty-cycle/` - duty-cycle diagnostic reports.
 - `docs/assets/` - architecture figure, poster preview, and final poster PDF.
 
-The main dataset is resolved through `src/inoas_data_file.m`, so scripts and
+The main dataset is resolved through `matlab/inoas_data_file.m`, so scripts and
 Simulink callbacks can refer to the GNSS `.dat` file by name while the file remains
 organized under `data/`.
 

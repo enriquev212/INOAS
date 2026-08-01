@@ -12,8 +12,8 @@ if isfile(filename)
     return;
 end
 
-srcDir = fileparts(mfilename("fullpath"));
-repoRoot = fileparts(srcDir);
+functionDir = fileparts(mfilename("fullpath"));
+repoRoot = fileparts(functionDir);
 candidate = fullfile(repoRoot, "data", filename);
 
 if isfile(candidate)

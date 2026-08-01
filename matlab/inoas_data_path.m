@@ -5,8 +5,8 @@ if nargin < 1 || strlength(string(filename)) == 0
     error("inoas_data_path:missingFilename", "A data filename is required.");
 end
 
-srcDir = fileparts(mfilename("fullpath"));
-repoRoot = fileparts(srcDir);
+functionDir = fileparts(mfilename("fullpath"));
+repoRoot = fileparts(functionDir);
 dataDir = fullfile(repoRoot, "data");
 
 if ~isfolder(dataDir)

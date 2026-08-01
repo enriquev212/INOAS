@@ -36,7 +36,7 @@ y_real = x_real_data(:,2);
 z_real = x_real_data(:,3);
 
 %% Control MPC
-u_log = codex_get_logsout_signal(out.logsout, {"u_MPC", "u_discret"});
+u_log = get_logsout_signal(out.logsout, {"u_MPC", "u_discret"});
 t_u = u_log.Time;
 u_MPC = squeeze(u_log.Data);
 
@@ -44,14 +44,14 @@ if size(u_MPC,2) ~= 3 && size(u_MPC,1) == 3
     u_MPC = u_MPC.';
 end
 
-has_dsafe_log = exist("codex_dsafe_log_time", "var") && ...
-                exist("codex_dsafe_log_first", "var") && ...
-                exist("codex_dsafe_log_max", "var");
+has_dsafe_log = exist("mpc_dsafe_log_time", "var") && ...
+                exist("mpc_dsafe_log_first", "var") && ...
+                exist("mpc_dsafe_log_max", "var");
 
 if has_dsafe_log
-    t_dsafe = codex_dsafe_log_time(:);
-    dsafe_first = codex_dsafe_log_first(:);
-    dsafe_horizon_max = codex_dsafe_log_max(:);
+    t_dsafe = mpc_dsafe_log_time(:);
+    dsafe_first = mpc_dsafe_log_first(:);
+    dsafe_horizon_max = mpc_dsafe_log_max(:);
 else
     t_dsafe = [];
     dsafe_first = [];

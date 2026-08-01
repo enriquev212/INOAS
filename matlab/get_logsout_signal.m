@@ -1,4 +1,4 @@
-function values = codex_get_logsout_signal(logsout, candidateNames)
+function values = get_logsout_signal(logsout, candidateNames)
 % Resolve a logged signal by trying several compatible names.
 
     if isstring(candidateNames)

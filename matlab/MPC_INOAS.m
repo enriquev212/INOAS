@@ -270,9 +270,9 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
             dsafe_log_first(end+1,1) = dsafe_profile(1);
             dsafe_log_max(end+1,1) = max(dsafe_profile);
 
-            assignin('base', 'codex_dsafe_log_time', dsafe_log_time);
-            assignin('base', 'codex_dsafe_log_first', dsafe_log_first);
-            assignin('base', 'codex_dsafe_log_max', dsafe_log_max);
+            assignin('base', 'mpc_dsafe_log_time', dsafe_log_time);
+            assignin('base', 'mpc_dsafe_log_first', dsafe_log_first);
+            assignin('base', 'mpc_dsafe_log_max', dsafe_log_max);
         end
 
     end
@@ -396,11 +396,11 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
             dsafe_snapshot_margin_log(:,end+1) = margin_profile;
             dsafe_snapshot_slack_log(:,end+1) = slack_opt(:);
 
-            assignin('base', 'codex_dsafe_snapshot_time', dsafe_snapshot_time_log);
-            assignin('base', 'codex_dsafe_snapshot_profile', dsafe_snapshot_profile_log);
-            assignin('base', 'codex_dsafe_snapshot_distance', dsafe_snapshot_distance_log);
-            assignin('base', 'codex_dsafe_snapshot_margin', dsafe_snapshot_margin_log);
-            assignin('base', 'codex_dsafe_snapshot_slack', dsafe_snapshot_slack_log);
+            assignin('base', 'mpc_dsafe_snapshot_time', dsafe_snapshot_time_log);
+            assignin('base', 'mpc_dsafe_snapshot_profile', dsafe_snapshot_profile_log);
+            assignin('base', 'mpc_dsafe_snapshot_distance', dsafe_snapshot_distance_log);
+            assignin('base', 'mpc_dsafe_snapshot_margin', dsafe_snapshot_margin_log);
+            assignin('base', 'mpc_dsafe_snapshot_slack', dsafe_snapshot_slack_log);
         end
     end
 
@@ -471,7 +471,7 @@ function cfg = getMpcConfig(varargin)
 
     cfg.r_p_full = getBaseWorkspaceVar('r_p_full');
     cfg.Ntimesteps = getBaseWorkspaceVar('Ntimesteps');
-    cfg.quiet = getBaseWorkspaceVar('codexQuiet', false);
+    cfg.quiet = getBaseWorkspaceVar('mpcQuiet', false);
 end
 
 function u_ff_abs = getReferenceFeedforward(cfg, t_sim)

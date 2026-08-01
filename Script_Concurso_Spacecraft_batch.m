@@ -24,13 +24,13 @@ if exist("modelName", "var")
     preservedModelName = string(modelName);
 end
 
-if exist("codexStopTime", "var")
-    preservedStopTime = codexStopTime;
+if exist("simulationStopTime", "var")
+    preservedStopTime = simulationStopTime;
 end
 
-skipBatchClear = ispref("codex", "skipBatchClear") && getpref("codex", "skipBatchClear");
-if ispref("codex", "skipBatchClear")
-    rmpref("codex", "skipBatchClear");
+skipBatchClear = ispref("inoas", "skipBatchClear") && getpref("inoas", "skipBatchClear");
+if ispref("inoas", "skipBatchClear")
+    rmpref("inoas", "skipBatchClear");
 end
 
 if ~skipBatchClear
@@ -43,7 +43,7 @@ if strlength(preservedModelName) > 0
 end
 
 if ~isempty(preservedStopTime)
-    codexStopTime = preservedStopTime;
+    simulationStopTime = preservedStopTime;
 end
 
 clear preservedModelName preservedStopTime
@@ -68,8 +68,8 @@ end_date=juliandate(datetime(2024, 2, 11));
 tf=4000; % Tiempo de simulación nominal seguro [s]
 
 requestedStopTime = [];
-if exist("codexStopTime", "var") && ~isempty(codexStopTime)
-    requestedStopTime = double(codexStopTime);
+if exist("simulationStopTime", "var") && ~isempty(simulationStopTime)
+    requestedStopTime = double(simulationStopTime);
 elseif exist("modelName", "var") && strlength(string(modelName)) > 0
     requestedStopTime = getModelStopTimeSeconds(modelName);
 else
@@ -82,7 +82,7 @@ if ~isempty(requestedStopTime)
     % the relative state grows artificially once the run outlasts the
     % precomputed nominal timeline.
     tf = max(tf, requestedStopTime);
-    codexStopTime = requestedStopTime;
+    simulationStopTime = requestedStopTime;
 end
 
 clear requestedStopTime
@@ -232,14 +232,14 @@ end
 % sensor, not the trajectory that the MPC must follow.
 referenceSourceMode = "nominal";
 referencePropModel = "j2-rk4";
-if ispref("codex", "referenceSourceMode")
-    referenceSourceMode = string(getpref("codex", "referenceSourceMode"));
-    rmpref("codex", "referenceSourceMode");
+if ispref("inoas", "referenceSourceMode")
+    referenceSourceMode = string(getpref("inoas", "referenceSourceMode"));
+    rmpref("inoas", "referenceSourceMode");
 end
 
-if ispref("codex", "referencePropModel")
-    referencePropModel = string(getpref("codex", "referencePropModel"));
-    rmpref("codex", "referencePropModel");
+if ispref("inoas", "referencePropModel")
+    referencePropModel = string(getpref("inoas", "referencePropModel"));
+    rmpref("inoas", "referencePropModel");
 end
 
 % Parametros del MPC/referencia. El muestreo real del sensor GNSS se carga
@@ -250,9 +250,9 @@ h  = 3;      % Sample time de la referencia MPC [s]
 %% MPC tuning
 
 mpcTuneConfig = struct();
-if ispref("codex", "mpcTuneConfig")
-    mpcTuneConfig = getpref("codex", "mpcTuneConfig");
-    rmpref("codex", "mpcTuneConfig");
+if ispref("inoas", "mpcTuneConfig")
+    mpcTuneConfig = getpref("inoas", "mpcTuneConfig");
+    rmpref("inoas", "mpcTuneConfig");
 end
 
 % Cost matrices
@@ -450,7 +450,7 @@ R_gnss_state_matrix = R_gnss_state_matrix + 1e-9 * eye(6);
 ts_pos = gnssProfile.ts_pos_eci;
 ts_vel = gnssProfile.ts_vel_eci;
 ts_Q = gnssProfile.ts_R_state_eci_flat;
-codex_gnss_state_source = "plant_sensor";
+gnss_state_source = "plant_sensor";
 
 fprintf("\nGNSS sensor profile loaded:\n");
 fprintf("mode              = %s\n", string(gnss_sensor_mode));
@@ -594,9 +594,9 @@ delta_Ulast = zeros(m*Np,1);
  
 %% Debris
 debrisConfig = struct();
-if ispref("codex", "debrisConfig")
-    debrisConfig = getpref("codex", "debrisConfig");
-    rmpref("codex", "debrisConfig");
+if ispref("inoas", "debrisConfig")
+    debrisConfig = getpref("inoas", "debrisConfig");
+    rmpref("inoas", "debrisConfig");
 end
 
 t_debris = 800;              % [s]
@@ -700,8 +700,8 @@ fprintf("\n================ CHECK REFERENCIA ================\n");
 fprintf("referenceSourceMode = %s\n", string(referenceSourceMode));
 fprintf("h                   = %.6f s\n", h);
 fprintf("dt referencia       = %.6f s\n", t_ref(2)-t_ref(1));
-if exist("codexStopTime", "var")
-    fprintf("sim StopTime usado  = %.3f s\n", double(codexStopTime));
+if exist("simulationStopTime", "var")
+    fprintf("sim StopTime usado  = %.3f s\n", double(simulationStopTime));
 end
 
 if exist("referenceMeta", "var")
@@ -736,7 +736,7 @@ fprintf("v_ref = [%.6f %.6f %.6f] m/s\n", ...
 fprintf("norm r0 = %.6f km\n", norm(x_ref_hist(1:3,1))/1000);
 fprintf("norm v0 = %.6f km/s\n", norm(x_ref_hist(4:6,1))/1000);
 fprintf("==================================================\n\n");
-clear codex_dsafe_log_time codex_dsafe_log_first codex_dsafe_log_max
+clear mpc_dsafe_log_time mpc_dsafe_log_first mpc_dsafe_log_max
 
 clear MPC_INOAS;
 
