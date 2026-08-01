@@ -5,13 +5,13 @@ type: software
 authors:
   - given-names: Alberto
     family-names: Fernandez-Acero Campoamor
-  - given-names: J.
+  - given-names: Julia
     family-names: Soler i Pla
   - given-names: Enrique
     family-names: Valverde Sacristan
-  - given-names: C.
+  - given-names: Chang
     family-names: Xu
-  - given-names: A.
+  - given-names: Alvaro
     family-names: Yuste Pubill
 contact:
   - given-names: Enrique
@@ -25,13 +25,13 @@ preferred-citation:
   authors:
     - given-names: Alberto
       family-names: Fernandez-Acero Campoamor
-    - given-names: J.
+    - given-names: Julia
       family-names: Soler i Pla
     - given-names: Enrique
       family-names: Valverde Sacristan
-    - given-names: C.
+    - given-names: Chang
       family-names: Xu
-    - given-names: A.
+    - given-names: Alvaro
       family-names: Yuste Pubill
   conference:
     name: "2027 IEEE Aerospace Conference"

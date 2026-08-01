@@ -131,7 +131,7 @@ If you refer to this project or the conference adaptation, please use:
 ```bibtex
 @inproceedings{fernandezacero2027inoas,
   title = {Robust MPC-Based Collision Avoidance Guidance and Safe Duty-Cycled GNSS Navigation for LEO CubeSats},
-  author = {Fernandez-Acero Campoamor, Alberto and Soler i Pla, J. and Valverde Sacristan, Enrique and Xu, C. and Yuste Pubill, A.},
+  author = {Fernandez-Acero Campoamor, Alberto and Soler i Pla, Julia and Valverde Sacristan, Enrique and Xu, Chang and Yuste Pubill, Alvaro},
   booktitle = {Proceedings of the 2027 IEEE Aerospace Conference},
   address = {Big Sky, Montana, USA},
   year = {2027},
@@ -317,8 +317,8 @@ Maintainer/contact: Enrique Valverde Sacristan
 ([enriquev212](https://github.com/enriquev212),
 [enriquevalverdesacristan@gmail.com](mailto:enriquevalverdesacristan@gmail.com)).
 
-- A. Fernandez-Acero Campoamor
-- J. Soler i Pla
-- E. Valverde Sacristan
-- C. Xu
-- A. Yuste Pubill
+- Alberto Fernandez-Acero Campoamor
+- Julia Soler i Pla
+- Enrique Valverde Sacristan
+- Chang Xu
+- Alvaro Yuste Pubill
