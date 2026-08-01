@@ -151,6 +151,7 @@ by each team member in their own CV, portfolio, or interview material.
 ```text
 .
 |-- open_inoas_model.m
+|-- check_inoas_requirements.m
 |-- initialize_inoas_simulation.m
 |-- models/
 |-- matlab/
@@ -162,6 +163,8 @@ Key files:
 
 - `open_inoas_model.m` - recommended entry point for loading the project,
   initializing the workspace, and opening the top-level Simulink model.
+- `check_inoas_requirements.m` - checks the required MATLAB products and
+  ephemeris data files before running the model.
 - `initialize_inoas_simulation.m` - initializes the MATLAB workspace before
   opening or simulating the Simulink model.
 - `models/MPCcontrolledSpacecraft_plant_gnss_kalman_decisionFinal.slx` - final
@@ -185,6 +188,8 @@ Requirements:
 
 - MATLAB with Simulink.
 - Aerospace Blockset for the spacecraft dynamics model.
+- Aerospace Toolbox and the MATLAB add-on `Ephemeris Data for Aerospace
+  Toolbox`, required by the orbital environment blocks.
 - Optimization Toolbox for the MPC optimization routine.
 
 Suggested workflow from the repository root:
@@ -192,7 +197,8 @@ Suggested workflow from the repository root:
 ```matlab
 open_inoas_model
 modelName = "MPCcontrolledSpacecraft_plant_gnss_kalman_decisionFinal";
-simOut = sim(modelName);
+out = sim(modelName);
+run("matlab/plot_MPC_results.m");
 ```
 
 The helper script adds the project folders to the MATLAB path, runs

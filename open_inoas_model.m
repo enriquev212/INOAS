@@ -36,6 +36,8 @@ addpath(projectRoot);
 addpath(genpath(fullfile(projectRoot, 'matlab')));
 addpath(fullfile(projectRoot, 'models'));
 
+check_inoas_requirements();
+
 if bdIsLoaded(modelName)
     close_system(modelName, 0);
 end
