@@ -37,10 +37,7 @@ addpath(genpath(fullfile(projectRoot, 'matlab')));
 addpath(fullfile(projectRoot, 'models'));
 
 if bdIsLoaded(modelName)
-    loadedModelPath = string(get_param(modelName, 'FileName'));
-    if ~strcmpi(loadedModelPath, string(modelPath))
-        close_system(modelName, 0);
-    end
+    close_system(modelName, 0);
 end
 
 run(fullfile(projectRoot, 'initialize_inoas_simulation.m'));
