@@ -131,7 +131,7 @@ If you refer to this project or the conference adaptation, please use:
 ```bibtex
 @inproceedings{fernandezacero2027inoas,
   title = {Robust {MPC}-Based Collision Avoidance Guidance and Safe Duty-Cycled {GNSS} Navigation for {LEO} {CubeSats}},
-  author = {Fernandez-Acero Campoamor, Alberto and Valverde Sacristan, Enrique and Yuste Pubill, Alvaro and Grande Gonzalez, Guzman and Soler i Pla, Julia and Xu, Chang},
+  author = {Fernandez-Acero Campoamor, Alberto and Valverde Sacristán, Enrique and Yuste Pubill, Álvaro and Grande González, Guzmán and Soler i Pla, Julia and Xu, Chang},
   booktitle = {Proceedings of the 2027 IEEE Aerospace Conference},
   address = {Big Sky, Montana, USA},
   year = {2027},
@@ -306,14 +306,14 @@ This repository is maintained as the shared public version of the team project.
 The work was developed by the Supaero Astra Iberian Team (ISAE-SUPAERO students)
 for the Student Aerospace Challenge.
 
-Maintainer/contact: Enrique Valverde Sacristan
+Maintainer/contact: Enrique Valverde Sacristán
 ([enriquev212](https://github.com/enriquev212),
 [enriquevalverdesacristan@gmail.com](mailto:enriquevalverdesacristan@gmail.com)).
 
 - Alberto Fernandez-Acero Campoamor
-- Enrique Valverde Sacristan
-- Alvaro Yuste Pubill
-- Guzman Grande Gonzalez
+- Enrique Valverde Sacristán
+- Álvaro Yuste Pubill
+- Guzmán Grande González
 - Julia Soler i Pla
 - Chang Xu
 

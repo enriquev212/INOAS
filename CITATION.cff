@@ -6,18 +6,18 @@ authors:
   - given-names: Alberto
     family-names: Fernandez-Acero Campoamor
   - given-names: Enrique
-    family-names: Valverde Sacristan
-  - given-names: Alvaro
+    family-names: Valverde Sacristán
+  - given-names: Álvaro
     family-names: Yuste Pubill
-  - given-names: Guzman
-    family-names: Grande Gonzalez
+  - given-names: Guzmán
+    family-names: Grande González
   - given-names: Julia
     family-names: Soler i Pla
   - given-names: Chang
     family-names: Xu
 contact:
   - given-names: Enrique
-    family-names: Valverde Sacristan
+    family-names: Valverde Sacristán
     email: "enriquevalverdesacristan@gmail.com"
 repository-code: "https://github.com/enriquev212/INOAS"
 license: MIT
@@ -28,11 +28,11 @@ preferred-citation:
     - given-names: Alberto
       family-names: Fernandez-Acero Campoamor
     - given-names: Enrique
-      family-names: Valverde Sacristan
-    - given-names: Alvaro
+      family-names: Valverde Sacristán
+    - given-names: Álvaro
       family-names: Yuste Pubill
-    - given-names: Guzman
-      family-names: Grande Gonzalez
+    - given-names: Guzmán
+      family-names: Grande González
     - given-names: Julia
       family-names: Soler i Pla
     - given-names: Chang
