@@ -1,8 +1,8 @@
 # Integrated Navigation and Orbital Awareness System (INOAS)
 
-Portfolio copy of the INOAS navigation and collision-avoidance work developed for the
-Student Aerospace Challenge 2025/2026 by the Supaero Astra Iberian Team, WP7:
-Reusable Propulsion / Maintenance.
+Shared public repository for the INOAS navigation and collision-avoidance project
+developed for the Student Aerospace Challenge 2025/2026 by the Supaero Astra
+Iberian Team, WP7: Reusable Propulsion / Maintenance.
 
 The project studies how a LEO servicing spacecraft can reduce GNSS receiver duty
 cycle while keeping enough navigation accuracy and collision-avoidance authority for
@@ -17,6 +17,14 @@ Project downloads:
 
 - [Final presentation PPTX](https://github.com/enriquev212/INOAS/releases/download/inoas-portfolio-materials-v1/INOAS_full_quality_final_presentation.pptx)
 - [Final poster PDF](docs/assets/final-poster-supaero-astra-iberian-team.pdf)
+
+Project team:
+
+- A. Fernandez-Acero Campoamor
+- J. Soler i Pla
+- E. Valverde Sacristan
+- C. Xu
+- A. Yuste Pubill
 
 <details>
 <summary>Poster preview</summary>
@@ -142,9 +150,10 @@ autonomy layer:
 - Adapting the system toward the ongoing LEO CubeSat conference-paper
   formulation.
 
-This repository is a portfolio-oriented copy of a team project, prepared for public
-CV sharing by the project contributors. Individual roles can be detailed separately
-by each team member in their own CV, portfolio, or interview material.
+This repository is maintained as the shared public version of the team project,
+prepared for CV, portfolio, and interview use by the project contributors.
+Individual roles can be detailed separately by each team member in their own CV,
+portfolio, or interview material.
 
 ## Repository Layout
 
