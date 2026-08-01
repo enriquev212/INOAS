@@ -192,7 +192,7 @@ addpath(genpath(pwd));
 modelName = "MPCcontrolledSpacecraft_plant_gnss_kalman_decisionFinal";
 run("initialize_inoas_simulation.m");
 
-open_system(modelName);
+open_system(modelName, "window");
 simOut = sim(modelName);
 ```
 
