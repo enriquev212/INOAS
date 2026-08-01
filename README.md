@@ -12,20 +12,16 @@ Simulink orbital plant, simulated GNSS measurements, UKF/Kalman state estimation
 instrument decision logic, and an MPC controller with covariance-aware safety
 margins.
 
-![INOAS architecture](docs/assets/inoas-architecture.png)
+![Debris-avoidance playback](docs/assets/debris-avoidance-playback.gif)
 
-Project downloads:
+This qualitative playback comes from the final presentation material and shows
+the coordinated MPC avoidance maneuver, debris-relative geometry, safety radius,
+and control effort for the selected validation setup.
 
-- [Final presentation PPTX](https://github.com/enriquev212/INOAS/releases/download/inoas-project-materials-v1/INOAS_full_quality_final_presentation.pptx)
-- [Final poster PDF](docs/assets/final-poster-supaero-astra-iberian-team.pdf)
+## Project Materials
 
-Project team:
-
-- A. Fernandez-Acero Campoamor
-- J. Soler i Pla
-- E. Valverde Sacristan
-- C. Xu
-- A. Yuste Pubill
+[Final poster PDF](docs/assets/final-poster-supaero-astra-iberian-team.pdf) |
+[Final presentation PPTX](https://github.com/enriquev212/INOAS/releases/download/inoas-project-materials-v1/INOAS_full_quality_final_presentation.pptx)
 
 <details>
 <summary>Poster preview</summary>
@@ -47,27 +43,20 @@ The validation uses Sentinel-6A precise orbit determination telemetry
 nominal tracking, GNSS signal outage, precision degradation, geometric drift, and
 rendezvous.
 
-## Conference Adaptation
+## Core Idea
 
-The project is currently being adapted into a paper for the **2027 IEEE Aerospace
-Conference**, held at the Yellowstone Conference Center in Big Sky, Montana,
-March 6-13, 2027.
+INOAS uses uncertainty-driven GNSS duty cycling. When the covariance remains below
+the selected threshold, GNSS is switched off and the estimator propagates the state
+autonomously. When uncertainty grows, GNSS quality degrades, or NIS indicates filter
+divergence, the system reactivates GNSS and updates the navigation solution.
 
-The abstract was accepted on **July 6, 2026**:
-
-- **Title:** Robust MPC-Based Collision Avoidance Guidance and Safe Duty-Cycled
-  GNSS Navigation for LEO CubeSats
-- **Session:** 12.01 Orbital, Surface and Payload/Instrument Mission Operations
-- **Paper number:** 2437
-- **Full paper deadline:** October 2, 2026
-
-For the conference version, the original Student Aerospace Challenge architecture
-is being adapted toward a LEO CubeSat scenario. This includes scaling the physical
-system and mission assumptions to better match CubeSat-class constraints while
-preserving the main contribution: robust MPC-based collision avoidance coupled with
-safe duty-cycled GNSS/UKF navigation.
+The MPC does not treat navigation and control as independent blocks: the estimated
+covariance is used to increase the debris safety margin, so the controller becomes
+more conservative when navigation confidence is lower.
 
 ## System Architecture
+
+![INOAS architecture](docs/assets/inoas-architecture.png)
 
 The simulation is organized around four functional layers:
 
@@ -94,17 +83,6 @@ The simulation is organized around four functional layers:
    - Plotting and diagnostics for tracking, NIS, innovation, duty cycle, Delta-V,
      and control effort.
 
-## Core Idea
-
-INOAS uses uncertainty-driven GNSS duty cycling. When the covariance remains below
-the selected threshold, GNSS is switched off and the estimator propagates the state
-autonomously. When uncertainty grows, GNSS quality degrades, or NIS indicates filter
-divergence, the system reactivates GNSS and updates the navigation solution.
-
-The MPC does not treat navigation and control as independent blocks: the estimated
-covariance is used to increase the debris safety margin, so the controller becomes
-more conservative when navigation confidence is lower.
-
 ## Main Results
 
 From the final validation campaign:
@@ -123,16 +101,24 @@ These headline metrics are reported from the final project material. Scenario
 plots are not stored as fixed outputs in this repository because the MPC response
 depends on the selected setup, encounter geometry, tuning, and simulation horizon.
 
-<details>
-<summary>Debris-avoidance playback</summary>
+## Conference Adaptation
 
-![Debris-avoidance playback](docs/assets/debris-avoidance-playback.gif)
+The project is currently being adapted into a paper for the **2027 IEEE Aerospace
+Conference**, held at the Yellowstone Conference Center in Big Sky, Montana,
+March 6-13, 2027.
 
-This qualitative playback comes from the final presentation material and shows
-the coordinated MPC avoidance maneuver, debris-relative geometry, safety radius,
-and control effort for the selected validation setup.
+The abstract was accepted on **July 6, 2026**:
 
-</details>
+- **Title:** Robust MPC-Based Collision Avoidance Guidance and Safe Duty-Cycled
+  GNSS Navigation for LEO CubeSats
+- **Session:** 12.01 Orbital, Surface and Payload/Instrument Mission Operations
+- **Paper number:** 2437
+
+For the conference version, the original Student Aerospace Challenge architecture
+is being adapted toward a LEO CubeSat scenario. This includes scaling the physical
+system and mission assumptions to better match CubeSat-class constraints while
+preserving the main contribution: robust MPC-based collision avoidance coupled with
+safe duty-cycled GNSS/UKF navigation.
 
 ## Technical Scope
 
@@ -150,8 +136,6 @@ autonomy layer:
   final project communication material.
 - Adapting the system toward the ongoing LEO CubeSat conference-paper
   formulation.
-
-This repository is maintained as the shared public version of the team project.
 
 ## Repository Layout
 
@@ -195,7 +179,8 @@ organized under `data/`.
 
 Requirements:
 
-- MATLAB with Simulink.
+- Tested with MATLAB R2026a.
+- Simulink.
 - Aerospace Blockset for the spacecraft dynamics model.
 - Aerospace Toolbox and the MATLAB add-on `Ephemeris Data for Aerospace
   Toolbox`, required by the orbital environment blocks.
@@ -208,35 +193,6 @@ Simulation modes:
 | Fast validation | `open_inoas_fast` | 25 | 120 s | Check installation, dependencies, model loading, and logging. |
 | Debris demo | `open_inoas_debris_demo` | 25 | 950 s | Inspect the debris-avoidance maneuver around the configured encounter at 800 s. |
 | Full run | `open_inoas_model` | 125 | 4000 s | Reproduce the final validation setup and plots. |
-
-Generated plots:
-
-- 3D orbital trajectory with reference, truth, estimated state, and debris path.
-- X/Y/Z position tracking against the nominal reference.
-- Cartesian position error and position-error norm.
-- MPC applied control acceleration with actuator limits.
-- Debris distance against the fixed and covariance-inflated safety radii.
-- Dynamic safety radius used by the MPC over the prediction horizon.
-- XY, XZ, and YZ trajectory projections.
-- LVLH radial/tangential/normal tracking error with corresponding control effort.
-- Cumulative maneuver Delta-V and printed MPC performance summary.
-
-Key parameters:
-
-| Parameter | Default value | Notes |
-| --- | ---: | --- |
-| MPC horizon `Np` | 125 | Full validation horizon; reduced to 25 by `open_inoas_fast` and `open_inoas_debris_demo`. |
-| Reference/MPC sample time `h` | 3 s | Reference trajectory and MPC discretization step. |
-| Sensor/estimator sample time `Ts` | 1 s | Main Simulink estimator and decision sample time. |
-| Full-run `StopTime` | 4000 s | Default validation duration. |
-| Debris encounter time `t_debris` | 800 s | Encounter inspected by the debris-demo mode. |
-| Debris relative offset | `[50, 0, 0] m` | Closest-approach offset in the LVLH frame. |
-| Debris relative velocity | `[0, 10, 0] m/s` | Tangential fly-by velocity in the LVLH frame. |
-| Baseline safety radius `dsafe0` | 150 m | Enlarged by the MPC covariance-aware safety margin. |
-| Control limit `u_max` | 0.05 m/s^2 | Per-axis acceleration bound. |
-| Control-rate limit `du_max` | 0.007 m/s^2 per step | Per-axis command increment bound. |
-| GNSS duty-cycle timers | 90 s / 10 s | GNSS-on and Kalman-propagation windows. |
-| GNSS health thresholds | 4 satellites, PDOP 6, HPE/VPE 5 m | Used by the instrument-decision state machine. |
 
 Fast validation workflow from the repository root:
 
@@ -275,6 +231,37 @@ initialization step generates the nominal reference trajectory, debris
 trajectory, GNSS quality profile, Kalman tuning, MPC parameters, and instrument
 decision thresholds required by the model.
 
+## Generated Plots
+
+`matlab/plot_MPC_results.m` generates:
+
+- 3D orbital trajectory with reference, truth, estimated state, and debris path.
+- X/Y/Z position tracking against the nominal reference.
+- Cartesian position error and position-error norm.
+- MPC applied control acceleration with actuator limits.
+- Debris distance against the fixed and covariance-inflated safety radii.
+- Dynamic safety radius used by the MPC over the prediction horizon.
+- XY, XZ, and YZ trajectory projections.
+- LVLH radial/tangential/normal tracking error with corresponding control effort.
+- Cumulative maneuver Delta-V and printed MPC performance summary.
+
+## Key Parameters
+
+| Parameter | Default value | Notes |
+| --- | ---: | --- |
+| MPC horizon `Np` | 125 | Full validation horizon; reduced to 25 by `open_inoas_fast` and `open_inoas_debris_demo`. |
+| Reference/MPC sample time `h` | 3 s | Reference trajectory and MPC discretization step. |
+| Sensor/estimator sample time `Ts` | 1 s | Main Simulink estimator and decision sample time. |
+| Full-run `StopTime` | 4000 s | Default validation duration. |
+| Debris encounter time `t_debris` | 800 s | Encounter inspected by the debris-demo mode. |
+| Debris relative offset | `[50, 0, 0] m` | Closest-approach offset in the LVLH frame. |
+| Debris relative velocity | `[0, 10, 0] m/s` | Tangential fly-by velocity in the LVLH frame. |
+| Baseline safety radius `dsafe0` | 150 m | Enlarged by the MPC covariance-aware safety margin. |
+| Control limit `u_max` | 0.05 m/s^2 | Per-axis acceleration bound. |
+| Control-rate limit `du_max` | 0.007 m/s^2 per step | Per-axis command increment bound. |
+| GNSS duty-cycle timers | 90 s / 10 s | GNSS-on and Kalman-propagation windows. |
+| GNSS health thresholds | 4 satellites, PDOP 6, HPE/VPE 5 m | Used by the instrument-decision state machine. |
+
 ## Technical Notes
 
 - Reference and debris trajectories are expressed in orbital frames and transformed
@@ -293,3 +280,13 @@ decision thresholds required by the model.
 - Extend the MPC to terminal docking operations.
 - Connect the architecture to live multi-debris SSA tracking.
 - Validate the navigation and control chain in hardware-in-the-loop.
+
+## Project Team and Acknowledgments
+
+This repository is maintained as the shared public version of the team project.
+
+- A. Fernandez-Acero Campoamor
+- J. Soler i Pla
+- E. Valverde Sacristan
+- C. Xu
+- A. Yuste Pubill
