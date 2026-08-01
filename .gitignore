@@ -1,5 +1,6 @@
 # MATLAB / Simulink generated files
 slprj/
+slx-inspect-*/
 *.slxc
 *.slxcs
 *.asv

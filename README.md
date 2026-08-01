@@ -136,10 +136,10 @@ by each team member in their own CV, portfolio, or interview material.
 ```text
 .
 |-- Script_Concurso_Spacecraft_batch.m
-|-- MPCcontrolledSpacecraft_plant_gnss_kalman_decisionFinal.slx
-|-- relatedFunctions/
-|-- .mat y .dat/
-|-- PreviousNISresulta/
+|-- models/
+|-- src/
+|-- data/
+|-- results/
 |-- docs/assets/
 ```
 
@@ -147,19 +147,20 @@ Key files:
 
 - `Script_Concurso_Spacecraft_batch.m` - initializes the MATLAB workspace before
   opening or simulating the Simulink model.
-- `MPCcontrolledSpacecraft_plant_gnss_kalman_decisionFinal.slx` - final integrated
-  Simulink model.
-- `relatedFunctions/MPC_INOAS.m` - MPC tracking and debris-avoidance controller.
-- `relatedFunctions/gnss_data.m` and `relatedFunctions/load_gnss_sensor_profile.m`
+- `models/MPCcontrolledSpacecraft_plant_gnss_kalman_decisionFinal.slx` - final
+  integrated Simulink model.
+- `src/MPC_INOAS.m` - MPC tracking and debris-avoidance controller.
+- `src/gnss_data.m` and `src/load_gnss_sensor_profile.m`
   - GNSS profile and measurement-noise setup.
-- `relatedFunctions/instrument_decision.m` - GNSS/Kalman mode-selection logic.
-- `.mat y .dat/` - telemetry and precomputed MATLAB data used by the simulation.
-- `PreviousNISresulta/` - previous result snapshots and validation plots.
-- `docs/assets/` - poster-derived architecture diagram, final poster, and final
-  presentation deck.
+- `src/instrument_decision.m` - GNSS/Kalman mode-selection logic.
+- `data/` - active telemetry and precomputed MATLAB data used by the simulation.
+- `results/final-validation/` - final validation plots and text summary.
+- `results/duty-cycle/` - duty-cycle diagnostic reports.
+- `docs/assets/` - architecture figure, poster preview, and final poster PDF.
 
-Some legacy folder names are intentionally preserved for now because the MATLAB and
-Simulink setup uses the current path layout.
+The main dataset is resolved through `src/inoas_data_file.m`, so scripts and
+Simulink callbacks can refer to the GNSS `.dat` file by name while the file remains
+organized under `data/`.
 
 ## How To Run
 

@@ -8,8 +8,13 @@ rng('shuffle');
 
 %------------------------ ASIGNACIÓN SUBCARPETAS --------------------------
 % Añadir todas las subcarpetas del directorio actual al Path de MATLAB
-carpeta_actual = pwd;
-addpath(genpath(carpeta_actual));
+scriptPath = mfilename("fullpath");
+if strlength(scriptPath) > 0
+    repoRoot = fileparts(scriptPath);
+else
+    repoRoot = pwd;
+end
+addpath(genpath(repoRoot));
 %--------------------------------------------------------------------------
 
 preservedModelName = "";
@@ -29,7 +34,7 @@ if ispref("codex", "skipBatchClear")
 end
 
 if ~skipBatchClear
-    clearvars -except preservedModelName preservedStopTime skipBatchClear;
+    clearvars -except preservedModelName preservedStopTime skipBatchClear repoRoot;
 end
 clc
 
@@ -42,6 +47,10 @@ if ~isempty(preservedStopTime)
 end
 
 clear preservedModelName preservedStopTime
+
+gnssCovarianceFile = inoas_data_file("cov_perturb_POS_s6a_Y24D011_fixed.dat");
+referenceTrajectoryFile = inoas_data_path("referenceTrajectory.mat");
+debrisTrajectoryFile = inoas_data_path("debrisTrajectory.mat");
 a=7714.43*1000; %m
 ecc=0.000095;
 inc=63.04; %deg
@@ -335,8 +344,7 @@ mu = 3.986004418e14;   % [m^3/s^2] Earth gravitational parameter
 %    "AssignToBase", false);
 
 % 1. Definimos la ruta absoluta al archivo UNA SOLA VEZ
-carpeta_datos = fullfile(pwd, '.mat y .dat');
-ruta_archivo  = fullfile(carpeta_datos, 'cov_perturb_POS_s6a_Y24D011_fixed.dat');
+ruta_archivo  = gnssCovarianceFile;
 
 % 2. Llamada a la función del GNSS (usando la variable ruta_archivo)
 [gnssSensor, gnssProfile] = prepare_gnss_sensor_workspace( ...
@@ -349,7 +357,10 @@ ruta_archivo  = fullfile(carpeta_datos, 'cov_perturb_POS_s6a_Y24D011_fixed.dat')
 % events. We replace ts_gnss_pos_noise_eci with the actual epoch-by-epoch
 % position errors from the .dat file so NIS sees the real spikes.
 
-fid  = fopen('cov_perturb_POS_s6a_Y24D011_fixed.dat', 'r');
+fid  = fopen(gnssCovarianceFile, 'r');
+if fid < 0
+    error("Cannot open GNSS covariance file: %s", gnssCovarianceFile);
+end
 raw  = textscan(fid, repmat('%f',1,17), 'HeaderLines', 1);
 fclose(fid);
 
@@ -459,7 +470,7 @@ if strcmpi(referenceSourceMode, "gnss")
     Ntimesteps_raw = Ntimesteps + skip_ref_steps;
 
     [r_p_full_raw, x_ref_hist_raw, t_ref_raw, referenceMeta] = ...
-        get_nominal_trajectory_from_gnss(h, Ntimesteps_raw, "referenceTrajectory.mat");
+        get_nominal_trajectory_from_gnss(h, Ntimesteps_raw, referenceTrajectoryFile);
 
     idx0 = skip_ref_steps + 1;
     x_ref_hist = x_ref_hist_raw(:, idx0:end);
@@ -467,17 +478,17 @@ if strcmpi(referenceSourceMode, "gnss")
     t_ref = t_ref - t_ref(1);
     Ntimesteps = size(x_ref_hist, 2);
     r_p_full = reshape(x_ref_hist, [], 1);
-    save("referenceTrajectory.mat", "r_p_full", "x_ref_hist", "t_ref", "referenceMeta");
+    save(referenceTrajectoryFile, "r_p_full", "x_ref_hist", "t_ref", "referenceMeta");
 
     fprintf("\nReferencia GNSS recortada:\n");
     fprintf("skip_ref_steps = %d\n", skip_ref_steps);
     fprintf("tiempo saltado = %.3f s\n", skip_ref_steps*h);
 else
-    get_nominal_trajectory(h, Ntimesteps, "referenceTrajectory.mat", ...
+    get_nominal_trajectory(h, Ntimesteps, referenceTrajectoryFile, ...
         "startDateJulian", start_date, ...
         "a", a, "ecc", ecc, "incl", inc, "RAAN", RAAN, "argp", w, "nu", theta, "PropModel", referencePropModel);
 
-    load("referenceTrajectory.mat", "r_p_full", "x_ref_hist", "t_ref");
+    load(referenceTrajectoryFile, "r_p_full", "x_ref_hist", "t_ref");
 
     referenceMeta = struct( ...
         "source", referencePropModel, ...
@@ -605,9 +616,9 @@ if isfield(debrisConfig, "rel_vel_debris_lvlh")
 end
 
 get_debris_trajectory(h, x_ref_hist, t_ref, t_debris, ...
-    rel_pos_debris_lvlh, rel_vel_debris_lvlh, "debrisTrajectory.mat");
+    rel_pos_debris_lvlh, rel_vel_debris_lvlh, debrisTrajectoryFile);
 
-load("debrisTrajectory.mat", "x_debris_hist", "r_debris_full", ...
+load(debrisTrajectoryFile, "x_debris_hist", "r_debris_full", ...
     "t_debris_ref", "rk_debris_encounter", "encounter_idx");
 
 rk_debris = rk_debris_encounter;
