@@ -150,6 +150,7 @@ by each team member in their own CV, portfolio, or interview material.
 
 ```text
 .
+|-- open_inoas_model.m
 |-- initialize_inoas_simulation.m
 |-- models/
 |-- matlab/
@@ -159,6 +160,8 @@ by each team member in their own CV, portfolio, or interview material.
 
 Key files:
 
+- `open_inoas_model.m` - recommended entry point for loading the project,
+  initializing the workspace, and opening the top-level Simulink model.
 - `initialize_inoas_simulation.m` - initializes the MATLAB workspace before
   opening or simulating the Simulink model.
 - `models/MPCcontrolledSpacecraft_plant_gnss_kalman_decisionFinal.slx` - final
@@ -187,16 +190,14 @@ Requirements:
 Suggested workflow from the repository root:
 
 ```matlab
-addpath(genpath(pwd));
-
+open_inoas_model
 modelName = "MPCcontrolledSpacecraft_plant_gnss_kalman_decisionFinal";
-run("initialize_inoas_simulation.m");
-
-open_system(modelName, "window");
 simOut = sim(modelName);
 ```
 
-The initialization script generates the nominal reference trajectory, debris
+The helper script adds the project folders to the MATLAB path, runs
+`initialize_inoas_simulation.m`, and opens the top-level Simulink model. The
+initialization step generates the nominal reference trajectory, debris
 trajectory, GNSS quality profile, Kalman tuning, MPC parameters, and instrument
 decision thresholds required by the model.
 

@@ -13,7 +13,9 @@ if strlength(scriptPath) > 0
 else
     repoRoot = pwd;
 end
-addpath(genpath(repoRoot));
+addpath(repoRoot);
+addpath(genpath(fullfile(repoRoot, "matlab")));
+addpath(fullfile(repoRoot, "models"));
 
 preservedModelName = "";
 preservedStopTime = [];
