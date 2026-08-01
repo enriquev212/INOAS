@@ -110,6 +110,10 @@ From the final validation campaign:
 - Debris-avoidance maneuver cost was about **2.5 m/s Delta-V**, with **9.2 m/s**
   cumulative Delta-V over the 4000 s simulation.
 
+These headline metrics are reported from the final project material. Scenario
+plots are not stored as fixed outputs in this repository because the MPC response
+depends on the selected setup, encounter geometry, tuning, and simulation horizon.
+
 ## Technical Scope
 
 The technical work represented in this repository covers the navigation and
@@ -139,7 +143,6 @@ by each team member in their own CV, portfolio, or interview material.
 |-- models/
 |-- matlab/
 |-- data/
-|-- results/
 |-- docs/assets/
 ```
 
@@ -155,7 +158,6 @@ Key files:
 - `matlab/instrument_decision.m` - GNSS/Kalman mode-selection logic.
 - `matlab/README.md` - short description of each MATLAB function.
 - `data/` - active telemetry and precomputed MATLAB data used by the simulation.
-- `results/final-validation/` - final validation plots and text summary.
 - `docs/assets/` - architecture figure, poster preview, and final poster PDF.
 
 The main dataset is resolved through `matlab/inoas_data_file.m`, so scripts and

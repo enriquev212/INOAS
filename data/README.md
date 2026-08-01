@@ -12,4 +12,5 @@ simulation.
 - `debrisTrajectory.mat` - debris encounter trajectory used by the avoidance
   scenario. The main setup script can regenerate this file.
 
-Diagnostic outputs and validation plots are kept under `../results/`.
+Simulation plots should be regenerated from the selected scenario setup rather
+than treated as fixed repository outputs.
