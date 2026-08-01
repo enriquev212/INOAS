@@ -1,0 +1,42 @@
+cff-version: 1.2.0
+message: "If you use this project, please cite the accepted conference-paper adaptation."
+title: "Integrated Navigation and Orbital Awareness System (INOAS)"
+type: software
+authors:
+  - given-names: Alberto
+    family-names: Fernandez-Acero Campoamor
+  - given-names: J.
+    family-names: Soler i Pla
+  - given-names: Enrique
+    family-names: Valverde Sacristan
+  - given-names: C.
+    family-names: Xu
+  - given-names: A.
+    family-names: Yuste Pubill
+contact:
+  - given-names: Enrique
+    family-names: Valverde Sacristan
+    email: "enriquevalverdesacristan@gmail.com"
+repository-code: "https://github.com/enriquev212/INOAS"
+license: MIT
+preferred-citation:
+  type: conference-paper
+  title: "Robust MPC-Based Collision Avoidance Guidance and Safe Duty-Cycled GNSS Navigation for LEO CubeSats"
+  authors:
+    - given-names: Alberto
+      family-names: Fernandez-Acero Campoamor
+    - given-names: J.
+      family-names: Soler i Pla
+    - given-names: Enrique
+      family-names: Valverde Sacristan
+    - given-names: C.
+      family-names: Xu
+    - given-names: A.
+      family-names: Yuste Pubill
+  conference:
+    name: "2027 IEEE Aerospace Conference"
+    location: "Big Sky, Montana, USA"
+    date-start: "2027-03-06"
+    date-end: "2027-03-13"
+  year: 2027
+  notes: "To appear; abstract accepted July 6, 2026, paper no. 2437."

@@ -18,6 +18,10 @@ This qualitative playback comes from the final presentation material and shows
 the coordinated MPC avoidance maneuver, debris-relative geometry, safety radius,
 and control effort for the selected validation setup.
 
+**Headline results:** **82% GNSS energy reduction** | **below 40 m** outage
+position error | **483.2 m** minimum debris separation vs **154 m** robust safety
+radius.
+
 ## Project Materials
 
 [Final poster PDF](docs/assets/final-poster-supaero-astra-iberian-team.pdf) |
@@ -119,6 +123,21 @@ is being adapted toward a LEO CubeSat scenario. This includes scaling the physic
 system and mission assumptions to better match CubeSat-class constraints while
 preserving the main contribution: robust MPC-based collision avoidance coupled with
 safe duty-cycled GNSS/UKF navigation.
+
+## Citation
+
+If you refer to this project or the conference adaptation, please use:
+
+```bibtex
+@inproceedings{fernandezacero2027inoas,
+  title = {Robust MPC-Based Collision Avoidance Guidance and Safe Duty-Cycled GNSS Navigation for LEO CubeSats},
+  author = {Fernandez-Acero Campoamor, Alberto and Soler i Pla, J. and Valverde Sacristan, Enrique and Xu, C. and Yuste Pubill, A.},
+  booktitle = {Proceedings of the 2027 IEEE Aerospace Conference},
+  address = {Big Sky, Montana, USA},
+  year = {2027},
+  note = {To appear; abstract accepted July 6, 2026, paper no. 2437}
+}
+```
 
 ## Technical Scope
 
@@ -274,6 +293,13 @@ decision thresholds required by the model.
 - The estimator continues propagating during GNSS-off intervals, so control remains
   available even when GNSS is inactive or degraded.
 
+## License
+
+The source code is released under the MIT License; see [LICENSE](LICENSE).
+Project communication materials, including the poster, final presentation, and
+derived visual assets under `docs/assets/`, remain project-team materials unless
+separately authorized.
+
 ## Future Work
 
 - Complete the 6-DOF model with attitude-control integration.
@@ -284,6 +310,12 @@ decision thresholds required by the model.
 ## Project Team and Acknowledgments
 
 This repository is maintained as the shared public version of the team project.
+The work was developed within the Student Aerospace Challenge at ISAE-SUPAERO by
+the Supaero Astra Iberian Team.
+
+Maintainer/contact: Enrique Valverde Sacristan
+([enriquev212](https://github.com/enriquev212),
+[enriquevalverdesacristan@gmail.com](mailto:enriquevalverdesacristan@gmail.com)).
 
 - A. Fernandez-Acero Campoamor
 - J. Soler i Pla
