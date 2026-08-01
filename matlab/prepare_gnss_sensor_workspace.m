@@ -2,8 +2,8 @@ function [gnssSensor, profile] = prepare_gnss_sensor_workspace(varargin)
 %PREPARE_GNSS_SENSOR_WORKSPACE Prepare plant-driven GNSS sensor inputs.
 %
 % This creates time-varying GNSS noise and measurement covariance from the
-% real GNSS dataset. The patched Simulink subsystem samples the plant state
-% every gnss_sample_time seconds and adds these noise signals.
+% real GNSS dataset. The Simulink GNSS subsystem samples the plant state every
+% gnss_sample_time seconds and adds these noise signals.
 
     p = inputParser;
     p.addParameter("Filename", "cov_perturb_POS_s6a_Y24D011_fixed.dat");
@@ -100,7 +100,7 @@ function [gnssSensor, profile] = prepare_gnss_sensor_workspace(varargin)
         assignin("base", "ts_gnss_R_state_eci_flat", ts_gnss_R_state_eci_flat);
         assignin("base", "ts_gnss_valid", ts_gnss_valid);
 
-        % Legacy names keep the old replay subsystem executable for A/B tests.
+        % Workspace aliases kept for Simulink blocks that read these names.
         assignin("base", "ts_pos", profile.ts_pos_eci);
         assignin("base", "ts_vel", profile.ts_vel_eci);
         assignin("base", "ts_Q", profile.ts_R_state_eci_flat);

@@ -1,13 +1,12 @@
-%% Ejecución modelo Simulink
-% Vamos a meter en primer lugar los datos de la órbita, así como datos varios 
-% del satélite:
+%% INOAS Simulink initialization
+% Loads all base-workspace variables required by the final Simulink model:
+% scenario definition, GNSS sensor profile, Kalman tuning, nominal reference,
+% debris encounter, and MPC configuration.
 clc; close all;
 
-% Baraja la semilla aleatoria usando el reloj interno de tu ordenador
 rng('shuffle');
 
-%------------------------ ASIGNACIÓN SUBCARPETAS --------------------------
-% Añadir todas las subcarpetas del directorio actual al Path de MATLAB
+%% Repository setup
 scriptPath = mfilename("fullpath");
 if strlength(scriptPath) > 0
     repoRoot = fileparts(scriptPath);
@@ -15,7 +14,6 @@ else
     repoRoot = pwd;
 end
 addpath(genpath(repoRoot));
-%--------------------------------------------------------------------------
 
 preservedModelName = "";
 preservedStopTime = [];
@@ -48,24 +46,26 @@ end
 
 clear preservedModelName preservedStopTime
 
+%% Input files and physical scenario
 gnssCovarianceFile = inoas_data_file("cov_perturb_POS_s6a_Y24D011_fixed.dat");
 referenceTrajectoryFile = inoas_data_path("referenceTrajectory.mat");
 debrisTrajectoryFile = inoas_data_path("debrisTrajectory.mat");
-a=7714.43*1000; %m
-ecc=0.000095;
-inc=63.04; %deg
-RAAN=116.6; %deg
-w=90; %deg
-theta=131; %deg
-F_control=4*220;
-%F_control=0.5*1000; %(0.5-2)*1000N
-m_sat=10*1000; %7-13.7 tons
-initMass=m_sat;
-ref=1.3; %reflectancia
-area=15; %m^2
-start_date=juliandate(datetime(2024, 1, 11));%Fecha
-end_date=juliandate(datetime(2024, 2, 11));
-tf=4000; % Tiempo de simulación nominal seguro [s]
+a = 7714.43 * 1000;  % [m]
+ecc = 0.000095;
+inc = 63.04;         % [deg]
+RAAN = 116.6;        % [deg]
+w = 90;              % [deg]
+theta = 131;         % [deg]
+
+F_control = 4 * 220; % [N]
+m_sat = 10 * 1000;   % [kg]
+initMass = m_sat;
+ref = 1.3;           % reflectivity coefficient
+area = 15;           % [m^2]
+
+start_date = juliandate(datetime(2024, 1, 11));
+end_date = juliandate(datetime(2024, 2, 11));
+tf = 4000;           % [s] nominal simulation duration
 
 requestedStopTime = [];
 if exist("simulationStopTime", "var") && ~isempty(simulationStopTime)
@@ -86,134 +86,41 @@ if ~isempty(requestedStopTime)
 end
 
 clear requestedStopTime
-k_p=5;
-k_d=20;
-%% Filtro de Kalman
-% Vamos ahora a caracterizar el filtro de Kalman. 
-% 
-% Lo que caracteriza al Unscented Kalman Filter son las matrices Q y R. Estas 
-% matrices expresan la confianza que depositamos tanto en el modelo matemático, 
-% como en las medidas. Por tanto, el tuneado correcto del Kalman Filter viene 
-% por ajustar correctamente estas matrices. Con las matrices actuales, hasta los 
-% 2200s el estimador funciona correctamente. Faltaría hacer algunos estudios de 
-% casos cuantificables.
+k_p = 5;
+k_d = 20;
 
-%% INICIALIZACIÓN DEL FILTRO DE KALMAN (UKF) Y SENSORES
-% Este script carga los parámetros en el Workspace necesarios para el modelo
-% de Simulink de la controladora orbital (Challenge Dassault).
+%% Kalman/UKF tuning and decision observable
+Ts = 1;          % [s] master sample time for sensors and estimator
+var_IMU = 0.01; % accelerometer variance used by the Kalman propagation
 
-% =========================================================================
-% 1. PARÁMETROS GLOBALES DE SIMULACIÓN
-% =========================================================================
-% Tiempo de muestreo del Filtro y los Sensores (Reloj Maestro)
-Ts = 1; % [s] El filtro y los sensores operan a 1 Hz (1 vez por segundo)
-
-var_IMU=0.01; %Varianza de las aceleraciones que medirá la IMU del KALMAN
-
-% =========================================================================
-% 2. CARACTERIZACIÓN DE LOS SENSORES (RUIDO FÍSICO)
-% =========================================================================
-% Sensor de Posición (Magnetómetro / Sensor Solar sintético 3D)
-sigma_pos = 100;  %Desviación muy pequeñita  %5000;        % Desviación estándar / Error en metros (+- 5 km)
-var_pos   = sigma_pos^2; % Varianza de la posición (2.5e7 m^2)
-
-% Sensor Altímetro (Radar)
-%sigma_alt = 10;          % Desviación estándar / Error en metros (+- 10 m)
-
-sigma_alt = 1; %Desviación muy pequeñita (irreal)
-var_alt   = sigma_alt^2; % Varianza de la altitud (100 m^2)
-
-
-% =========================================================================
-% 3. MATRICES DE SINTONIZACIÓN DEL FILTRO DE KALMAN (TUNING)
-% =========================================================================
-% Matriz de Covarianza del Ruido de Medida (R) [4x4]
-% Le dice al filtro cuánto debe dudar de las medidas de los sensores.
-% (Construida dinámicamente usando las varianzas definidas arriba)
-
-% Kalman synthetic sensor tuning. Keep these overrides close to R_matrix so
-% the values used by the UKF are explicit and not hidden in comments above.
-sigma_pos = 100;   % [m]
-sigma_alt = 50;    % [m]
+% Synthetic internal sensor measurement covariance.
+sigma_pos = 100; % [m]
+sigma_alt = 50;  % [m]
 var_pos = sigma_pos^2;
 var_alt = sigma_alt^2;
 R_matrix = diag([var_pos, var_pos, var_pos, var_alt]);
 
+% Process-noise covariance for the 6-state orbital estimator.
+Q_matrix = diag([1, 1, 1, 1e-2, 1e-2, 1e-2]);
 
-% Matriz de Covarianza del Ruido de Proceso (Q) [6x6]
-% Le dice al filtro cuánto dudar de la función de propagación (modelo J2).
-% Asumimos alta confianza en posición y un poco menos en velocidad por 
-% las fuerzas no modeladas (drag, radiación solar, armónicos altos).
-% Q_pos = 1e-2, Q_vel = 1e-4
-
-%Q_matrix = diag([10, 10, 10, 1, 1, 1]);%Errores tochos del modelado 
-
-%Q_matrix = diag([1e-6, 1e-6, 1e-6, 1e-8, 1e-8, 1e-8]); %Errores
-%matemáticos casi nulos
-%Q_matrix = diag([1e-2, 1e-2, 1e-2, 1e-4, 1e-4, 1e-4]); %Medio medio
-
-Q_matrix = diag([1, 1, 1, 1e-2, 1e-2, 1e-2]); %Es coherente con var_IMU
-
-% ------------------- Caracterización GNSS en el filtro ------------------
-% Definimos aquí el ruido del GNSS para meterlo en el UNSCENTED KALMAN
-% FILTER como segunda medida
-sigma_pos_gnss = 5;   % Error de posición del GNSS en metros
-sigma_vel_gnss = 0.1; % Error de velocidad del GNSS en m/s
-
+% Nominal GNSS measurement covariance used by the estimator.
+sigma_pos_gnss = 5;   % [m]
+sigma_vel_gnss = 0.1; % [m/s]
 R_gnss = diag([sigma_pos_gnss^2, sigma_pos_gnss^2, sigma_pos_gnss^2, ...
                sigma_vel_gnss^2, sigma_vel_gnss^2, sigma_vel_gnss^2]);
 
-% =========================================================================
-% 4. INCERTIDUMBRE INICIAL DEL FILTRO
-% =========================================================================
-% Matriz de Covarianza Inicial (P0) [6x6]
-% Define lo "perdido" que está el filtro en el segundo 0 respecto a la verdad.
-% Asumimos un error inicial de 1 km en posición y 10 m/s en velocidad.
-% Posición: (1000 m)^2 = 1e6
-% Velocidad: (10 m/s)^2 = 100 
+% Initial Kalman covariance: 1 km position error and 10 m/s velocity error.
 P0_kalman = diag([1e6, 1e6, 1e6, 100, 100, 100]);
-%P0_kalman = zeros(6,6);
 
-% NOTA: Recuerda definir también 'x0_kalman' (tu estado inicial estimado) 
-% en tu código, sumándole el error inicial a tu estado verdadero.
-%mu = 3.986004418e14;
-%h = sqrt(mu * a * (1 - ecc^2));
-%coe=[h,ecc,RAAN,inc,w,theta];
-%[r, v] = sv_from_coe(coe,mu);
-%x0_kalman =[r v] ;
-
-%x_ini=[4.6589;-4.178;-4.512]*10^06;
-%v_ini=[88;5316;-4835];
-%x0_kalman=[x_ini;v_ini];
-%% Observable O
-% Para implementar el _Instrument Decision_, necesitamos normalizar o adimensionalizar 
-% nuestra matriz de covarianza, y convertirla en un escalar que nos permita analizar, 
-% o tener una perspectiva del "error global", para tener un criterio que nos permita 
-% decidir cuando activar o desactivar el GNSS.
-% 
-% Utilizaremos las siguientes expresiones
-% 
-% $$J=\textrm{trace}\left(S^{-1} PS^{-T} \right)$$
-% 
-% donde S será una matriz diagonal con el error maximo tolerable de cada variable. 
-% Esto nos permitirá comparar magnitudes de distinta naturaleza, así como darle 
-% más o menos importancia a cada variable de forma individual. Tomaremos, por 
-% ejemplo, errores $\sigma_x =10m\;\;$y $\sigma_v =1\frac{m}{s}\;$. Esto lo podremos 
-% modificar cuando tengamos las especificaciones y margenes finales.
-
-sigma_x=100;%10;
-sigma_v=50;%1;
-s=[sigma_x,sigma_x,sigma_x,sigma_v,sigma_v,sigma_v];
-S=diag(s);
-
-%% 
-% Escribamos nuestras matrices finales:
-
-S_inv=inv(S);
-S_T_inv=inv(S');
-max_cov=2000;
-%% 
-% La max_cov puede modificarse también.
+% Instrument-decision observable:
+% J = trace(S_inv * P * S_T_inv), with position/velocity scaling in S.
+sigma_x = 100; % [m]
+sigma_v = 50;  % [m/s]
+s = [sigma_x, sigma_x, sigma_x, sigma_v, sigma_v, sigma_v];
+S = diag(s);
+S_inv = inv(S);
+S_T_inv = inv(S');
+max_cov = 2000;
 
 %% *MPC controller initialization*
 % Control system parameters
@@ -324,22 +231,12 @@ deltaUmax = repmat(deltaU_max, Np, 1);
 mu = 3.986004418e14;   % [m^3/s^2] Earth gravitational parameter
 
 %% GNSS sensor profile
-% New default: the dataset characterizes the GNSS sensor. The patched
-% Simulink model samples the real plant state every gnss_sample_time seconds
-% and adds these noise/covariance signals. Legacy ts_pos/ts_vel are still
-% exported only to keep the old replay subsystem executable for comparison.
+% The dataset characterizes GNSS quality, noise, covariance, and availability.
+% The MPC reference is generated separately from orbital elements.
+gnssInputFile = gnssCovarianceFile;
 
-%[gnssSensor, gnssProfile] = prepare_gnss_sensor_workspace( ...
-%    "Filename", "cov_perturb_POS_s6a_Y24D011_fixed.dat", ...
-%    "StartDateJulian", start_date, ...
-%    "AssignToBase", false);
-
-% 1. Definimos la ruta absoluta al archivo UNA SOLA VEZ
-ruta_archivo  = gnssCovarianceFile;
-
-% 2. Llamada a la función del GNSS (usando la variable ruta_archivo)
 [gnssSensor, gnssProfile] = prepare_gnss_sensor_workspace( ...
-    "Filename", ruta_archivo, ...
+    "Filename", gnssInputFile, ...
     "StartDateJulian", start_date, ...
     "AssignToBase", false);
 
@@ -371,7 +268,7 @@ vel_noise_raw = [gradient(npe,dt), gradient(epe,dt), gradient(upe,dt)];
 % Build R diagonal from squared errors (epoch-by-epoch, not averaged)
 % R must be FIXED nominal covariance, NOT the instantaneous squared error.
 % If R and noise come from the same values, NIS = 3 always regardless of
-% spike magnitude — the innovation and covariance cancel each other out.
+% spike magnitude: the innovation and covariance cancel each other out.
 %
 % Use the RMS of quiet nominal periods (t=30s to t=500s, NSV>=13)
 % as the constant expected measurement noise.
@@ -437,7 +334,7 @@ R_gnss_state_matrix = reshape(median(gnssProfile.R_state_eci_flat, 1), 6, 6);
 R_gnss_state_matrix = 0.5 * (R_gnss_state_matrix + R_gnss_state_matrix.');
 R_gnss_state_matrix = R_gnss_state_matrix + 1e-9 * eye(6);
 
-% Legacy replay variables used by the unpatched GNSS subsystem.
+% Compatibility signals consumed by Simulink GNSS blocks.
 ts_pos = gnssProfile.ts_pos_eci;
 ts_vel = gnssProfile.ts_vel_eci;
 ts_Q = gnssProfile.ts_R_state_eci_flat;
@@ -506,7 +403,7 @@ ref_ts_vx = setinterpmethod(ref_ts_vx, 'linear');
 ref_ts_vy = setinterpmethod(ref_ts_vy, 'linear');
 ref_ts_vz = setinterpmethod(ref_ts_vz, 'linear');
 
-%% Calcular elementos orbitales iniciales desde la referencia GNSS
+%% Initial orbital elements used by the plant
 
 [a, ecc, inc, RAAN, w, theta] = rv2coe_from_state(x_ini, v_ini, mu);
 
@@ -548,11 +445,9 @@ B_c = [ 0  0  0;
       0  1  0;
       0  0  1 ];
 
-%% Initialization of variables 
-% Vector estado y control iniciales --> Dimensionales
+%% Initial plant, estimator, and control states
 X0 = x0_ref; U0 = zeros(m,1);
 
-% Inicialización
 x_estim = x0_kalman;
 u = U0;
 

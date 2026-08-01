@@ -3,6 +3,16 @@
 This folder contains the MATLAB functions used by the INOAS Simulink model,
 initialization script, and result post-processing.
 
+## Main Execution Flow
+
+1. `Script_Concurso_Spacecraft_batch.m` prepares the base workspace: input file
+   paths, physical scenario, Kalman/UKF tuning, GNSS sensor profile, nominal
+   reference trajectory, debris encounter, and MPC parameters.
+2. The Simulink model reads those workspace variables and calls the estimator,
+   instrument-decision logic, and MPC controller during simulation.
+3. `plot_MPC_results.m` can be run after simulation to regenerate plots for the
+   selected scenario setup.
+
 ## Model Core
 
 - `MPC_INOAS.m` - Model Predictive Control law for reference tracking and

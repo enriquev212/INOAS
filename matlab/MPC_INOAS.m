@@ -1,5 +1,18 @@
 function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_sim, varargin)
+%MPC_INOAS MPC guidance law for nominal tracking and debris avoidance.
+%
+% Inputs:
+%   x_estim          Estimated absolute spacecraft state in ECI [6x1].
+%   covariance_estim Estimated state covariance, either 6x6, 3x3, or vectorized.
+%   t_sim            Current simulation time [s]. If omitted, an internal clock is
+%                    advanced using the model sample time.
+%
+% Outputs:
+%   u                Commanded absolute acceleration in ECI [3x1].
+%   delta_Ulast      Last optimized delta-control sequence, reused as warm start.
+%   slack_opt        Debris-avoidance slack variables over the prediction horizon.
 
+    %% Configuration and persistent controller state
     cfg = getMpcConfig(varargin{:});
     hasExternalTime = (nargin >= 3) && ~isempty(t_sim);
 
@@ -84,7 +97,7 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
 
     delta_Ulast = delta_Ulast_internal;
 
-    %% Horizon reference
+    %% Build prediction-horizon reference
     r_p = zeros(nx*Np,1);
 
     for i = 1:Np
@@ -97,7 +110,7 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
         r_p(idx_mpc) = r_p_full(idx_ref);
     end
 
-    %% Current reference and LVLH transformation
+    %% Transform current absolute state into the reference LVLH frame
     idx_now = (timeStep-1)*nx + (1:nx);
     x_ref_now_abs = r_p_full(idx_now);
     x_ref_now_abs = x_ref_now_abs(:);
@@ -152,19 +165,19 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
     P_mpc = symmetrizeCovariance(P_mpc);
 
 
-    %% Discretization
+    %% Discretize the linear relative dynamics
     Phi = expm(A_c*h);
     Gamma_hat = integral_gammahat(A_c,h);
     Gamma = Gamma_hat * B_c;
 
-    %% Phi extension
+    %% Build free-response prediction matrices
     Phi_extend = zeros(Np*nx, nx);
     for i = 1:Np
         rows = (i-1)*nx + (1:nx);
         Phi_extend(rows,:) = Phi^i;
     end
 
-    %% Delta-U accumulator
+    %% Build delta-control accumulator
     E = repmat(eye(m), Np, 1);
 
     H = zeros(Np*m, Np*m);
@@ -176,7 +189,7 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
         end
     end
 
-    %% Prediction matrices
+    %% Build forced-response prediction matrices
     Gamma_u = zeros(Np*nx, Np*m);
 
     for i = 1:Np
@@ -197,7 +210,7 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
             t_sim, norm(x_rel_estim), norm(Y0(1:3)));
     end
 
-    %% Initial guess
+    %% Warm-start the optimization
     Ndu = m*Np;
     Nslack = Np;
     
@@ -209,7 +222,7 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
         delta_U0(idx_now_du) = delta_Ulast(idx_next_du);
     end
 
-    %% State constraints selector
+    %% Select constrained state channels
     stateConstraintIdx = cfg.stateConstraintIdx;
     ny = numel(stateConstraintIdx);
 
@@ -229,7 +242,7 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
         Y0_select = [];
     end
 
-    %% Debris constraints
+    %% Linearized debris-avoidance constraints
     LeftHandDebris = zeros(Np, m*Np + Np);
     RightHandDebris = zeros(Np,1);
 
@@ -277,7 +290,7 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
 
     end
 
-    %% Bounds
+    %% Decision-variable bounds
     lb_deltaU = -inf(m*Np,1);
     ub_deltaU =  inf(m*Np,1);
 
@@ -287,7 +300,7 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
     lb = [lb_deltaU; lb_slack];
     ub = [ub_deltaU; ub_slack];
 
-    %% Constraints
+    %% Assemble actuator, state, delta-control, and debris constraints
     Umin_eff = Umin;
     Umax_eff = Umax;
     if cfg.useReferenceFeedforward
@@ -303,7 +316,7 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
         u, E, H, Gamma_extend_select, Y0_select, ...
         LeftHandDebris, RightHandDebris, m, Np, dsafe0);
 
-    %% Decision-variable scaling
+    %% Scale decision variables for numerical conditioning
     du_scale = deltaUmax(:);
     
     if isempty(du_scale)
@@ -328,7 +341,7 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
     A_scaled = A;
     A_scaled(:,1:Ndu) = A(:,1:Ndu) * Ddu;
 
-    %% Optimization
+    %% Solve constrained MPC problem
     fun = @(z) MPCObjectiveScaled(Y0, Gamma_extend, Q, R, z, H, u, S, ...
                                   slackWeight, m, Np, Ddu);
     
@@ -358,7 +371,7 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
         fprintf('t=%.1f | exit=%d | fval=%.3e | viol=%.1e | err=%.3f m\n', ...
             t_sim, exitflag, fval, viol, norm(x_rel_estim(1:3)));
     end
-    %% Apply first control
+    %% Apply first optimized control move
     delta_u = delta_U(1:m);
     
     u_correction_ref = u_current + delta_u;
@@ -424,6 +437,8 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
 end
 
 
+
+%% Configuration helpers
 
 function cfg = getMpcConfig(varargin)
     cfg.nx = getBaseWorkspaceVar('nx', 6);
@@ -504,6 +519,8 @@ function u_ff_abs = getReferenceFeedforward(cfg, t_sim)
     end
 end
 
+
+%% Optimization model
 
 function [J, grad] = MPCObjectiveScaled(Y0, Gamma_extend, Q, R, z, H, u, S, ...
                                         slackWeight, m, Np, Ddu)
@@ -587,17 +604,18 @@ function [A,b] = MPCLinearConstraints(Umin, Umax, Ymin, Ymax, deltaUmax, ...
 
 end
 
-%% Integral correspondiente a la solución particular de la integración de la respuesta del sistema discretizado
+%% Linear-system helpers
+
 function integral_gammahat = integral_gammahat(A, h)
     n = size(A,1);
     M = [A, eye(n);
          zeros(n), zeros(n)];
     EM = expm(M * h);
-    integral_gammahat = EM(1:n, n+1:end);  % Esta es ∫₀ʰ e^{Aτ} dτ
+    integral_gammahat = EM(1:n, n+1:end);
 end
 
 
-%% Read the variables from the workspace declared at init
+%% Base-workspace and data-shape helpers
 
 function value = getBaseWorkspaceVar(varName, defaultValue)
     if evalin('base', sprintf('exist(''%s'', ''var'')', varName))

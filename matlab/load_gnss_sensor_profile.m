@@ -3,7 +3,7 @@ function profile = load_gnss_sensor_profile(filename, startDateJulian, varargin)
 %
 % The .dat trajectory is not used as the spacecraft state measurement here.
 % It is used to estimate sampling, time-varying measurement covariance, DOP,
-% satellite count, and a legacy replay trajectory for comparison.
+% satellite count, and dataset replay signals for comparison.
 
     if nargin < 1 || strlength(string(filename)) == 0
         filename = "cov_perturb_POS_s6a_Y24D011_fixed.dat";
@@ -154,12 +154,12 @@ function profile = load_gnss_sensor_profile(filename, startDateJulian, varargin)
     end
 
     ts_pos_eci = timeseries(pos_eci.', t);
-    ts_pos_eci.Name = "GNSS_LegacyReplay_Position_ECI";
+    ts_pos_eci.Name = "GNSS_DatasetReplay_Position_ECI";
     ts_pos_eci.DataInfo.Units = "m";
     ts_pos_eci = setinterpmethod(ts_pos_eci, "zoh");
 
     ts_vel_eci = timeseries(vel_eci.', t);
-    ts_vel_eci.Name = "GNSS_LegacyReplay_Velocity_ECI";
+    ts_vel_eci.Name = "GNSS_DatasetReplay_Velocity_ECI";
     ts_vel_eci.DataInfo.Units = "m/s";
     ts_vel_eci = setinterpmethod(ts_vel_eci, "zoh");
 
