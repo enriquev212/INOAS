@@ -5,14 +5,16 @@ type: software
 authors:
   - given-names: Alberto
     family-names: Fernandez-Acero Campoamor
-  - given-names: Julia
-    family-names: Soler i Pla
   - given-names: Enrique
     family-names: Valverde Sacristan
-  - given-names: Chang
-    family-names: Xu
   - given-names: Alvaro
     family-names: Yuste Pubill
+  - given-names: Guzman
+    family-names: Grande Gonzalez
+  - given-names: Julia
+    family-names: Soler i Pla
+  - given-names: Chang
+    family-names: Xu
 contact:
   - given-names: Enrique
     family-names: Valverde Sacristan
@@ -25,14 +27,16 @@ preferred-citation:
   authors:
     - given-names: Alberto
       family-names: Fernandez-Acero Campoamor
-    - given-names: Julia
-      family-names: Soler i Pla
     - given-names: Enrique
       family-names: Valverde Sacristan
-    - given-names: Chang
-      family-names: Xu
     - given-names: Alvaro
       family-names: Yuste Pubill
+    - given-names: Guzman
+      family-names: Grande Gonzalez
+    - given-names: Julia
+      family-names: Soler i Pla
+    - given-names: Chang
+      family-names: Xu
   conference:
     name: "2027 IEEE Aerospace Conference"
     location: "Big Sky, Montana, USA"
