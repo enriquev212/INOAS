@@ -15,7 +15,7 @@ margins.
 
 Project downloads:
 
-- [Final presentation PPTX](https://github.com/enriquev212/INOAS/releases/download/inoas-portfolio-materials-v1/INOAS_full_quality_final_presentation.pptx)
+- [Final presentation PPTX](https://github.com/enriquev212/INOAS/releases/download/inoas-project-materials-v1/INOAS_full_quality_final_presentation.pptx)
 - [Final poster PDF](docs/assets/final-poster-supaero-astra-iberian-team.pdf)
 
 Project team:
@@ -151,9 +151,9 @@ autonomy layer:
   formulation.
 
 This repository is maintained as the shared public version of the team project,
-prepared for CV, portfolio, and interview use by the project contributors.
+prepared for CV, project documentation, and interview use by the project contributors.
 Individual roles can be detailed separately by each team member in their own CV,
-portfolio, or interview material.
+project documentation, or interview material.
 
 ## Repository Layout
 
