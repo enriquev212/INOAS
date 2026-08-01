@@ -11,9 +11,9 @@ From the final validation campaign:
   final error after a full GNSS outage scenario.
 - MPC maintained a minimum debris separation of **483.2 m**, above the **154 m**
   robust safety radius.
-- Peak control acceleration stayed below **0.018 m/s^2** across the RTN axes.
-- Debris-avoidance maneuver cost was about **2.5 m/s Delta-V**, with **9.2 m/s**
-  cumulative Delta-V over the 4000 s simulation.
+- Peak control acceleration stayed below **0.018 m/s²** across the RTN axes.
+- Debris-avoidance maneuver cost was about **2.5 m/s ΔV**, with **9.2 m/s**
+  cumulative ΔV over the 4000 s simulation.
 
 These headline metrics are reported from the final project material. Scenario
 plots are not stored as fixed outputs in this repository because the MPC response
@@ -35,7 +35,7 @@ horizon.
 - XY, XZ, and YZ trajectory projections.
 - LVLH radial/tangential/normal tracking error with corresponding control
   effort.
-- Cumulative maneuver Delta-V and printed MPC performance summary.
+- Cumulative maneuver ΔV and printed MPC performance summary.
 
 For reproducible presentation-style assets, see
 [Visualization Workflow](visualization-workflow.md).
@@ -52,7 +52,7 @@ For reproducible presentation-style assets, see
 | Debris relative offset | `[50, 0, 0] m` | Closest-approach offset in the LVLH frame. |
 | Debris relative velocity | `[0, 10, 0] m/s` | Tangential fly-by velocity in the LVLH frame. |
 | Baseline safety radius `dsafe0` | 150 m | Enlarged by the MPC covariance-aware safety margin. |
-| Control limit `u_max` | 0.05 m/s^2 | Per-axis acceleration bound. |
-| Control-rate limit `du_max` | 0.007 m/s^2 per step | Per-axis command increment bound. |
+| Control limit `u_max` | 0.05 m/s² | Per-axis acceleration bound. |
+| Control-rate limit `du_max` | 0.007 m/s² per step | Per-axis command increment bound. |
 | GNSS duty-cycle timers | 90 s / 10 s | GNSS-on and Kalman-propagation windows. |
 | GNSS health thresholds | 4 satellites, PDOP 6, HPE/VPE 5 m | Used by the instrument-decision state machine. |

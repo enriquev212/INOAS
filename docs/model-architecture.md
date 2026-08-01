@@ -52,7 +52,7 @@ The simulation is organized around four functional layers:
    - MPC controller for reference tracking and debris avoidance.
    - Covariance-aware safety margins for robust separation.
    - Plotting and diagnostics for tracking, NIS, innovation, duty cycle,
-     Delta-V, and control effort.
+     ΔV, and control effort.
 
 ## Technical Scope
 
