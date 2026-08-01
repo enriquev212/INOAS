@@ -49,6 +49,7 @@ guidance more conservative when state knowledge is less certain.
 - [Results, generated plots, and key parameters](docs/results.md)
 - [MATLAB-to-Python visualization workflow](docs/visualization-workflow.md)
 - [Conference adaptation and citation](docs/conference.md)
+- [References](docs/references.md)
 - [MATLAB function index](matlab/README.md)
 
 ## Quick Start
