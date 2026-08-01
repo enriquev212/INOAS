@@ -160,7 +160,6 @@ This repository is maintained as the shared public version of the team project.
 |-- open_inoas_model.m
 |-- open_inoas_fast.m
 |-- open_inoas_debris_demo.m
-|-- check_inoas_requirements.m
 |-- initialize_inoas_simulation.m
 |-- models/
 |-- matlab/
@@ -176,8 +175,6 @@ Key files:
   quick installation and workflow checks.
 - `open_inoas_debris_demo.m` - opens the model with the same reduced MPC
   horizon, but runs long enough to inspect the debris-avoidance encounter.
-- `check_inoas_requirements.m` - checks the required MATLAB products and
-  ephemeris data files before running the model.
 - `initialize_inoas_simulation.m` - initializes the MATLAB workspace before
   opening or simulating the Simulink model.
 - `models/inoas_model.slx` - final integrated Simulink model.
