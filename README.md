@@ -167,8 +167,7 @@ Key files:
   ephemeris data files before running the model.
 - `initialize_inoas_simulation.m` - initializes the MATLAB workspace before
   opening or simulating the Simulink model.
-- `models/MPCcontrolledSpacecraft_plant_gnss_kalman_decisionFinal.slx` - final
-  integrated Simulink model.
+- `models/inoas_model.slx` - final integrated Simulink model.
 - `matlab/MPC_INOAS.m` - MPC tracking and debris-avoidance controller.
 - `matlab/prepare_gnss_sensor_workspace.m` and
   `matlab/load_gnss_sensor_profile.m` - GNSS profile and measurement-noise setup.
@@ -196,7 +195,7 @@ Suggested workflow from the repository root:
 
 ```matlab
 open_inoas_model
-modelName = "MPCcontrolledSpacecraft_plant_gnss_kalman_decisionFinal";
+modelName = "inoas_model";
 out = sim(modelName);
 run("matlab/plot_MPC_results.m");
 ```

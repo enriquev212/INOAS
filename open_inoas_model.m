@@ -1,7 +1,7 @@
 %OPEN_INOAS_MODEL Initialize the workspace and open the INOAS Simulink model.
 
 projectRoot = fileparts(mfilename('fullpath'));
-modelName = "MPCcontrolledSpacecraft_plant_gnss_kalman_decisionFinal";
+modelName = "inoas_model";
 modelFile = char(modelName + ".slx");
 modelPath = fullfile(projectRoot, "models", modelName + ".slx");
 
@@ -45,7 +45,7 @@ end
 run(fullfile(projectRoot, 'initialize_inoas_simulation.m'));
 
 projectRoot = fileparts(mfilename('fullpath'));
-modelName = "MPCcontrolledSpacecraft_plant_gnss_kalman_decisionFinal";
+modelName = "inoas_model";
 modelPath = fullfile(projectRoot, "models", modelName + ".slx");
 
 load_system(modelPath);
