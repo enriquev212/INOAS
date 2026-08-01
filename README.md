@@ -1,5 +1,9 @@
 # Integrated Navigation and Orbital Awareness System (INOAS)
 
+<p align="center">
+  <img src="docs/assets/inoas-logo.png" alt="INOAS logo" width="180">
+</p>
+
 Shared public repository for the INOAS navigation and collision-avoidance project
 developed for the
 [Student Aerospace Challenge 2025/2026](https://www.studentaerospacechallenge.eu/index.php/en)
