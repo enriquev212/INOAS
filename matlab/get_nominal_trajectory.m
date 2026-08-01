@@ -5,21 +5,16 @@ function get_nominal_trajectory(Ts, Nsteps, filename, varargin)
     end
 
     p = inputParser;
-    p.addParameter("startDateJulian", juliandate(datetime(2024,1,11)));
     p.addParameter("a", 7714.43 * 1000);
     p.addParameter("ecc", 0.000095);
     p.addParameter("incl", 63.04);
     p.addParameter("RAAN", 116.6);
     p.addParameter("argp", 90);
     p.addParameter("nu", 131);
-    p.addParameter("PropModel", "two-body-keplerian");
     p.parse(varargin{:});
     opts = p.Results;
 
-    t0 = datetime(opts.startDateJulian, "ConvertFrom", "juliandate");
-
     t_ref = (0:Nsteps-1)' * Ts;
-    t_vec = t0 + seconds(t_ref);
 
     a    = opts.a;
     ecc  = opts.ecc;
@@ -28,13 +23,7 @@ function get_nominal_trajectory(Ts, Nsteps, filename, varargin)
     argp = opts.argp;
     nu   = opts.nu;
 
-    propModel = string(opts.PropModel);
-    if strcmpi(propModel, "j2-rk4")
-        [pos, vel] = propagateJ2Reference(t_ref, a, ecc, incl, RAAN, argp, nu);
-    else
-        [pos, vel] = propagateOrbit(t_vec, a, ecc, incl, RAAN, argp, nu, ...
-                                    'PropModel','two-body-keplerian');
-    end
+    [pos, vel] = propagateJ2Reference(t_ref, a, ecc, incl, RAAN, argp, nu);
 
     x_ref_hist = [pos; vel];   % [6 x Nsteps]
 

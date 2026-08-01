@@ -7,8 +7,8 @@ simulation.
   and covariance dataset used by the navigation sensor model.
 - `perturb_POS_s6a_Y24D011.dat` - original GNSS perturbation dataset retained
   for traceability and comparison with earlier processing.
-- `referenceTrajectory.mat` - nominal reference trajectory used by the MPC
-  guidance layer. The main setup script can regenerate this file.
+- `referenceTrajectory.mat` - nominal J2-propagated reference trajectory used by
+  the MPC guidance layer. The main setup script can regenerate this file.
 - `debrisTrajectory.mat` - debris encounter trajectory used by the avoidance
   scenario. The main setup script can regenerate this file.
 

@@ -226,21 +226,12 @@ if exist("modelName", "var")
     targetModelName = string(modelName);
 end
 
-%% Selección de fuente de referencia
+%% Reference trajectory generation setup
 
-% Default for the GNSS sensor architecture: the .dat file characterizes the
-% sensor, not the trajectory that the MPC must follow.
-referenceSourceMode = "nominal";
+% Final setup: the GNSS .dat file characterizes sensor quality and noise,
+% not the trajectory followed by the MPC. The reference is generated from
+% orbital elements and propagated dynamically.
 referencePropModel = "j2-rk4";
-if ispref("inoas", "referenceSourceMode")
-    referenceSourceMode = string(getpref("inoas", "referenceSourceMode"));
-    rmpref("inoas", "referenceSourceMode");
-end
-
-if ispref("inoas", "referencePropModel")
-    referencePropModel = string(getpref("inoas", "referencePropModel"));
-    rmpref("inoas", "referencePropModel");
-end
 
 % Parametros del MPC/referencia. El muestreo real del sensor GNSS se carga
 % desde el fichero .dat en prepare_gnss_sensor_workspace.
@@ -463,41 +454,18 @@ fprintf("covariance source  = %s\n\n", string(gnssMeta.source));
 
 Ntimesteps = ceil(tf/h) + Np + 1;
 
-if strcmpi(referenceSourceMode, "gnss")
-    % Optional legacy mode: use the GNSS .dat as a replayed reference.
-    % This is intentionally not the default for the sensor architecture.
-    skip_ref_steps = 10;       % con h = 3 s, empieza 30 s mas tarde
-    Ntimesteps_raw = Ntimesteps + skip_ref_steps;
+get_nominal_trajectory(h, Ntimesteps, referenceTrajectoryFile, ...
+    "a", a, "ecc", ecc, "incl", inc, "RAAN", RAAN, "argp", w, "nu", theta);
 
-    [r_p_full_raw, x_ref_hist_raw, t_ref_raw, referenceMeta] = ...
-        get_nominal_trajectory_from_gnss(h, Ntimesteps_raw, referenceTrajectoryFile);
+load(referenceTrajectoryFile, "r_p_full", "x_ref_hist", "t_ref");
 
-    idx0 = skip_ref_steps + 1;
-    x_ref_hist = x_ref_hist_raw(:, idx0:end);
-    t_ref = t_ref_raw(idx0:end);
-    t_ref = t_ref - t_ref(1);
-    Ntimesteps = size(x_ref_hist, 2);
-    r_p_full = reshape(x_ref_hist, [], 1);
-    save(referenceTrajectoryFile, "r_p_full", "x_ref_hist", "t_ref", "referenceMeta");
+referenceMeta = struct( ...
+    "source", referencePropModel, ...
+    "frame", "ECI", ...
+    "sample_time", h, ...
+    "t_ref_end", t_ref(end));
 
-    fprintf("\nReferencia GNSS recortada:\n");
-    fprintf("skip_ref_steps = %d\n", skip_ref_steps);
-    fprintf("tiempo saltado = %.3f s\n", skip_ref_steps*h);
-else
-    get_nominal_trajectory(h, Ntimesteps, referenceTrajectoryFile, ...
-        "startDateJulian", start_date, ...
-        "a", a, "ecc", ecc, "incl", inc, "RAAN", RAAN, "argp", w, "nu", theta, "PropModel", referencePropModel);
-
-    load(referenceTrajectoryFile, "r_p_full", "x_ref_hist", "t_ref");
-
-    referenceMeta = struct( ...
-        "source", referencePropModel, ...
-        "frame", "ECI", ...
-        "sample_time", h, ...
-        "t_ref_end", t_ref(end));
-
-    fprintf("\nReferencia nominal dinamica:\n");
-end
+fprintf("\nReferencia nominal dinamica:\n");
 
 % Estado inicial coherente con la referencia
 x_ini = x_ref_hist(1:3,1);
@@ -658,7 +626,7 @@ if isfield(mpcTuneConfig, "logDsafeMpc")
     logDsafeMpc = logical(mpcTuneConfig.logDsafeMpc);
 end
 
-%% CHECK aceleracion de referencia GNSS vs aceleracion orbital natural
+%% CHECK aceleracion de referencia dinamica vs aceleracion orbital natural
 
 r_ref = x_ref_hist(1:3,:);
 v_ref = x_ref_hist(4:6,:);
@@ -683,8 +651,7 @@ end
 a_missing = a_ref - a_2body;
 u_ff_ref_hist = a_missing;
 missing_acc_norm = vecnorm(a_missing,2,1);
-useReferenceFeedforward = ~strcmpi(referenceSourceMode, "nominal") && ...
-    max(missing_acc_norm) <= 0.8*u_max;
+useReferenceFeedforward = false;
 
 fprintf("\nCHECK REFERENCIA DINAMICA\n");
 fprintf("mean |a_ref|     = %.6e m/s2\n", mean(vecnorm(a_ref,2,1)));
@@ -697,7 +664,7 @@ fprintf("feedforward ref  = %d\n\n", useReferenceFeedforward);
 %% Check de la referencia
 
 fprintf("\n================ CHECK REFERENCIA ================\n");
-fprintf("referenceSourceMode = %s\n", string(referenceSourceMode));
+fprintf("referencePropModel  = %s\n", string(referencePropModel));
 fprintf("h                   = %.6f s\n", h);
 fprintf("dt referencia       = %.6f s\n", t_ref(2)-t_ref(1));
 if exist("simulationStopTime", "var")
@@ -724,7 +691,7 @@ if exist("referenceMeta", "var")
         fprintf("t_gnss(end)         = %.3f s\n", referenceMeta.t_gnss_end);
     end
 else
-    warning("No existe referenceMeta. Revisa que get_nominal_trajectory_from_gnss devuelva el cuarto output.");
+    warning("No existe referenceMeta. Revisa la generacion de referencia nominal.");
 end
 
 fprintf("\nPrimer estado referencia ECI:\n");

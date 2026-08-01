@@ -20,10 +20,8 @@ initialization script, and result post-processing.
 
 ## Scenario Generation
 
-- `get_nominal_trajectory.m` - Generates the nominal orbital reference trajectory
-  used by the MPC.
-- `get_nominal_trajectory_from_gnss.m` - Optional legacy generator that derives a
-  replayed reference trajectory from the GNSS dataset.
+- `get_nominal_trajectory.m` - Generates the J2-propagated nominal orbital
+  reference trajectory used by the MPC.
 - `get_debris_trajectory.m` - Builds the debris encounter trajectory relative to
   the reference orbit.
 - `referenceFrameTransform.m` - Computes ECI-to-RTN/LVLH frame transformations

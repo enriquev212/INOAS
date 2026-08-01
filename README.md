@@ -184,7 +184,7 @@ open_system(modelName);
 simOut = sim(modelName);
 ```
 
-The initialization script generates or loads the reference trajectory, debris
+The initialization script generates the nominal reference trajectory, debris
 trajectory, GNSS quality profile, Kalman tuning, MPC parameters, and instrument
 decision thresholds required by the model.
 
