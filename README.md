@@ -151,6 +151,7 @@ by each team member in their own CV, portfolio, or interview material.
 ```text
 .
 |-- open_inoas_model.m
+|-- open_inoas_fast.m
 |-- check_inoas_requirements.m
 |-- initialize_inoas_simulation.m
 |-- models/
@@ -163,6 +164,8 @@ Key files:
 
 - `open_inoas_model.m` - recommended entry point for loading the project,
   initializing the workspace, and opening the top-level Simulink model.
+- `open_inoas_fast.m` - opens the same model with a reduced MPC horizon for
+  quick installation and workflow checks.
 - `check_inoas_requirements.m` - checks the required MATLAB products and
   ephemeris data files before running the model.
 - `initialize_inoas_simulation.m` - initializes the MATLAB workspace before
@@ -191,7 +194,14 @@ Requirements:
   Toolbox`, required by the orbital environment blocks.
 - Optimization Toolbox for the MPC optimization routine.
 
-Suggested workflow from the repository root:
+Fast validation workflow from the repository root:
+
+```matlab
+open_inoas_fast
+out = sim("inoas_model");
+```
+
+Full workflow from the repository root:
 
 ```matlab
 open_inoas_model
@@ -199,6 +209,10 @@ modelName = "inoas_model";
 out = sim(modelName);
 run("matlab/plot_MPC_results.m");
 ```
+
+The full MPC setup uses a prediction horizon of `Np = 125`, so complete
+simulations can take a long time on a laptop. Use `open_inoas_fast` first to
+verify the MATLAB installation, Simulink dependencies, and logging workflow.
 
 The helper script adds the project folders to the MATLAB path, runs
 `initialize_inoas_simulation.m`, and opens the top-level Simulink model. The

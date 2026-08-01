@@ -51,7 +51,8 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
     r_p_full = cfg.r_p_full;
     Ntimesteps = cfg.Ntimesteps;
 
-    persistent u_abs_current delta_Ulast_internal dsafe_log_time dsafe_log_first dsafe_log_max
+    persistent u_abs_current delta_Ulast_internal last_solved_step last_slack_internal
+    persistent dsafe_log_time dsafe_log_first dsafe_log_max
     persistent dsafe_snapshot_time_log dsafe_snapshot_profile_log
     persistent dsafe_snapshot_distance_log dsafe_snapshot_margin_log dsafe_snapshot_slack_log
     persistent t_internal
@@ -77,6 +78,8 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
     if t_sim <= 1e-9
         u_abs_current = cfg.u0(:);
         delta_Ulast_internal = zeros(m*Np,1);
+        last_solved_step = [];
+        last_slack_internal = zeros(Np,1);
         dsafe_log_time = [];
         dsafe_log_first = [];
         dsafe_log_max = [];
@@ -96,6 +99,19 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
     timeStep = max(1, min(timeStep, Ntimesteps));
 
     delta_Ulast = delta_Ulast_internal;
+
+    if ~isempty(last_solved_step) && last_solved_step == timeStep
+        u = u_abs_current;
+        delta_Ulast = padColumnVector(delta_Ulast_internal, cfg.m * cfg.outputNp);
+        slack_opt = padColumnVector(last_slack_internal, cfg.outputNp);
+
+        if ~hasExternalTime
+            t_internal = t_sim + sampleTime;
+        else
+            t_internal = t_sim;
+        end
+        return;
+    end
 
     %% Build prediction-horizon reference
     r_p = zeros(nx*Np,1);
@@ -377,7 +393,7 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
     u_correction_ref = u_current + delta_u;
     u_ref = u_ff_ref + u_correction_ref;
     
-    slack_opt = z_opt(Ndu+1:end);
+    slack_opt_internal = z_opt(Ndu+1:end);
 
     if dsafe0 > 0 && ~isempty(dsafeSnapshotTimes)
         matchIdx = find(abs(dsafeSnapshotTimes - t_sim) <= 1e-9, 1, 'first');
@@ -407,7 +423,7 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
             dsafe_snapshot_profile_log(:,end+1) = dsafe_profile;
             dsafe_snapshot_distance_log(:,end+1) = distance_profile;
             dsafe_snapshot_margin_log(:,end+1) = margin_profile;
-            dsafe_snapshot_slack_log(:,end+1) = slack_opt(:);
+            dsafe_snapshot_slack_log(:,end+1) = slack_opt_internal(:);
 
             assignin('base', 'mpc_dsafe_snapshot_time', dsafe_snapshot_time_log);
             assignin('base', 'mpc_dsafe_snapshot_profile', dsafe_snapshot_profile_log);
@@ -418,7 +434,10 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
     end
 
     delta_Ulast_internal = delta_U;
-    delta_Ulast = delta_Ulast_internal;
+    last_solved_step = timeStep;
+    last_slack_internal = slack_opt_internal;
+    delta_Ulast = padColumnVector(delta_Ulast_internal, cfg.m * cfg.outputNp);
+    slack_opt = padColumnVector(slack_opt_internal, cfg.outputNp);
 
     u_abs = T_ref_to_abs * u_ref;
 
@@ -440,6 +459,17 @@ end
 
 %% Configuration helpers
 
+function padded = padColumnVector(values, targetLength)
+    values = values(:);
+    targetLength = max(0, round(double(targetLength)));
+    padded = zeros(targetLength, 1);
+
+    nCopy = min(numel(values), targetLength);
+    if nCopy > 0
+        padded(1:nCopy) = values(1:nCopy);
+    end
+end
+
 function cfg = getMpcConfig(varargin)
     cfg.nx = getBaseWorkspaceVar('nx', 6);
     cfg.m  = getBaseWorkspaceVar('m', 3);
@@ -447,6 +477,8 @@ function cfg = getMpcConfig(varargin)
     m = cfg.m;
 
     cfg.Np = getBaseWorkspaceVar('Np', 40);
+    cfg.outputNp = getBaseWorkspaceVar('mpcOutputNpMax', cfg.Np);
+    cfg.outputNp = max(cfg.outputNp, cfg.Np);
     cfg.h  = getBaseWorkspaceVar('h', 1);
     cfg.sampleTime = getBaseWorkspaceVar('Ts', cfg.h);
 

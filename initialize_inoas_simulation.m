@@ -189,6 +189,8 @@ if isfield(mpcTuneConfig, "Np")
     Np = mpcTuneConfig.Np;
 end
 
+mpcOutputNpMax = max(Np, 125);
+
 if isfield(mpcTuneConfig, "h")
     h = mpcTuneConfig.h;
 end
