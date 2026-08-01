@@ -1,8 +1,9 @@
 # Integrated Navigation and Orbital Awareness System (INOAS)
 
 Shared public repository for the INOAS navigation and collision-avoidance project
-developed for the Student Aerospace Challenge 2025/2026 by the Supaero Astra
-Iberian Team, WP7: Reusable Propulsion / Maintenance.
+developed for the
+[Student Aerospace Challenge 2025/2026](https://www.studentaerospacechallenge.eu/index.php/en)
+by the Supaero Astra Iberian Team, WP7: Reusable Propulsion / Maintenance.
 
 The project studies how a LEO servicing spacecraft can reduce GNSS receiver duty
 cycle while keeping enough navigation accuracy and collision-avoidance authority for
@@ -150,10 +151,7 @@ autonomy layer:
 - Adapting the system toward the ongoing LEO CubeSat conference-paper
   formulation.
 
-This repository is maintained as the shared public version of the team project,
-prepared for CV, project documentation, and interview use by the project contributors.
-Individual roles can be detailed separately by each team member in their own CV,
-project documentation, or interview material.
+This repository is maintained as the shared public version of the team project.
 
 ## Repository Layout
 
@@ -241,6 +239,9 @@ run("matlab/plot_MPC_results.m");
 The full MPC setup uses a prediction horizon of `Np = 125`, so complete
 simulations can take a long time on a laptop. Use `open_inoas_fast` first to
 verify the MATLAB installation, Simulink dependencies, and logging workflow.
+Use `open_inoas_debris_demo` when you want a shorter run that still reaches the
+configured debris-avoidance encounter. Use `open_inoas_model` for the full
+validation setup.
 
 The helper script adds the project folders to the MATLAB path, runs
 `initialize_inoas_simulation.m`, and opens the top-level Simulink model. The
