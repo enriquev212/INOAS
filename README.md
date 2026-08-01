@@ -13,9 +13,9 @@ margins.
 
 ![INOAS architecture](docs/assets/inoas-architecture.png)
 
-Project material:
+Project downloads:
 
-- [Final presentation deck](docs/assets/inoas-final-presentation.pptx)
+- [Download full-quality final presentation](https://github.com/enriquev212/INOAS/releases/download/inoas-portfolio-materials-v1/INOAS_full_quality_final_presentation.pptx)
 - [Final poster PDF](docs/assets/final-poster-supaero-astra-iberian-team.pdf)
 
 <details>
