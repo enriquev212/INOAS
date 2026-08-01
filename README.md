@@ -153,6 +153,7 @@ Key files:
 - `matlab/prepare_gnss_sensor_workspace.m` and
   `matlab/load_gnss_sensor_profile.m` - GNSS profile and measurement-noise setup.
 - `matlab/instrument_decision.m` - GNSS/Kalman mode-selection logic.
+- `matlab/README.md` - short description of each MATLAB function.
 - `data/` - active telemetry and precomputed MATLAB data used by the simulation.
 - `results/final-validation/` - final validation plots and text summary.
 - `docs/assets/` - architecture figure, poster preview, and final poster PDF.
