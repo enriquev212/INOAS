@@ -13,7 +13,7 @@ authors:
     family-names: Grande González
   - given-names: Julia
     family-names: Soler i Pla
-  - given-names: Chang
+  - given-names: Changxiang
     family-names: Xu
 contact:
   - given-names: Enrique
@@ -35,7 +35,7 @@ preferred-citation:
       family-names: Grande González
     - given-names: Julia
       family-names: Soler i Pla
-    - given-names: Chang
+    - given-names: Changxiang
       family-names: Xu
   conference:
     name: "2027 IEEE Aerospace Conference"
