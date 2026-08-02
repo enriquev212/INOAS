@@ -94,6 +94,22 @@ Key files:
 - `docs/assets/` - architecture figure, poster preview, final poster PDF, and
   selected visual playback assets.
 
+## Public Scope
+
+This repository focuses on the shared public version of the INOAS navigation and
+collision-avoidance work. It includes:
+
+- the final integrated Simulink model and MATLAB helper scripts;
+- curated scenario data and GNSS-quality inputs required by the runnable demos;
+- technical documentation, selected result assets, poster material and the
+  release-hosted final presentation;
+- the MATLAB-to-Python visualization workflow used to regenerate selected PNG
+  and GIF assets.
+
+It does not include private team working history, internal drafts, uncurated raw
+files, third-party reference PDFs without redistribution permission, or future
+paper-review material unless separately authorized by the project team.
+
 ## Conference and Citation
 
 The project is being adapted into a paper for the **2027 IEEE Aerospace

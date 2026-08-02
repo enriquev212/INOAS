@@ -84,22 +84,10 @@ The simulation is organized around four functional layers:
    - Plotting and diagnostics for tracking, NIS, innovation, duty cycle,
      ΔV, and control effort.
 
-## Technical Scope
+## Scope Note
 
-The technical work represented in this repository covers the navigation and
-autonomy layer:
-
-- Developing and integrating the GNSS simulation path using Sentinel-6A quality
-  indicators and time-varying measurement covariance.
-- Building the UKF/Kalman navigation architecture for GNSS-on and GNSS-off
-  operation.
-- Implementing and tuning instrument-decision logic based on GNSS health, NIS,
-  and covariance growth.
-- Connecting navigation confidence to the MPC debris-avoidance safety margin.
-- Producing diagnostic scripts, validation plots, architecture diagrams, and the
-  final project communication material.
-- Adapting the system toward the ongoing LEO CubeSat conference-paper
-  formulation.
+This document describes the model architecture and operating logic. For what the
+public repository includes and excludes, see [Public Scope](../README.md#public-scope).
 
 ## Technical Notes
 
