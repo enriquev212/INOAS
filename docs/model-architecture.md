@@ -25,6 +25,26 @@ The MPC does not treat navigation and control as independent blocks: the
 estimated covariance is used to increase the debris safety margin, so the
 controller becomes more conservative when navigation confidence is lower.
 
+## Key Equations
+
+The MPC safety margin is inflated with the relative-position covariance used in
+the collision-avoidance frame:
+
+```math
+d_{\mathrm{safe},k}
+=
+d_0 + k_\sigma \sqrt{\lambda_{\max}\!\left(P_{r,k}\right)}
+```
+
+The debris-avoidance constraint then enforces robust separation at each
+prediction step:
+
+```math
+\left\|r_{\mathrm{rel},k}\right\|_2
+\ge
+d_{\mathrm{safe},k}
+```
+
 ## System Architecture
 
 ![INOAS architecture](assets/inoas-architecture.png)
