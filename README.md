@@ -45,13 +45,20 @@ guidance more conservative when state knowledge is less certain.
 
 ## Documentation
 
-- [How to run the Simulink model](docs/how-to-run.md)
-- [Model architecture and technical scope](docs/model-architecture.md)
-- [Results, generated plots, and key parameters](docs/results.md)
-- [MATLAB-to-Python visualization workflow](docs/visualization-workflow.md)
-- [Conference adaptation and citation](docs/conference.md)
-- [References](docs/references.md)
-- [MATLAB function index](matlab/README.md)
+- [How to run](docs/how-to-run.md) - Simulink setup, simulation modes,
+  dependencies and common MATLAB notes.
+- [Model architecture](docs/model-architecture.md) - System layers, technical
+  scope and covariance-aware safety equations.
+- [Results](docs/results.md) - Generated plots, key parameters and the
+  debris-avoidance demo.
+- [Visualization workflow](docs/visualization-workflow.md) - MATLAB-to-Python
+  pipeline for regenerating PNG and GIF assets.
+- [Conference adaptation](docs/conference.md) - IEEE Aerospace 2027 adaptation,
+  citation details and paper context.
+- [MATLAB function index](matlab/README.md) - File-by-file guide to the MATLAB
+  scripts and model helpers.
+- [References](docs/references.md) - Bibliography and external technical
+  sources.
 
 ## Quick Start
 
