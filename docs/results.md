@@ -63,7 +63,12 @@ For reproducible presentation-style assets, see
   profiles and covariance-threshold settings.
 - Run Monte Carlo studies to quantify how navigation uncertainty, sensor
   quality and MPC tuning affect robust separation.
-- Continue adapting the formulation toward the IEEE Aerospace 2027 paper,
-  including the CubeSat-oriented scenario and conference-ready result figures.
+- Extend the current translational setup toward a 6-DOF spacecraft model with
+  attitude dynamics, pointing constraints and attitude-control coupling.
+- Prepare hardware-in-the-loop or onboard-prototype tests for the navigation
+  decision logic and MPC timing behaviour.
+- Continue adapting the formulation toward the IEEE Aerospace 2027 paper; see
+  [Conference Adaptation](conference.md) for the CubeSat-oriented scenario and
+  citation context.
 - Improve runtime and logging workflows for the full-horizon MPC simulations,
   while keeping the fast and debris-demo modes useful for quick checks.

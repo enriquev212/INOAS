@@ -16,17 +16,19 @@ rendezvous.
 ## Navigation and Decision Logic
 
 The Simulink model separates the truth plant, simulated GNSS sensor, estimator,
-navigation selector and MPC controller. The selector outputs `lambda`, where
-`lambda = 1` routes the GNSS-updated navigation solution and `lambda = 0` routes
-the Kalman/UKF propagated solution.
+navigation selector and MPC controller. The selector outputs the `lambda` flag,
+where `lambda = 1` routes the GNSS-updated navigation solution and `lambda = 0`
+routes the Kalman/UKF propagated solution.
 
 At each decision step, the instrument-decision block checks GNSS health
 indicators (`n_sat`, `PDOP`, `HPE`, `VPE` and fix validity), a covariance
-observable `J`, and the duty-cycle timers. GNSS can be switched off after its
-scheduled on-window, while Kalman/UKF propagation continues providing the state
-estimate during GNSS-off intervals. GNSS is reactivated when the propagation
-window expires or when the covariance observable exceeds its threshold, provided
-the GNSS solution is healthy again.
+observable `J`, and the duty-cycle timers. Here `J` is a normalized covariance
+trace, implemented as `trace(S_inv * P * S_T_inv)`, used to force a return to
+GNSS when propagation uncertainty grows too much. GNSS can be switched off after
+its scheduled on-window, while Kalman/UKF propagation continues providing the
+state estimate during GNSS-off intervals. GNSS is reactivated when the
+propagation window expires or when the covariance observable exceeds its
+threshold, provided the GNSS solution is healthy again.
 
 Innovation and NIS diagnostics are logged alongside this selector state to
 inspect filter consistency during degraded-GNSS and outage scenarios. The MPC
