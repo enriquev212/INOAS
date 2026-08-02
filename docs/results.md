@@ -56,3 +56,14 @@ For reproducible presentation-style assets, see
 | Control-rate limit `du_max` | 0.007 m/s² per step | Per-axis command increment bound. |
 | GNSS duty-cycle timers | 90 s / 10 s | GNSS-on and Kalman-propagation windows. |
 | GNSS health thresholds | 4 satellites, PDOP 6, HPE/VPE 5 m | Used by the instrument-decision state machine. |
+
+## Future Work
+
+- Extend the validation set with additional debris geometries, GNSS-degradation
+  profiles and covariance-threshold settings.
+- Run Monte Carlo studies to quantify how navigation uncertainty, sensor
+  quality and MPC tuning affect robust separation.
+- Continue adapting the formulation toward the IEEE Aerospace 2027 paper,
+  including the CubeSat-oriented scenario and conference-ready result figures.
+- Improve runtime and logging workflows for the full-horizon MPC simulations,
+  while keeping the fast and debris-demo modes useful for quick checks.

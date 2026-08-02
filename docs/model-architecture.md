@@ -13,17 +13,25 @@ at approximately 1347 km altitude, with representative scenarios for nominal
 tracking, GNSS signal outage, precision degradation, geometric drift, and
 rendezvous.
 
-## Core Idea
+## Navigation and Decision Logic
 
-INOAS uses uncertainty-driven GNSS duty cycling. When the covariance remains
-below the selected threshold, GNSS is switched off and the estimator propagates
-the state autonomously. When uncertainty grows, GNSS quality degrades, or NIS
-indicates filter divergence, the system reactivates GNSS and updates the
-navigation solution.
+The Simulink model separates the truth plant, simulated GNSS sensor, estimator,
+navigation selector and MPC controller. The selector outputs `lambda`, where
+`lambda = 1` routes the GNSS-updated navigation solution and `lambda = 0` routes
+the Kalman/UKF propagated solution.
 
-The MPC does not treat navigation and control as independent blocks: the
-estimated covariance is used to increase the debris safety margin, so the
-controller becomes more conservative when navigation confidence is lower.
+At each decision step, the instrument-decision block checks GNSS health
+indicators (`n_sat`, `PDOP`, `HPE`, `VPE` and fix validity), a covariance
+observable `J`, and the duty-cycle timers. GNSS can be switched off after its
+scheduled on-window, while Kalman/UKF propagation continues providing the state
+estimate during GNSS-off intervals. GNSS is reactivated when the propagation
+window expires or when the covariance observable exceeds its threshold, provided
+the GNSS solution is healthy again.
+
+Innovation and NIS diagnostics are logged alongside this selector state to
+inspect filter consistency during degraded-GNSS and outage scenarios. The MPC
+then receives the selected state and covariance, and uses that covariance to
+inflate the debris-avoidance safety margin.
 
 ## Key Equations
 
@@ -97,8 +105,7 @@ autonomy layer:
   transformed as needed for MPC tracking.
 - The controller operates in a relative RTN/LVLH frame and uses a robust safety
   distance that grows with navigation uncertainty.
-- GNSS duty cycling is represented by a selector variable `lambda`, where
-  `lambda = 1` selects GNSS-updated navigation and `lambda = 0` selects
-  propagated Kalman/UKF navigation.
+- GNSS duty cycling is represented by the selector variable `lambda`, described
+  in the navigation and decision logic section above.
 - The estimator continues propagating during GNSS-off intervals, so control
   remains available even when GNSS is inactive or degraded.
