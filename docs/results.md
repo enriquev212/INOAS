@@ -67,8 +67,8 @@ For reproducible presentation-style assets, see
   attitude dynamics, pointing constraints and attitude-control coupling.
 - Prepare hardware-in-the-loop or onboard-prototype tests for the navigation
   decision logic and MPC timing behaviour.
+- Improve runtime and logging workflows for the full-horizon MPC simulations,
+  while keeping the fast and debris-demo modes useful for quick checks.
 - Continue adapting the formulation toward the IEEE Aerospace 2027 paper; see
   [Conference Adaptation](conference.md) for the CubeSat-oriented scenario and
   citation context.
-- Improve runtime and logging workflows for the full-horizon MPC simulations,
-  while keeping the fast and debris-demo modes useful for quick checks.

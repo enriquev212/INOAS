@@ -23,12 +23,12 @@ routes the Kalman/UKF propagated solution.
 At each decision step, the instrument-decision block checks GNSS health
 indicators (`n_sat`, `PDOP`, `HPE`, `VPE` and fix validity), a covariance
 observable `J`, and the duty-cycle timers. Here `J` is a normalized covariance
-trace, implemented as `trace(S_inv * P * S_T_inv)`, used to force a return to
-GNSS when propagation uncertainty grows too much. GNSS can be switched off after
-its scheduled on-window, while Kalman/UKF propagation continues providing the
-state estimate during GNSS-off intervals. GNSS is reactivated when the
-propagation window expires or when the covariance observable exceeds its
-threshold, provided the GNSS solution is healthy again.
+trace, implemented as `trace(S_inv * P * S_T_inv)` with `S` a fixed scaling
+matrix, used to force a return to GNSS when propagation uncertainty grows too
+much. GNSS can be switched off after its scheduled on-window, while Kalman/UKF
+propagation continues providing the state estimate during GNSS-off intervals.
+GNSS is reactivated when the propagation window expires or when the covariance
+observable exceeds its threshold, provided the GNSS solution is healthy again.
 
 Innovation and NIS diagnostics are logged alongside this selector state to
 inspect filter consistency during degraded-GNSS and outage scenarios. The MPC
