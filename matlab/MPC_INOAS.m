@@ -183,43 +183,19 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
     P_mpc = symmetrizeCovariance(P_mpc);
 
 
-    %% Discretize the linear relative dynamics
-    Phi = expm(A_c*h);
-    Gamma_hat = integral_gammahat(A_c,h);
-    Gamma = Gamma_hat * B_c;
-
-    %% Build free-response prediction matrices
-    Phi_extend = zeros(Np*nx, nx);
-    for i = 1:Np
-        rows = (i-1)*nx + (1:nx);
-        Phi_extend(rows,:) = Phi^i;
-    end
-
-    %% Build delta-control accumulator
-    E = repmat(eye(m), Np, 1);
-
-    H = zeros(Np*m, Np*m);
-    for i = 1:Np
-        for j = 1:i
-            rows = (i-1)*m + (1:m);
-            cols = (j-1)*m + (1:m);
-            H(rows,cols) = eye(m);
-        end
-    end
-
-    %% Build forced-response prediction matrices
-    Gamma_u = zeros(Np*nx, Np*m);
-
-    for i = 1:Np
-        for j = 1:i
-            rows = (i-1)*nx + (1:nx);
-            cols = (j-1)*m  + (1:m);
-
-            Gamma_u(rows,cols) = Phi^(i-j) * Gamma;
-        end
-    end
-
-    Gamma_extend = Gamma_u * H;
+    %% Prediction matrices (cached)
+    % Phi, Gamma, Phi_extend, E, H, Gamma_u and Gamma_extend depend only on the
+    % pair (h, Np) and on the model, never on the state, yet all of them used to
+    % be rebuilt from scratch on every call, with Phi^i recomputed by repeated
+    % exponentiation thousands of times per solve. Build once per configuration.
+    pred = getPredictionMatrices(A_c, B_c, h, Np, nx, m);
+    Phi          = pred.Phi;
+    Gamma        = pred.Gamma;
+    Phi_extend   = pred.Phi_extend;
+    E            = pred.E;
+    H            = pred.H;
+    Gamma_u      = pred.Gamma_u;
+    Gamma_extend = pred.Gamma_extend;
 
     Y0 = Phi_extend*x_rel_estim + Gamma_u*(E*u);
 
@@ -263,9 +239,11 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
     %% Linearized debris-avoidance constraints
     LeftHandDebris = zeros(Np, m*Np + Np);
     RightHandDebris = zeros(Np,1);
+    debrisScale = ones(Np,1);
 
     if dsafe0 > 0
         dsafe_profile = zeros(Np,1);
+        debrisScale = ones(Np,1);   % escala de cada fila, para normalizar el slack
 
         % Process noise for ONE prediction step of length h. Adding a fixed
         % Q_cov once per step made the accumulated uncertainty proportional
@@ -306,6 +284,7 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
             Y0_k = Y0(idx_pos);
 
             scaleDebris = max([norm(d_nom)^2, dsafe_k^2, 1]);
+            debrisScale(i) = scaleDebris;
 
             LeftHandDebris(i,1:m*Np) = (-2*d_nom' * Gamma_k) / scaleDebris;
             LeftHandDebris(i,m*Np+i) = -1 / scaleDebris;
@@ -362,41 +341,74 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
     du_scale(du_scale <= 0) = 0.005;
     
     Ddu = diag(du_scale);
-    
+
+    % The slack column of the debris rows is -1/scaleDebris, so the slack
+    % variable carries units of m^2 and takes values of 1e4 to 1e6 while
+    % delta_U is around 1e-3. Left unscaled the QP spans some nine orders of
+    % magnitude and the interior-point method stalls. Normalising each slack by
+    % its own row factor is an exact change of variables: same optimum, far
+    % better conditioned, and it turns those -1/scaleDebris entries into -1.
+    s_scale = debrisScale(:);
+    s_scale(~isfinite(s_scale) | s_scale <= 0) = 1;
+    Dsl = diag(s_scale);
+
     w0 = Ddu \ delta_U0;
-    
+
     slack0 = zeros(Nslack,1);
     z0 = [w0; slack0];
-    
+
     lb_w = lb_deltaU ./ du_scale;
     ub_w = ub_deltaU ./ du_scale;
-    
-    lb = [lb_w; lb_slack];
-    ub = [ub_w; ub_slack];
-    
+
+    lb = [lb_w; lb_slack ./ s_scale];
+    ub = [ub_w; ub_slack ./ s_scale];
+
     A_scaled = A;
     A_scaled(:,1:Ndu) = A(:,1:Ndu) * Ddu;
+    A_scaled(:,Ndu+1:end) = A(:,Ndu+1:end) * Dsl;
 
     %% Solve constrained MPC problem
-    fun = @(z) MPCObjectiveScaled(Y0, Gamma_extend, Q, R, z, H, u, S, ...
-                                  slackWeight, m, Np, Ddu);
-    
-    options = optimoptions('fmincon', ...
+    % This is a strictly convex QP: quadratic objective with a constant, known
+    % Hessian, linear inequalities and simple bounds. It used to be handed to
+    % fmincon with the 'sqp' algorithm, a general nonlinear solver. The measured
+    % worst case was 80 s for a 400-variable instance and is unbounded in
+    % general, which is not acceptable for a controller that must return within
+    % h seconds.
+    %
+    %   J(z) = 0.5*z'*Hqp*z + fqp'*z + const,   z = [w; slack],  delta_U = Ddu*w
+    %
+    % The constant term is dropped: it does not move the argmin, but it does
+    % shift fval with respect to the old objective value.
+    U0 = repmat(u, Np, 1);
+    Hdu = Gamma_extend.'*Q*Gamma_extend + S + H.'*R*H;
+    fdu = Gamma_extend.'*(Q*Y0) + H.'*(R*U0);
+
+    Hqp = blkdiag(Ddu.'*Hdu*Ddu, 2*slackWeight*(Dsl.'*Dsl));
+    Hqp = 0.5*(Hqp + Hqp.');
+    fqp = [Ddu.'*fdu; zeros(Nslack,1)];
+
+    options = optimoptions('quadprog', ...
         'Display','none', ...
-        'Algorithm','sqp', ...
-        'SpecifyObjectiveGradient',true, ...
-        'MaxIterations',50, ...
-        'MaxFunctionEvaluations',2000, ...
-        'ConstraintTolerance',1e-5, ...
-        'OptimalityTolerance',1e-2, ...
-        'StepTolerance',1e-5);
-    
+        'Algorithm', char(cfg.qpAlgorithm), ...
+        'OptimalityTolerance',1e-8, ...
+        'ConstraintTolerance',1e-8, ...
+        'MaxIterations',2000);
+
     solveTimer = tic;
-    [z_opt,fval,exitflag,output] = fmincon(fun,z0,A_scaled,b,[],[],lb,ub,[],options);
+    [z_opt,fval,exitflag,output] = quadprog(Hqp,fqp,A_scaled,b,[],[],lb,ub,z0,options);
     solveTime = toc(solveTimer);
+
+    if isempty(z_opt)
+        % Hold the warm start rather than propagate an empty solution.
+        warning('INOAS:qpFailed', ...
+            'quadprog returned no solution at t = %.3f s (exitflag %d). Holding.', ...
+            t_sim, exitflag);
+        z_opt = z0;
+    end
     
     w_opt = z_opt(1:Ndu);
     delta_U = Ddu*w_opt;
+    z_opt(Ndu+1:end) = Dsl * z_opt(Ndu+1:end);   % slack de vuelta a m^2
 
     z_unscaled = [delta_U; z_opt(Ndu+1:end)];
     
@@ -488,7 +500,11 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
     diag_log.solve_time(end+1,1)     = solveTime;
     diag_log.exitflag(end+1,1)       = exitflag;
     diag_log.iterations(end+1,1)     = output.iterations;
-    diag_log.funcCount(end+1,1)      = output.funcCount;
+    if isfield(output, 'funcCount')
+        diag_log.funcCount(end+1,1)  = output.funcCount;
+    else
+        diag_log.funcCount(end+1,1)  = NaN;   % quadprog does not report it
+    end
     diag_log.violation(end+1,1)      = viol;
     diag_log.fval(end+1,1)           = fval;
     diag_log.u_norm(end+1,1)         = norm(u_abs);
@@ -577,6 +593,10 @@ function cfg = getMpcConfig(varargin)
     cfg.Q_c = resolveCovarianceMatrix({'Q_c_mpc'}, n, zeros(n));
     cfg.QcReferenceDt = getBaseWorkspaceVar('Q_cov_reference_dt', 1);
     cfg.vanLoanQ = getBaseWorkspaceVar('mpcVanLoanQ', true);
+    % 'active-set' aprovecha el warm start y converge en las instancias duras
+    % (el cruce del debris, donde la restriccion se activa y el problema se
+    % vuelve degenerado); 'interior-point-convex' sale ahi con exitflag -8.
+    cfg.qpAlgorithm = string(getBaseWorkspaceVar('mpcQpAlgorithm', "active-set"));
     cfg.uLimitMode = string(getBaseWorkspaceVar('uLimitMode', "per_axis"));
     cfg.covarianceFrame = getBaseWorkspaceVar('covarianceFrameMpc', 'eci');
     cfg.covarianceMetric = getBaseWorkspaceVar('covarianceMetricMpc', 'sqrt_trace_pos');
@@ -709,6 +729,58 @@ function [A,b] = MPCLinearConstraints(Umin, Umax, Ymin, Ymax, deltaUmax, ...
 end
 
 %% Linear-system helpers
+
+function pred = getPredictionMatrices(A_c, B_c, h, Np, nx, m)
+%GETPREDICTIONMATRICES Prediction matrices for the pair (h, Np), cached.
+%   Rebuilt only when the configuration actually changes. Powers of Phi are
+%   formed incrementally and Gamma_u exploits its block-Toeplitz structure:
+%   block (i,j) depends only on i-j, so each distinct block is formed once.
+    persistent cacheKey cached
+
+    key = [nx, m, Np, h, norm(A_c(:), 1), norm(B_c(:), 1)];
+
+    if ~isempty(cacheKey) && isequal(size(cacheKey), size(key)) && ...
+            all(abs(cacheKey - key) <= 1e-12 * max(1, abs(key)))
+        pred = cached;
+        return;
+    end
+
+    Phi = expm(A_c*h);
+    Gamma = integral_gammahat(A_c, h) * B_c;
+
+    Phi_pow = cell(Np, 1);
+    Phi_pow{1} = Phi;
+    for i = 2:Np
+        Phi_pow{i} = Phi_pow{i-1} * Phi;
+    end
+
+    Phi_extend = zeros(Np*nx, nx);
+    for i = 1:Np
+        Phi_extend((i-1)*nx + (1:nx), :) = Phi_pow{i};
+    end
+
+    E = repmat(eye(m), Np, 1);
+    H = kron(tril(ones(Np)), eye(m));
+
+    blocks = cell(Np, 1);
+    blocks{1} = Gamma;
+    for d = 2:Np
+        blocks{d} = Phi_pow{d-1} * Gamma;
+    end
+
+    Gamma_u = zeros(Np*nx, Np*m);
+    for i = 1:Np
+        rows = (i-1)*nx + (1:nx);
+        for j = 1:i
+            Gamma_u(rows, (j-1)*m + (1:m)) = blocks{i-j+1};
+        end
+    end
+
+    cached = struct('Phi', Phi, 'Gamma', Gamma, 'Phi_extend', Phi_extend, ...
+        'E', E, 'H', H, 'Gamma_u', Gamma_u, 'Gamma_extend', Gamma_u * H);
+    cacheKey = key;
+    pred = cached;
+end
 
 function Q_d = vanLoanProcessNoise(A, Q_c, h)
 %VANLOANPROCESSNOISE Discrete process noise over a step of length h.
