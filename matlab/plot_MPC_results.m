@@ -476,7 +476,10 @@ dV_total = trapz(t_real, vecnorm(u_vec,2,2));
 uR_max = max(abs(uR_real));
 uT_max = max(abs(uT_real));
 uN_max = max(abs(uN_real));
-u_max = max(vecnorm(u_vec,2,2));
+% NOTE: this is the peak COMMANDED norm, not the actuator limit. It used to
+% be assigned to u_max, which overwrote the real limit (0.05 m/s^2) and made
+% every later saturation check compare the signal against its own maximum.
+u_peak_norm = max(vecnorm(u_vec,2,2));
 
 fprintf('\n========== MPC PERFORMANCE ==========\n');
 
@@ -516,8 +519,24 @@ fprintf("Maximum |u_x|: %.6f m/s^2\n", max(abs(u_MPC(:,1))));
 fprintf("Maximum |u_y|: %.6f m/s^2\n", max(abs(u_MPC(:,2))));
 fprintf("Maximum |u_z|: %.6f m/s^2\n", max(abs(u_MPC(:,3))));
 
+fprintf("Peak commanded norm |u|:     %.6f m/s^2\n", u_peak_norm);
 if exist("u_max","var")
-    fprintf("u_max limit: %.6f m/s^2\n", u_max);
+    fprintf("Actuator limit u_max:        %.6f m/s^2 (per-axis)\n", u_max);
+    fprintf("Norm utilisation:            %.1f %% of u_max\n", ...
+        100*u_peak_norm/u_max);
+    fprintf("Per-axis utilisation:        %.1f / %.1f / %.1f %%\n", ...
+        100*max(abs(u_MPC(:,1)))/u_max, ...
+        100*max(abs(u_MPC(:,2)))/u_max, ...
+        100*max(abs(u_MPC(:,3)))/u_max);
+    nAxisSat = sum(any(abs(u_MPC) >= 0.999*u_max, 2));
+    fprintf("Steps at the per-axis bound: %d / %d (%.2f %%)\n", ...
+        nAxisSat, size(u_MPC,1), 100*nAxisSat/size(u_MPC,1));
+    if u_peak_norm > u_max
+        warning("INOAS:normExceedsLimit", ...
+            ["Commanded norm exceeds u_max by %.1f %%. The QP bounds each " + ...
+             "axis in LVLH and the final clamp bounds each axis in ECI; " + ...
+             "neither bounds the magnitude."], 100*(u_peak_norm/u_max - 1));
+    end
 end
 
 fprintf("Final position error: %.6f m\n", e_norm(end));

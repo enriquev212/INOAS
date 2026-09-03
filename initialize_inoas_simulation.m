@@ -4,7 +4,21 @@
 % debris encounter, and MPC configuration.
 clc; close all;
 
-rng('shuffle');
+% Reproducibility: a fixed seed by default, so that parameter sweeps are
+% comparable between runs. Any observed difference between two configurations
+% must be attributable to the parameters, not to the draw.
+%   setpref("inoas", "rngSeed", 1234)      -> a different fixed seed
+%   setpref("inoas", "rngSeed", "shuffle") -> previous non-reproducible behaviour
+inoasSeed = 42;
+if ispref("inoas", "rngSeed")
+    inoasSeed = getpref("inoas", "rngSeed");
+end
+if (ischar(inoasSeed) || isstring(inoasSeed)) && strcmpi(string(inoasSeed), "shuffle")
+    rng("shuffle");
+else
+    rng(inoasSeed, "twister");
+end
+clear inoasSeed
 
 %% Repository setup
 scriptPath = mfilename("fullpath");

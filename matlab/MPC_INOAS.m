@@ -53,6 +53,7 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
 
     persistent u_abs_current delta_Ulast_internal last_solved_step last_slack_internal
     persistent dsafe_log_time dsafe_log_first dsafe_log_max
+    persistent diag_log
     persistent dsafe_snapshot_time_log dsafe_snapshot_profile_log
     persistent dsafe_snapshot_distance_log dsafe_snapshot_margin_log dsafe_snapshot_slack_log
     persistent t_internal
@@ -83,6 +84,7 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
         dsafe_log_time = [];
         dsafe_log_first = [];
         dsafe_log_max = [];
+        diag_log = emptyDiagLog();
         dsafe_snapshot_time_log = [];
         dsafe_snapshot_profile_log = [];
         dsafe_snapshot_distance_log = [];
@@ -371,7 +373,9 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
         'OptimalityTolerance',1e-2, ...
         'StepTolerance',1e-5);
     
+    solveTimer = tic;
     [z_opt,fval,exitflag,output] = fmincon(fun,z0,A_scaled,b,[],[],lb,ub,[],options);
+    solveTime = toc(solveTimer);
     
     w_opt = z_opt(1:Ndu);
     delta_U = Ddu*w_opt;
@@ -441,8 +445,32 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
 
     u_abs = T_ref_to_abs * u_ref;
 
+    % The QP bounds each component in the LVLH/reference frame, but this clamp
+    % bounds each component in ECI. Neither bounds the norm, so the commanded
+    % magnitude can exceed u_max by up to sqrt(3) without any component
+    % saturating. Keep the pre-clamp value so that the bite is measurable.
+    u_abs_unclamped = u_abs;
     u_abs_max = cfg.Umax(1);
     u_abs = max(min(u_abs, u_abs_max), -u_abs_max);
+
+    %% Solver and actuator diagnostics
+    if isempty(diag_log)
+        diag_log = emptyDiagLog();
+    end
+    diag_log.t(end+1,1)              = t_sim;
+    diag_log.solve_time(end+1,1)     = solveTime;
+    diag_log.exitflag(end+1,1)       = exitflag;
+    diag_log.iterations(end+1,1)     = output.iterations;
+    diag_log.funcCount(end+1,1)      = output.funcCount;
+    diag_log.violation(end+1,1)      = viol;
+    diag_log.fval(end+1,1)           = fval;
+    diag_log.u_norm(end+1,1)         = norm(u_abs);
+    diag_log.u_norm_unclamped(end+1,1) = norm(u_abs_unclamped);
+    diag_log.clamp_bite(end+1,1)     = max(max(abs(u_abs_unclamped)) - u_abs_max, 0);
+    diag_log.u_ref_max(end+1,1)      = max(abs(u_ref));
+    diag_log.du_max_active(end+1,1)  = max(abs(delta_u)) >= 0.999*cfg.deltaUmax(1);
+    diag_log.slack_max(end+1,1)      = max(slack_opt_internal);
+    assignin('base', 'mpc_diag_log', diag_log);
 
     u_abs_current = u_abs;
     u = u_abs;
@@ -455,6 +483,19 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
 
 end
 
+
+
+%% Diagnostics helpers
+
+function log = emptyDiagLog()
+%EMPTYDIAGLOG Empty solver/actuator diagnostics record.
+    z = zeros(0,1);
+    log = struct( ...
+        't', z, 'solve_time', z, 'exitflag', z, 'iterations', z, ...
+        'funcCount', z, 'violation', z, 'fval', z, 'u_norm', z, ...
+        'u_norm_unclamped', z, 'clamp_bite', z, 'u_ref_max', z, ...
+        'du_max_active', z, 'slack_max', z);
+end
 
 
 %% Configuration helpers
