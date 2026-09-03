@@ -237,8 +237,22 @@ Ymax = repmat(Y_max, Np, 1);
 
 % Constraints on deltaU
 
-du_max = 0.007;              % [m/s^2] per step
+% Control-rate limit. This used to be a per-STEP bound, which made the
+% physical slew rate du/dt equal to du_max/h: changing h silently changed
+% the actuator. Going from h = 3 s to h = 10 s stretched the ramp from 0 to
+% u_max from 24 s to 80 s, longer than the whole encounter window, so a
+% sweep over h was really a sweep over actuator agility. Define the
+% physical rate and derive the per-step bound from it. The value keeps the
+% published baseline exactly: 0.007/3 * 3 = 0.007 at h = 3 s.
+du_rate_max = 0.007/3;       % [m/s^3] slew rate of the commanded acceleration
 
+if isfield(mpcTuneConfig, "du_rate_max")
+    du_rate_max = mpcTuneConfig.du_rate_max;
+end
+
+du_max = du_rate_max * h;    % [m/s^2] per step, derived from the physical rate
+
+% An explicit du_max override still wins, for replicating older runs.
 if isfield(mpcTuneConfig, "du_max")
     du_max = mpcTuneConfig.du_max;
 end
@@ -516,10 +530,33 @@ if isfield(mpcTuneConfig, "safetyCost")
     safetyCost = mpcTuneConfig.safetyCost;
 end
 
+%% Actuator limit semantics
+% u_max bounds each AXIS. The QP applies that bound per component in the
+% LVLH/reference frame and the final clamp applies it per component in ECI,
+% so nothing bounds the MAGNITUDE of the commanded acceleration: it can
+% reach u_max*sqrt(3) = 0.0866 m/s^2 without a single component saturating.
+% "norm" bounds the magnitude instead, which is what a fixed thruster set
+% actually imposes. Default stays "per_axis" so that previously published
+% results reproduce; switch deliberately, it changes the numbers.
+uLimitMode = "per_axis";
+
+if isfield(mpcTuneConfig, "uLimitMode")
+    uLimitMode = string(mpcTuneConfig.uLimitMode);
+end
+
 %% MPC covariance inflation for debris avoidance
 % This extends the keep-out radius with the propagated navigation covariance
 % used by the MPC over the prediction horizon.
-Q_cov_mpc = Q_matrix;
+%
+% Q_c_mpc is a CONTINUOUS power spectral density, rediscretized over the
+% actual MPC step inside MPC_INOAS. Q_matrix is a DISCRETE covariance
+% calibrated at the estimator sample time Ts, so the equivalent PSD is
+% Q_matrix/Ts. Passing the discrete matrix straight through, as the code
+% used to, injected one full dose per prediction step regardless of the
+% step length, making the inflated keep-out radius a function of Np rather
+% than of elapsed time.
+Q_c_mpc = Q_matrix / Ts;
+Q_cov_mpc = Q_matrix;   % legacy discrete form, kept for mpcVanLoanQ = false
 covarianceFrameMpc = "eci";
 covarianceMetricMpc = "sqrt_trace_pos";
 logDsafeMpc = true;

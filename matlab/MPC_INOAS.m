@@ -266,9 +266,27 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
 
     if dsafe0 > 0
         dsafe_profile = zeros(Np,1);
+
+        % Process noise for ONE prediction step of length h. Adding a fixed
+        % Q_cov once per step made the accumulated uncertainty proportional
+        % to the NUMBER of steps instead of to the elapsed time, so two
+        % configurations covering the same 500 s horizon disagreed by 12.5%
+        % on the inflated radius. Discretizing a continuous PSD over h makes
+        % the keep-out zone a property of the physics rather than of the mesh.
+        if cfg.vanLoanQ
+            Q_c_eff = cfg.Q_c;
+            if ~any(Q_c_eff(:))
+                % Legacy input: a discrete covariance calibrated at QcReferenceDt.
+                Q_c_eff = Q_cov / cfg.QcReferenceDt;
+            end
+            Q_step = vanLoanProcessNoise(A_c, Q_c_eff, h);
+        else
+            Q_step = Q_cov;   % previous behaviour, dose per step
+        end
+
         P_k = P_mpc;
         for i = 1:Np
-            P_k = Phi * P_k * Phi.' + Q_cov;
+            P_k = Phi * P_k * Phi.' + Q_step;
             P_k = symmetrizeCovariance(P_k);
 
             dsafe_k = dsafe0 + safetyCost * covarianceRadiusFromPosition(P_k(1:3,1:3), covarianceMetric);
@@ -451,7 +469,16 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
     % saturating. Keep the pre-clamp value so that the bite is measurable.
     u_abs_unclamped = u_abs;
     u_abs_max = cfg.Umax(1);
-    u_abs = max(min(u_abs, u_abs_max), -u_abs_max);
+    if strcmpi(cfg.uLimitMode, "norm")
+        % Bound the magnitude, preserving direction: the manoeuvre keeps
+        % pointing where the optimizer wanted, only shorter.
+        nrm = norm(u_abs);
+        if nrm > u_abs_max
+            u_abs = u_abs * (u_abs_max / nrm);
+        end
+    else
+        u_abs = max(min(u_abs, u_abs_max), -u_abs_max);
+    end
 
     %% Solver and actuator diagnostics
     if isempty(diag_log)
@@ -547,6 +574,10 @@ function cfg = getMpcConfig(varargin)
     cfg.slackWeight = getBaseWorkspaceVar('slackWeight', 1e6);
     cfg.safetyCost = getBaseWorkspaceVar('safetyCost', 0);
     cfg.Q_cov = resolveCovarianceMatrix({'Q_cov_mpc', 'Q_process_mpc', 'Q_covariance_mpc'}, n, zeros(n));
+    cfg.Q_c = resolveCovarianceMatrix({'Q_c_mpc'}, n, zeros(n));
+    cfg.QcReferenceDt = getBaseWorkspaceVar('Q_cov_reference_dt', 1);
+    cfg.vanLoanQ = getBaseWorkspaceVar('mpcVanLoanQ', true);
+    cfg.uLimitMode = string(getBaseWorkspaceVar('uLimitMode', "per_axis"));
     cfg.covarianceFrame = getBaseWorkspaceVar('covarianceFrameMpc', 'eci');
     cfg.covarianceMetric = getBaseWorkspaceVar('covarianceMetricMpc', 'sqrt_trace_pos');
     cfg.logDsafe = getBaseWorkspaceVar('logDsafeMpc', false);
@@ -678,6 +709,20 @@ function [A,b] = MPCLinearConstraints(Umin, Umax, Ymin, Ymax, deltaUmax, ...
 end
 
 %% Linear-system helpers
+
+function Q_d = vanLoanProcessNoise(A, Q_c, h)
+%VANLOANPROCESSNOISE Discrete process noise over a step of length h.
+%   Van Loan (1978): for xdot = A x + w with E[w w'] = Q_c delta(t), the
+%   equivalent discrete covariance over h is obtained from a single matrix
+%   exponential. Unlike a fixed per-step dose, this scales with the step
+%   length, so the propagated uncertainty depends on elapsed time only.
+    n = size(A,1);
+    M = [-A, Q_c; zeros(n), A.'] * h;
+    F = expm(M);
+    Phi_T = F(n+1:2*n, n+1:2*n);
+    Q_d = Phi_T.' * F(1:n, n+1:2*n);
+    Q_d = 0.5 * (Q_d + Q_d.');
+end
 
 function integral_gammahat = integral_gammahat(A, h)
     n = size(A,1);
