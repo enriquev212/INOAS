@@ -241,7 +241,116 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
     RightHandDebris = zeros(Np,1);
     debrisScale = ones(Np,1);
 
-    if dsafe0 > 0
+    if dsafe0 > 0 && strcmpi(cfg.debrisMode, "bplane_tca")
+        % ---------------- B-plane constraint at closest approach --------
+        % One row instead of Np. The remaining rows are left trivially
+        % inactive (0 <= 1) so that the block structure of A stays fixed.
+        RightHandDebris(:) = 1;
+        dsafe_profile = zeros(Np,1);
+
+        dt_tca = cfg.tTca - (timeStep-1)*h;    % from the current grid time
+        if ~isempty(cfg.tTca) && dt_tca > 0 && dt_tca <= Np*h
+            iStar = min(max(floor(dt_tca/h), 0), Np-1);
+            tau   = dt_tca - iStar*h;
+
+            % State at the encounter: propagate the last grid point by the
+            % remaining fraction of a step. The encounter almost never falls
+            % on a grid node, and at km/s that fraction matters at metre level.
+            Phi_tau = expm(A_c*tau);
+            Gam_tau = integral_gammahat(A_c, tau) * B_c;
+
+            if iStar >= 1
+                rows_i = (iStar-1)*nx + (1:nx);
+                Y0_i   = Y0(rows_i);
+                G_i    = Gamma_extend(rows_i,:);
+                Hrow   = H((iStar-1)*m + (1:m), :);
+            else
+                Y0_i = x_rel_estim;  G_i = zeros(nx, m*Np);  Hrow = zeros(m, m*Np);
+            end
+
+            Y0_tca = Phi_tau*Y0_i + Gam_tau*u;
+            G_tca  = Phi_tau*G_i  + Gam_tau*Hrow;
+            r0_tca = Y0_tca(1:3);
+            Gr_tca = G_tca(1:3,:);
+
+            % Control applied after the deadline does not count towards
+            % satisfying the constraint, so the optimizer cannot defer.
+            n_dl = Np;
+            if ~isempty(cfg.tDeadline)
+                n_dl = floor((cfg.tDeadline - (timeStep-1)*h)/h);
+                n_dl = min(n_dl, Np);
+                if n_dl < Np && n_dl > 0
+                    Gr_tca(:, n_dl*m+1:end) = 0;
+                end
+            end
+            % Pasada la fecha limite no queda autoridad util sobre el
+            % encuentro: imponer la restriccion solo produce holgura que el
+            % optimizador absorbe sin actuar. Se retira.
+            imposeDebris = (n_dl > 0);
+
+            % Encounter geometry, brought into the frame the controller works in.
+            d_nom_t = T_abs_to_ref * cfg.dNomEci(:);
+            u_rel_t = T_abs_to_ref * cfg.uRelEci(:);
+            u_rel_t = u_rel_t / norm(u_rel_t);
+            Proj    = eye(3) - (u_rel_t*u_rel_t.');    % onto the B-plane
+
+            q  = Proj * (d_nom_t + r0_tca);            % predicted miss vector
+            Mq = Proj * Gr_tca;                        % its sensitivity to dU
+
+            % Navigation covariance propagated to the encounter, combined with
+            % the object's. Until now only the spacecraft's was used, which is
+            % why the radius could not be read as a collision probability.
+            if ~isempty(cfg.PnavTca)
+                P_nav_pos = T_abs_to_ref * cfg.PnavTca * T_abs_to_ref.';
+            elseif cfg.vanLoanQ
+                Q_c_eff = cfg.Q_c;
+                if ~any(Q_c_eff(:)); Q_c_eff = Q_cov / cfg.QcReferenceDt; end
+                Phi_dt = expm(A_c*dt_tca);
+                P_tca  = Phi_dt*P_mpc*Phi_dt.' + vanLoanProcessNoise(A_c, Q_c_eff, dt_tca);
+                P_nav_pos = symmetrizeCovariance(P_tca(1:3,1:3));
+            else
+                nSteps = max(1, round(dt_tca/h));
+                P_tca = P_mpc;
+                for kk = 1:nSteps
+                    P_tca = Phi*P_tca*Phi.' + Q_cov;
+                end
+                P_nav_pos = symmetrizeCovariance(P_tca(1:3,1:3));
+            end
+
+            P_deb_ref = T_abs_to_ref * cfg.Pdebris * T_abs_to_ref.';
+            P_comb    = P_nav_pos + P_deb_ref;
+
+            % Margin along the miss direction, inside the B-plane. Same shape
+            % as the previous d_safe = d0 + k*sigma, now with both objects.
+            nq = norm(q);
+            if nq > 1e-9
+                u_b = q / nq;
+            else
+                u_b = Proj(:,1); u_b = u_b/max(norm(u_b),eps);
+            end
+            sigma_b = sqrt(max(u_b.' * P_comb * u_b, 0));
+            dsafe_k = dsafe0 + cfg.kSigma * sigma_b;
+            dsafe_profile(:) = dsafe_k;
+
+            if imposeDebris
+                scaleDebris = max([nq^2, dsafe_k^2, 1]);
+                debrisScale(1) = scaleDebris;
+                LeftHandDebris(1,1:m*Np) = (-2*q.' * Mq) / scaleDebris;
+                LeftHandDebris(1,m*Np+1) = -1 / scaleDebris;
+                RightHandDebris(1)       = (nq^2 - dsafe_k^2) / scaleDebris;
+            end
+        end
+
+        if logDsafe
+            dsafe_log_time(end+1,1)  = t_sim;
+            dsafe_log_first(end+1,1) = dsafe_profile(1);
+            dsafe_log_max(end+1,1)   = max(dsafe_profile);
+            assignin('base', 'mpc_dsafe_log_time', dsafe_log_time);
+            assignin('base', 'mpc_dsafe_log_first', dsafe_log_first);
+            assignin('base', 'mpc_dsafe_log_max', dsafe_log_max);
+        end
+
+    elseif dsafe0 > 0
         dsafe_profile = zeros(Np,1);
         debrisScale = ones(Np,1);   % escala de cada fila, para normalizar el slack
 
@@ -597,6 +706,38 @@ function cfg = getMpcConfig(varargin)
     % (el cruce del debris, donde la restriccion se activa y el problema se
     % vuelve degenerado); 'interior-point-convex' sale ahi con exitflag -8.
     cfg.qpAlgorithm = string(getBaseWorkspaceVar('mpcQpAlgorithm', "active-set"));
+
+    % Debris-avoidance constraint mode.
+    %   "sphere_grid" : ||r_rel|| >= d_safe at every prediction step. Works
+    %                   only while the object crosses slowly enough for the
+    %                   grid to resolve the encounter.
+    %   "bplane_tca"  : a single constraint on the miss distance projected
+    %                   onto the B-plane at the time of closest approach.
+    %                   Independent of the grid, and the natural place for
+    %                   the combined covariance of both objects.
+    cfg.debrisMode = string(getBaseWorkspaceVar('mpcDebrisMode', "sphere_grid"));
+    cfg.tTca       = getBaseWorkspaceVar('conj_t_tca', []);
+    cfg.dNomEci    = getBaseWorkspaceVar('conj_d_nom_eci', []);
+    cfg.uRelEci    = getBaseWorkspaceVar('conj_u_rel_eci', []);
+    cfg.Pdebris    = getBaseWorkspaceVar('conj_P_debris', zeros(3));
+    cfg.kSigma     = getBaseWorkspaceVar('conj_k_sigma', 3);
+    % Predicted navigation covariance AT the encounter, in ECI, supplied by
+    % the navigation layer. Extrapolating the filter covariance over the full
+    % lead time is not an option: Q_matrix is a filter tuning parameter, not a
+    % physical power spectral density. Its velocity term of 1e-2 (m/s)^2/s
+    % grows the uncertainty to kilometres over an orbit, which would drive the
+    % keep-out radius to tens of km and saturate the actuator. The navigation
+    % layer is the one that knows the duty-cycle plan and can predict it.
+    cfg.PnavTca    = getBaseWorkspaceVar('conj_P_nav_tca', []);
+    % Manoeuvre deadline. A receding-horizon controller with a terminal
+    % avoidance constraint procrastinates: at every step, acting later is
+    % still feasible and the control cost rewards waiting, so it defers until
+    % the constraint is about to bite. That is the worst possible policy here,
+    % because the lever arm of an along-track burn grows with the time left to
+    % the encounter: the displacement it buys is 3*dv*t. Deferring the burn by
+    % an orbit multiplies its cost. Requiring the manoeuvre to be complete by a
+    % deadline removes the option to wait.
+    cfg.tDeadline  = getBaseWorkspaceVar('conj_t_deadline', []);
     cfg.uLimitMode = string(getBaseWorkspaceVar('uLimitMode', "per_axis"));
     cfg.covarianceFrame = getBaseWorkspaceVar('covarianceFrameMpc', 'eci');
     cfg.covarianceMetric = getBaseWorkspaceVar('covarianceMetricMpc', 'sqrt_trace_pos');
