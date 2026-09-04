@@ -74,11 +74,21 @@ RAAN = 116.6;        % [deg]
 w = 90;              % [deg]
 theta = 131;         % [deg]
 
-F_control = 4 * 220; % [N]
-m_sat = 10 * 1000;   % [kg]
+% --- Platform: 12U CubeSat -------------------------------------------
+% The scenario used to carry m_sat = 10 000 kg, F_control = 880 N and
+% area = 15 m^2, i.e. a large satellite, in a paper about CubeSats. These
+% are 12U-class figures instead.
+%
+% Only u_max below has any effect on the results: F_control is not read by
+% the model, the SpacecraftDynamics block runs with forcesIn = off and
+% accelIn = on so m_sat divides no force, and area/ref only feed the solar
+% radiation pressure gain, of order 1e-8 m/s^2.
+n_units = 12;              % [U]
+m_sat = 24;                % [kg] 12U at the CubeSat standard mass limit
+F_control = 1.0;           % [N]  green monopropellant thruster, HPGP class
 initMass = m_sat;
-ref = 1.3;           % reflectivity coefficient
-area = 15;           % [m^2]
+ref = 1.3;                 % reflectivity coefficient
+area = 0.15;               % [m^2] 12U with deployed panels
 
 start_date = juliandate(datetime(2024, 1, 11));
 end_date = juliandate(datetime(2024, 2, 11));
@@ -216,7 +226,12 @@ S = diag(repmat(S_step, 1, Np));
 
 % Constraints as column vectors!!
 
-u_max = 0.05;%F_control/m_sat;     % [m/s^2] = 5000/10000 = 0.05
+% Derived from the platform instead of hardcoded. The previous value was
+% u_max = 0.05 with a comment claiming F_control/m_sat = 5000/10000, a third
+% system that never existed: the actual F_control/m_sat was 880/10000 =
+% 0.088. With the 12U platform this gives 1.0/24 = 0.0417 m/s^2, and the
+% published peak of 0.018 m/s^2 sits at 43% of it.
+u_max = F_control / m_sat;   % [m/s^2] per axis
 
 if isfield(mpcTuneConfig, "u_max")
     u_max = mpcTuneConfig.u_max;
