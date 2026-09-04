@@ -118,6 +118,16 @@ k_d = 20;
 
 %% Kalman/UKF tuning and decision observable
 Ts = 1;          % [s] master sample time for sensors and estimator
+
+% The UKF block runs at Ts but integrates with the step returned by
+% inoas_estimator_dt(). If they disagree the filter propagates at the wrong
+% rate and drifts systematically, silently. Fail loudly instead.
+assert(abs(Ts - inoas_estimator_dt()) <= 1e-12, ...
+    'INOAS:estimatorRateMismatch', ...
+    ['Ts = %g s but myStateTransitionFcn integrates with %g s. ' ...
+     'Change both: Ts here and the literal in matlab/inoas_estimator_dt.m.'], ...
+    Ts, inoas_estimator_dt());
+
 var_IMU = 0.01; % accelerometer variance used by the Kalman propagation
 
 % Synthetic internal sensor measurement covariance.
@@ -362,6 +372,16 @@ fprintf('  trace(R) at t=850s: %.4f m^2\n', ...
 gnssMeta = gnssProfile.meta;
 gnss_sensor_mode = gnssSensor.mode;
 gnss_sample_time = gnssSensor.sample_time;
+
+% The GNSS gate inside the model opens on the epoch returned by
+% inoas_gnss_epoch(). It used to carry its own literal (gnss_rate = 3) with
+% a comment telling the reader to keep the two in sync by hand. Fail loudly
+% if they drift apart.
+assert(abs(gnss_sample_time - inoas_gnss_epoch()) <= 1e-12, ...
+    'INOAS:gnssEpochMismatch', ...
+    ['gnss_sample_time = %g s but the model gate uses %g s. ' ...
+     'Change both: the sensor profile and matlab/inoas_gnss_epoch.m.'], ...
+    gnss_sample_time, inoas_gnss_epoch());
 lamda_init = 1;
 %ts_gnss_pos_noise_eci = gnssSensor.ts_pos_noise_eci;
 %ts_gnss_vel_noise_eci = gnssSensor.ts_vel_noise_eci;

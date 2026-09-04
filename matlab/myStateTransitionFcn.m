@@ -12,7 +12,11 @@ function x_next = myStateTransitionFcn(x_current, u)
     % Force the control input to be a 3x1 column vector.
     u = u(:);
 
-    dt = 1; % [s] Must match the Simulink estimator sample time.
+    % Integration step. This MUST equal the Simulink estimator sample time
+    % Ts. It used to be a bare literal here while Ts lived in the init
+    % script, so setting Ts = 0.5 s made the filter propagate twice as fast
+    % as the plant, with a systematic same-sign drift and no warning.
+    dt = inoas_estimator_dt();
 
     k1 = get_state_derivative(x_current, u);
     k2 = get_state_derivative(x_current + 0.5 * dt * k1, u);
