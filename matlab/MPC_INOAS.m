@@ -237,6 +237,7 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
     end
 
     %% Linearized debris-avoidance constraints
+    Q_eff = Q;   % puede relajarse durante la ventana de evasion
     LeftHandDebris = zeros(Np, m*Np + Np);
     RightHandDebris = zeros(Np,1);
     debrisScale = ones(Np,1);
@@ -333,6 +334,17 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
             dsafe_profile(:) = dsafe_k;
 
             if imposeDebris
+                % Relajar el seguimiento hasta el encuentro, inclusive. Los
+                % pasos posteriores conservan el peso completo, de modo que
+                % la maniobra de retorno sigue estando en el problema.
+                if cfg.trackRelax ~= 1
+                    nRelax = min(iStar+1, Np);
+                    for iq = 1:nRelax
+                        idq = (iq-1)*nx + (1:nx);
+                        Q_eff(idq,idq) = Q(idq,idq) * cfg.trackRelax;
+                    end
+                end
+
                 scaleDebris = max([nq^2, dsafe_k^2, 1]);
                 debrisScale(1) = scaleDebris;
                 LeftHandDebris(1,1:m*Np) = (-2*q.' * Mq) / scaleDebris;
@@ -489,8 +501,8 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
     % The constant term is dropped: it does not move the argmin, but it does
     % shift fval with respect to the old objective value.
     U0 = repmat(u, Np, 1);
-    Hdu = Gamma_extend.'*Q*Gamma_extend + S + H.'*R*H;
-    fdu = Gamma_extend.'*(Q*Y0) + H.'*(R*U0);
+    Hdu = Gamma_extend.'*Q_eff*Gamma_extend + S + H.'*R*H;
+    fdu = Gamma_extend.'*(Q_eff*Y0) + H.'*(R*U0);
 
     Hqp = blkdiag(Ddu.'*Hdu*Ddu, 2*slackWeight*(Dsl.'*Dsl));
     Hqp = 0.5*(Hqp + Hqp.');
@@ -738,6 +750,16 @@ function cfg = getMpcConfig(varargin)
     % an orbit multiplies its cost. Requiring the manoeuvre to be complete by a
     % deadline removes the option to wait.
     cfg.tDeadline  = getBaseWorkspaceVar('conj_t_deadline', []);
+    % Relajacion del seguimiento durante la evasion. El coste de seguimiento
+    % pesa unas mil veces mas que el de control, asi que al controlador le
+    % sale caro ESTAR fuera de la nominal y su optimo es desviarse lo mas
+    % tarde posible. Eso es exactamente lo contrario de lo que debe hacer:
+    % un impulso tangencial compra 3*dv*t de desplazamiento, de modo que
+    % esperar multiplica el coste. Una vez comprometida la maniobra, la
+    % trayectoria nominal ES la desplazada, y seguir la antigua no debe
+    % costar nada. Relajar Q en la ventana convierte el problema en el de
+    % delta-v minimo, que es el que se quiere resolver.
+    cfg.trackRelax = getBaseWorkspaceVar('mpcTrackRelax', 1);
     cfg.uLimitMode = string(getBaseWorkspaceVar('uLimitMode', "per_axis"));
     cfg.covarianceFrame = getBaseWorkspaceVar('covarianceFrameMpc', 'eci');
     cfg.covarianceMetric = getBaseWorkspaceVar('covarianceMetricMpc', 'sqrt_trace_pos');
