@@ -1,0 +1,6 @@
+# Restriccion de colision dentro del QP. El plazo de tiempo real es h. pct_converged es 100*mean(exitflag>0), es decir cuantos QP resolvio el solver, no cuantos llegaron a tiempo: eso se cuenta sobre timing_qp_samples.csv.
+step_h_s,Np,n_solves,median_s,p90_s,p99_s,worst_s,pct_converged
+3,125,134,0.81318335,5.18875963,40.96907119,45.1379906,94.02985075
+5,100,81,0.210229,2.67341034,25.3699363,25.4592221,93.82716049
+10,50,41,0.0336372,0.09510294,0.1192229,0.1192229,100
+5,150,81,1.1121484,8.35532804,74.0088858,77.4609617,96.2962963

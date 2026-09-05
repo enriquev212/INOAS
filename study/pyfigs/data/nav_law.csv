@@ -1,0 +1,12 @@
+# MEDIANA de sigma en cada intervalo de tiempo transcurrido desde la ultima medida (run_navigation_chain.m usa median, no mean).
+bin_lo_s,bin_hi_s,bin_centre_s,sigma_nav_m,count
+0,30,15,4.760327666,379
+30,60,45,25.16085379,114
+60,90,75,31.41664901,110
+90,120,105,31.92260114,110
+120,150,135,31.99597458,110
+150,180,165,32.07896344,110
+180,210,195,32.11147901,101
+210,240,225,32.1179932,100
+240,270,255,32.11834789,100
+270,300,285,32.11845538,100

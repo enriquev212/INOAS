@@ -1,0 +1,30 @@
+{
+  "T_orb_s": 6743.210925248001,
+  "d_safe0_m": 150.0,
+  "execution": {
+    "Np": 60,
+    "dInc_deg": 88.15,
+    "d_target_m": 257.3923763588016,
+    "dv_planned_mms": 12.567794274417635,
+    "dv_spent_mms": 19.204422994469535,
+    "guidance_step_s": 30.0,
+    "miss_achieved_m": 257.39366612651224,
+    "miss_after_m": 257.3935243331735,
+    "miss_before_m": 119.99992638209494,
+    "pass_time_s": 0.024003436649654722,
+    "retrograde": true,
+    "sigma_bplane_m": 84.13079211960053,
+    "t_burn_rel_tca_min": -112.5,
+    "u_max_ms2": 0.041666666666666664,
+    "v_rel_ms": 9998.568267658968
+  },
+  "k_sigma": 3.0,
+  "n_geometries": 1500,
+  "nav": {
+    "on_fraction": 0.1945,
+    "sigma_fresh_m": 4.760327665510801,
+    "sigma_saturated_m": 32.118516339016004,
+    "window_s": 4000.0
+  },
+  "t_burn_s": 3371.7890747519987
+}

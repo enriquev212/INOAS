@@ -1,0 +1,8 @@
+# Marginalizado sobre sigma_obj con PESO UNIFORME en los cuatro niveles (10, 30, 100, 300 m): es una hipotesis sobre la calidad de las efemerides del catalogo, no una medida. Por celda, sin esa hipotesis, esta mc_percentiles.csv. frac_no_manoeuvre es la fraccion de geometrias que ya cumplen la distancia segura sin maniobrar.
+sigma_nav_m,n,p10_dv_mms,p50_dv_mms,p90_dv_mms,mean_dv_mms,frac_no_manoeuvre
+4.8,6000,0,10.57784817,53.10920392,20.66885883,0.2203333333
+12,6000,0,10.91145253,53.22253417,20.86864343,0.2111666667
+32.1,6000,0,12.53150324,53.73827116,21.95732595,0.1633333333
+40,6000,0,13.36010073,53.96630196,22.55068902,0.1388333333
+100,6000,7.488239149,20.30055323,58.69067846,29.19773992,0
+250,6000,23.71767454,38.36031248,91.04415358,49.30916669,0
