@@ -113,6 +113,8 @@ for modo = ["legacy","vanloan"]
     end
 end
 
+save(fullfile(OUT_DIR,'koz_profiles.mat'), '-struct', 'prof');
+
 f = figure('Visible','off');
 sty = {'-','--',':'};
 lbl = {'h = 5 s, N_p = 100', 'h = 10 s, N_p = 50', 'h = 4 s, N_p = 125'};
