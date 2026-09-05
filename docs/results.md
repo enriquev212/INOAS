@@ -1,5 +1,14 @@
 # Results and Parameters
 
+> **These figures describe commit `db477bd` and no longer match the code.**
+> The guidance layer was reworked on `fix/mpc-open-points`, and seven rows of
+> the parameter table below are now wrong: `u_max` is derived from the platform
+> (0.0417, not 0.05), `du_max` follows from a slew rate rather than being a
+> per-step bound, the duty-cycle windows are 60/300 rather than 90/10, and the
+> safety margin is 3 sigma rather than 0.2. The headline results were measured
+> with a per-axis actuator bound, a 0.2 sigma margin and no object covariance,
+> none of which is still the default. See `study/` for the current campaign.
+
 ## Headline Results
 
 From the final validation campaign:
