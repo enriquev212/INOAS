@@ -388,7 +388,14 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
             P_k = Phi * P_k * Phi.' + Q_step;
             P_k = symmetrizeCovariance(P_k);
 
-            dsafe_k = dsafe0 + safetyCost * covarianceRadiusFromPosition(P_k(1:3,1:3), covarianceMetric);
+            % Combined uncertainty of the RELATIVE position: the object's
+            % covariance belongs here just as much as the spacecraft's.
+            sig_own = covarianceRadiusFromPosition(P_k(1:3,1:3), covarianceMetric);
+            sig_own = min(sig_own, cfg.sigmaNavMax);   % lo que navegacion entrega
+            sig_deb = covarianceRadiusFromPosition( ...
+                T_abs_to_ref * cfg.Pdebris * T_abs_to_ref.', covarianceMetric);
+            % Incertidumbres independientes: se combinan en cuadratura.
+            dsafe_k = dsafe0 + safetyCost * sqrt(sig_own^2 + sig_deb^2);
             dsafe_profile(i) = dsafe_k;
 
             idx_state_i = (i-1)*nx + (1:nx);
@@ -513,10 +520,32 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
         'Algorithm', char(cfg.qpAlgorithm), ...
         'OptimalityTolerance',1e-8, ...
         'ConstraintTolerance',1e-8, ...
-        'MaxIterations',2000);
+        'MaxIterations', cfg.qpMaxIter);
 
     solveTimer = tic;
     [z_opt,fval,exitflag,output] = quadprog(Hqp,fqp,A_scaled,b,[],[],lb,ub,z0,options);
+
+    % Two-stage solve. The two algorithms fail on disjoint sets of
+    % instances: active-set cycles on some tightly constrained problems and
+    % exhausts its iteration budget with zero slack, i.e. on problems that
+    % are feasible and it simply cannot close; interior-point stalls where
+    % the avoidance constraint activates. Retrying with the other one
+    % recovers almost all of them, and costs nothing when the first
+    % succeeds, which is the common case.
+    qpFallback = false;
+    if exitflag <= 0
+        if strcmpi(cfg.qpAlgorithm, "active-set")
+            altAlg = 'interior-point-convex';
+        else
+            altAlg = 'active-set';
+        end
+        optAlt = optimoptions(options, 'Algorithm', altAlg);
+        [z2,f2,ef2,out2] = quadprog(Hqp,fqp,A_scaled,b,[],[],lb,ub,z0,optAlt);
+        if ef2 > 0 && ~isempty(z2)
+            z_opt = z2; fval = f2; exitflag = ef2; output = out2;
+            qpFallback = true;
+        end
+    end
     solveTime = toc(solveTimer);
 
     if isempty(z_opt)
@@ -634,6 +663,10 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
     diag_log.u_ref_max(end+1,1)      = max(abs(u_ref));
     diag_log.du_max_active(end+1,1)  = max(abs(delta_u)) >= 0.999*cfg.deltaUmax(1);
     diag_log.slack_max(end+1,1)      = max(slack_opt_internal);
+    % Incertidumbre de navegacion que el guiado recibe del filtro. Es el
+    % eslabon entre el ciclo de trabajo del GNSS y el coste de la maniobra.
+    diag_log.sigma_nav(end+1,1)      = sqrt(trace(covariance_estim(1:3,1:3)));
+    diag_log.qp_fallback(end+1,1)    = qpFallback;
     assignin('base', 'mpc_diag_log', diag_log);
 
     u_abs_current = u_abs;
@@ -658,7 +691,7 @@ function log = emptyDiagLog()
         't', z, 'solve_time', z, 'exitflag', z, 'iterations', z, ...
         'funcCount', z, 'violation', z, 'fval', z, 'u_norm', z, ...
         'u_norm_unclamped', z, 'clamp_bite', z, 'u_ref_max', z, ...
-        'du_max_active', z, 'slack_max', z);
+        'du_max_active', z, 'slack_max', z, 'sigma_nav', z, 'qp_fallback', z);
 end
 
 
@@ -682,8 +715,14 @@ function cfg = getMpcConfig(varargin)
     m = cfg.m;
 
     cfg.Np = getBaseWorkspaceVar('Np', 40);
+    % Length of the reported sequences. It must match the port sizes the
+    % Simulink wrapper declares, which are fixed at 125 steps, so it cannot
+    % be forced up to Np: a longer horizon would return vectors the model
+    % cannot accept. Truncating is safe because only the first block of the
+    % sequence is ever applied and the warm start uses the internal,
+    % full-length copy.
     cfg.outputNp = getBaseWorkspaceVar('mpcOutputNpMax', cfg.Np);
-    cfg.outputNp = max(cfg.outputNp, cfg.Np);
+    cfg.outputNp = max(1, round(cfg.outputNp));
     cfg.h  = getBaseWorkspaceVar('h', 1);
     cfg.sampleTime = getBaseWorkspaceVar('Ts', cfg.h);
 
@@ -731,7 +770,8 @@ function cfg = getMpcConfig(varargin)
     cfg.tTca       = getBaseWorkspaceVar('conj_t_tca', []);
     cfg.dNomEci    = getBaseWorkspaceVar('conj_d_nom_eci', []);
     cfg.uRelEci    = getBaseWorkspaceVar('conj_u_rel_eci', []);
-    cfg.Pdebris    = getBaseWorkspaceVar('conj_P_debris', zeros(3));
+    cfg.Pdebris    = getBaseWorkspaceVar('conj_P_debris', ...
+        getBaseWorkspaceVar('P_debris_pos', zeros(3)));
     cfg.kSigma     = getBaseWorkspaceVar('conj_k_sigma', 3);
     % Predicted navigation covariance AT the encounter, in ECI, supplied by
     % the navigation layer. Extrapolating the filter covariance over the full
@@ -760,6 +800,15 @@ function cfg = getMpcConfig(varargin)
     % costar nada. Relajar Q en la ventana convierte el problema en el de
     % delta-v minimo, que es el que se quiere resolver.
     cfg.trackRelax = getBaseWorkspaceVar('mpcTrackRelax', 1);
+    % Ceiling on the propagated navigation sigma used by the keep-out inflation.
+    % Inf reproduces the previous unbounded extrapolation.
+    cfg.sigmaNavMax = getBaseWorkspaceVar('sigma_nav_max', inf);
+    % Iteration budget per solve. It bounds the WORST case, which is the
+    % only number that matters for a controller with a deadline. The median
+    % solve converges in about 13 iterations, so a few hundred is ample;
+    % letting it run to thousands only delays the fallback on the instances
+    % that were never going to converge with that algorithm anyway.
+    cfg.qpMaxIter = getBaseWorkspaceVar('mpcQpMaxIter', 300);
     cfg.uLimitMode = string(getBaseWorkspaceVar('uLimitMode', "per_axis"));
     cfg.covarianceFrame = getBaseWorkspaceVar('covarianceFrameMpc', 'eci');
     cfg.covarianceMetric = getBaseWorkspaceVar('covarianceMetricMpc', 'sqrt_trace_pos');

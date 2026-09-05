@@ -37,13 +37,17 @@ inflate the debris-avoidance safety margin.
 
 ## Key Equations
 
-The MPC safety margin is inflated with the relative-position covariance used in
-the collision-avoidance frame:
+The MPC safety margin is inflated with the covariance of the RELATIVE position,
+that is, the sum of the spacecraft and object covariances, in the
+collision-avoidance frame. Note the metric is the square root of the trace,
+matching `covarianceMetricMpc = "sqrt_trace_pos"` in the code; an earlier
+version of this document quoted the largest eigenvalue instead, which differs
+by up to a factor of sqrt(3):
 
 ```math
 d_{\mathrm{safe},k}
 =
-d_0 + k_\sigma \sqrt{\lambda_{\max}\!\left(P_{r,k}\right)}
+d_0 + k_\sigma \sqrt{\operatorname{tr}\!\left(P_{r,k}\right)}
 ```
 
 The debris-avoidance constraint then enforces robust separation at each

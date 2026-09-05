@@ -224,7 +224,13 @@ if isfield(mpcTuneConfig, "Np")
     Np = mpcTuneConfig.Np;
 end
 
-mpcOutputNpMax = max(Np, 125);
+% The Simulink wrapper declares the guidance output ports with hardcoded
+% sizes of 375 and 125, so a horizon longer than 125 steps returns vectors
+% that do not fit and the model fails at run time. The recommended
+% configuration (h = 5 s, Np = 150) hits this. Pin the reported length to
+% what the model expects; MPC_INOAS pads or truncates to it, and only the
+% first block of the sequence is ever applied.
+mpcOutputNpMax = 125;
 
 if isfield(mpcTuneConfig, "h")
     h = mpcTuneConfig.h;
@@ -555,7 +561,14 @@ load(debrisTrajectoryFile, "x_debris_hist", "r_debris_full", ...
 rk_debris = rk_debris_encounter;
 
 dsafe0 = 150;
-safetyCost = 0.2;
+% Safety margin expressed in standard deviations of the propagated
+% uncertainty. It used to be 0.2, which corresponds to roughly a 42%
+% chance of violating the keep-out zone: not a robust margin in any
+% statistical sense, and hard to defend with "Robust" in the paper title.
+% Three sigma is the usual figure in the collision-avoidance literature,
+% and it is what the conjunction scenario already uses, so both scenarios
+% now share one criterion.
+safetyCost = 3;
 
 if isfield(mpcTuneConfig, "dsafe0")
     dsafe0 = mpcTuneConfig.dsafe0;
@@ -573,7 +586,11 @@ end
 % "norm" bounds the magnitude instead, which is what a fixed thruster set
 % actually imposes. Default stays "per_axis" so that previously published
 % results reproduce; switch deliberately, it changes the numbers.
-uLimitMode = "per_axis";
+% A fixed thruster set limits the MAGNITUDE of the commanded acceleration,
+% not its components along inertial axes. Bounding each axis separately
+% lets the norm reach u_max*sqrt(3): measured demands of 1.13 N from a 1 N
+% thruster with no component saturating. Bound the magnitude instead.
+uLimitMode = "norm";
 
 if isfield(mpcTuneConfig, "uLimitMode")
     uLimitMode = string(mpcTuneConfig.uLimitMode);
@@ -590,6 +607,36 @@ end
 % used to, injected one full dose per prediction step regardless of the
 % step length, making the inflated keep-out radius a function of Np rather
 % than of elapsed time.
+% Object covariance. The inflated keep-out radius used to grow with the
+% spacecraft's uncertainty alone, so the radius could not be read in terms
+% of collision probability: that requires the combined uncertainty of the
+% RELATIVE position.
+%
+% This is a property of the object and of the scenario, not a constant. The
+% baseline here is a co-orbital companion at a relative velocity of 10 m/s,
+% i.e. an object being operated close to, and therefore known well. A
+% catalogue-tracked debris object in a genuine conjunction is a different
+% case and carries hundreds of metres: get_conjunction_scenario sets that
+% one itself. Using the catalogue figure here would put d_safe above 600 m
+% for an encounter that passes at 50 m, which is close to infeasible and
+% collapses the QP convergence.
+P_debris_pos = diag([5 5 5].^2);   % [m^2] ECI, co-orbital companion
+
+% Ceiling on the navigation uncertainty used to inflate the keep-out zone.
+%
+% The inflation propagates the filter covariance forward with Q_matrix, but
+% Q_matrix is a filter TUNING parameter, not a physical spectral density: its
+% velocity term of 1e-2 (m/s)^2/s predicts a 1-sigma position uncertainty of
+% 728 m after 375 s of propagation. The full model says otherwise. Measured
+% over a 4000 s run, the estimate saturates at 32.1 m, because the auxiliary
+% sensors keep bounding it while GNSS is off -- which is precisely what the
+% architecture is for.
+%
+% Extrapolating an unbounded random walk therefore inflates the keep-out zone
+% to kilometres, makes the avoidance constraint infeasible and collapses the QP.
+% Cap the inflation at what navigation actually delivers.
+sigma_nav_max = 32.1;   % [m] 1-sigma, measured on the full model
+
 Q_c_mpc = Q_matrix / Ts;
 Q_cov_mpc = Q_matrix;   % legacy discrete form, kept for mpcVanLoanQ = false
 covarianceFrameMpc = "eci";
