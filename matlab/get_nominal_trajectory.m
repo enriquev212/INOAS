@@ -70,6 +70,21 @@ function x = coeToEciState(a, ecc, incl, raan, argp, nu)
 end
 
 function xNext = rk4StepJ2(x, dt)
+%RK4STEPJ2 Advance by dt, substepping so the internal step stays near 1 s.
+%   The guidance grid can be 60 s wide. Integrating the reference at that
+%   resolution leaves 23.7 m of error after an orbit and a half, which is
+%   more than the tolerance the manoeuvre planner converges to, and the
+%   object's trajectory is already substepped: the two would not be
+%   integrated consistently.
+    nsub = max(1, ceil(abs(dt)/1.0));
+    ds = dt / nsub;
+    xNext = x;
+    for isub = 1:nsub
+        xNext = rk4SingleStepJ2(xNext, ds);
+    end
+end
+
+function xNext = rk4SingleStepJ2(x, dt)
     k1 = derivativeJ2(x);
     k2 = derivativeJ2(x + 0.5*dt*k1);
     k3 = derivativeJ2(x + 0.5*dt*k2);

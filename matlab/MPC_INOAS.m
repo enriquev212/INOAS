@@ -289,9 +289,18 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
             % optimizador absorbe sin actuar. Se retira.
             imposeDebris = (n_dl > 0);
 
-            % Encounter geometry, brought into the frame the controller works in.
-            d_nom_t = T_abs_to_ref * cfg.dNomEci(:);
-            u_rel_t = T_abs_to_ref * cfg.uRelEci(:);
+            % Encounter geometry, rotated into the LVLH frame OF THE
+            % ENCOUNTER. The HCW propagation returns the relative state in
+            % the frame of the instant it refers to, because that frame
+            % rotates with the reference. Using the frame at t_sim instead
+            % adds vectors separated by n*dt_tca: 0.42 rad over a 375 s
+            % horizon and more than a full turn over 7200 s.
+            iTcaRef = min(max(round(cfg.tTca/h) + 1, 1), Ntimesteps);
+            x_ref_tca = r_p_full((iTcaRef-1)*nx + (1:nx));
+            T_tca = referenceFrameTransform(x_ref_tca(1:3), x_ref_tca(4:6));
+
+            d_nom_t = T_tca * cfg.dNomEci(:);
+            u_rel_t = T_tca * cfg.uRelEci(:);
             u_rel_t = u_rel_t / norm(u_rel_t);
             Proj    = eye(3) - (u_rel_t*u_rel_t.');    % onto the B-plane
 
@@ -302,7 +311,7 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
             % the object's. Until now only the spacecraft's was used, which is
             % why the radius could not be read as a collision probability.
             if ~isempty(cfg.PnavTca)
-                P_nav_pos = T_abs_to_ref * cfg.PnavTca * T_abs_to_ref.';
+                P_nav_pos = T_tca * cfg.PnavTca * T_tca.';
             elseif cfg.vanLoanQ
                 Q_c_eff = cfg.Q_c;
                 if ~any(Q_c_eff(:)); Q_c_eff = Q_cov / cfg.QcReferenceDt; end
@@ -318,7 +327,7 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
                 P_nav_pos = symmetrizeCovariance(P_tca(1:3,1:3));
             end
 
-            P_deb_ref = T_abs_to_ref * cfg.Pdebris * T_abs_to_ref.';
+            P_deb_ref = T_tca * cfg.Pdebris * T_tca.';
             P_comb    = P_nav_pos + P_deb_ref;
 
             % Margin along the miss direction, inside the B-plane. Same shape
@@ -388,25 +397,36 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
             P_k = Phi * P_k * Phi.' + Q_step;
             P_k = symmetrizeCovariance(P_k);
 
-            % Combined uncertainty of the RELATIVE position: the object's
-            % covariance belongs here just as much as the spacecraft's.
-            sig_own = covarianceRadiusFromPosition(P_k(1:3,1:3), covarianceMetric);
-            sig_own = min(sig_own, cfg.sigmaNavMax);   % lo que navegacion entrega
-            sig_deb = covarianceRadiusFromPosition( ...
-                T_abs_to_ref * cfg.Pdebris * T_abs_to_ref.', covarianceMetric);
-            % Incertidumbres independientes: se combinan en cuadratura.
-            dsafe_k = dsafe0 + safetyCost * sqrt(sig_own^2 + sig_deb^2);
-            dsafe_profile(i) = dsafe_k;
-
             idx_state_i = (i-1)*nx + (1:nx);
             idx_pos     = (i-1)*nx + (1:3);
-            refStep = min(timeStep + i - 1, Ntimesteps);
+            % Block i of Phi_extend is Phi^i, i.e. the state i steps ahead, so
+            % the nominal geometry belongs at timeStep+i. Taking it at
+            % timeStep+i-1 offset the two by one step: 30 m in the co-orbital
+            % case and 600 km at 10 km/s with h = 60 s.
+            refStep = min(timeStep + i, Ntimesteps);
 
             x_ref_i = r_p(idx_state_i);
             r_ref_i = x_ref_i(1:3);
             r_debris_i = getDebrisPositionAtStep(x_debris_hist, refStep, nx, rk_debris);
 
-            d_nom = T_abs_to_ref * (r_ref_i - r_debris_i);
+            % Frame of step i, not the frame at t_sim. The HCW propagation
+            % returns the relative state in the frame of the instant it refers
+            % to, because that frame rotates with the reference; rotating the
+            % geometry with the current frame instead adds vectors separated by
+            % n*i*h, which reaches a full turn over a long horizon.
+            T_i = referenceFrameTransform(x_ref_i(1:3), x_ref_i(4:6));
+
+            % Combined uncertainty of the RELATIVE position: the object's
+            % covariance belongs here just as much as the spacecraft's.
+            sig_own = covarianceRadiusFromPosition(P_k(1:3,1:3), covarianceMetric);
+            sig_own = min(sig_own, cfg.sigmaNavMax);   % lo que navegacion entrega
+            sig_deb = covarianceRadiusFromPosition( ...
+                T_i * cfg.Pdebris * T_i.', covarianceMetric);
+            % Incertidumbres independientes: se combinan en cuadratura.
+            dsafe_k = dsafe0 + safetyCost * sqrt(sig_own^2 + sig_deb^2);
+            dsafe_profile(i) = dsafe_k;
+
+            d_nom = T_i * (r_ref_i - r_debris_i);
 
             Gamma_k = Gamma_extend(idx_pos,:);
             Y0_k = Y0(idx_pos);
@@ -596,7 +616,10 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
                 x_ref_i = r_p(idx_state_i);
                 r_ref_i = x_ref_i(1:3);
                 r_debris_i = getDebrisPositionAtStep(x_debris_hist, refStep, nx, rk_debris);
-                d_nom = T_abs_to_ref * (r_ref_i - r_debris_i);
+                % Rotated with the frame of step i, not the frame at t_sim, for
+            % the same reason as the closest-approach constraint above.
+            T_i = referenceFrameTransform(x_ref_i(1:3), x_ref_i(4:6));
+            d_nom = T_i * (r_ref_i - r_debris_i);
 
                 rel_vec_to_debris = Y_pred(idx_pos) + d_nom;
                 distance_profile(i) = norm(rel_vec_to_debris);
