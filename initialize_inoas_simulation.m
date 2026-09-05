@@ -584,8 +584,8 @@ end
 % so nothing bounds the MAGNITUDE of the commanded acceleration: it can
 % reach u_max*sqrt(3) = 0.0866 m/s^2 without a single component saturating.
 % "norm" bounds the magnitude instead, which is what a fixed thruster set
-% actually imposes. Default stays "per_axis" so that previously published
-% results reproduce; switch deliberately, it changes the numbers.
+% actually imposes, and it is now the default. Results published before this
+% change were produced with "per_axis" and do NOT reproduce under it.
 % A fixed thruster set limits the MAGNITUDE of the commanded acceleration,
 % not its components along inertial axes. Bounding each axis separately
 % lets the norm reach u_max*sqrt(3): measured demands of 1.13 N from a 1 N

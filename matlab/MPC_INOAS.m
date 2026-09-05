@@ -264,9 +264,9 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
                 rows_i = (iStar-1)*nx + (1:nx);
                 Y0_i   = Y0(rows_i);
                 G_i    = Gamma_extend(rows_i,:);
-                Hrow   = H((iStar-1)*m + (1:m), :);
+                Hrow   = H(iStar*m + (1:m), :);
             else
-                Y0_i = x_rel_estim;  G_i = zeros(nx, m*Np);  Hrow = zeros(m, m*Np);
+                Y0_i = x_rel_estim;  G_i = zeros(nx, m*Np);  Hrow = H(1:m, :);
             end
 
             Y0_tca = Phi_tau*Y0_i + Gam_tau*u;
