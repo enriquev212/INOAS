@@ -132,18 +132,28 @@ write_csv('mc_marginal.csv',
 # 2. Zona de exclusion inflada: por paso frente a van Loan
 # --------------------------------------------------------------------------
 print('Perfiles de zona de exclusion')
-d = load('koz_profiles.mat')
-rows = []
-for i, (tt, lg, vl) in enumerate(zip(cells(d['tt']), cells(d['legacy']), cells(d['vanloan']))):
-    tt, lg, vl = np.atleast_1d(tt), np.atleast_1d(lg), np.atleast_1d(vl)
-    h = float(np.median(np.diff(tt))) if tt.size > 1 else float('nan')
-    for t, a, b in zip(tt, lg, vl):
-        rows.append([i + 1, h, float(t), float(a), float(b)])
-write_csv('koz_profiles.csv',
-          ['case', 'step_h_s', 't_into_horizon_s', 'radius_perstep_m', 'radius_vanloan_m'],
-          rows,
-          note='Radio de exclusion inflado d0 + k*sigma a lo largo del horizonte, con la '
-               'covarianza propagada de dos maneras. Tres particiones del mismo horizonte.')
+# Dos configuraciones, generadas por make_koz_profiles.m. La de vuelo lleva las
+# constantes que corren a bordo; la otra quita el techo de sigma para que se vea
+# acumular el ruido de proceso. La version anterior mezclaba las dos: generaba
+# con k = 0.2 y sin techo, y rotulaba k = 3.
+for variante in ('flight', 'uncapped'):
+    d = load('koz_profiles_%s.mat' % variante)
+    rows = []
+    for i, (tt, lg, vl) in enumerate(zip(cells(d['tt']), cells(d['legacy']),
+                                         cells(d['vanloan']))):
+        tt, lg, vl = np.atleast_1d(tt), np.atleast_1d(lg), np.atleast_1d(vl)
+        h = float(np.median(np.diff(tt))) if tt.size > 1 else float('nan')
+        for t, a, b in zip(tt, lg, vl):
+            rows.append([i + 1, h, float(t), float(a), float(b)])
+    write_csv('koz_profiles_%s.csv' % variante,
+              ['case', 'step_h_s', 't_into_horizon_s', 'radius_perstep_m',
+               'radius_vanloan_m'], rows,
+              note='Radio de exclusion inflado d0 + k*sigma a lo largo del horizonte, con '
+                   'la covarianza propagada de dos maneras, para tres particiones del mismo '
+                   'horizonte de 500 s. Configuracion %s: sigma_nav_max = %g m, k = %g.'
+                   % (variante, float(d['cap']), float(d['k'])))
+    META['koz_%s' % variante] = {'sigma_nav_max_m': float(d['cap']),
+                                 'k_sigma': float(d['k'])}
 
 # --------------------------------------------------------------------------
 # 3. Coste de resolver: restriccion dentro del QP frente a planificar y seguir
@@ -246,12 +256,23 @@ write_csv('retarget_sweep.csv',
 # --------------------------------------------------------------------------
 print('Probabilidad de colision')
 d = load('cam_demo.mat')
+# cam_demo.m monta la covarianza como diag([s s s].^2), asi que su 'sigma' es POR
+# EJE, mientras que el resto del estudio (mc_cam, la cadena de navegacion, la
+# figura 1) usa el radio 3D sqrt(trace(P)). Son la misma magnitud a un factor
+# sqrt(3), y mezclarlas hacia que la figura 8 sombrease la banda 4.8-32.1 m
+# (radio 3D) sobre un eje graduado por eje. Se exportan las dos columnas y el
+# convenio queda escrito.
 write_csv('pc_nav_sweep.csv',
-          ['sigma_nav_m', 'miss_required_m', 'dv_ms', 'Pc_before', 'Pc_after'],
-          [[float(s.sig), float(s.miss_req), float(s.dv), float(s.Pc0), float(s.Pc1)]
+          ['sigma_nav_per_axis_m', 'sigma_nav_3d_m', 'miss_required_m', 'dv_ms',
+           'Pc_before', 'Pc_after'],
+          [[float(s.sig), float(s.sig) * np.sqrt(3.0), float(s.miss_req),
+            float(s.dv), float(s.Pc0), float(s.Pc1)]
            for s in cells(d['nav_sweep'])],
           note='Pc con la formulacion de Foster. Pc_before decrece con sigma por dilucion: '
-               'una covarianza mayor reparte la masa de probabilidad.')
+               'una covarianza mayor reparte la masa de probabilidad. sigma_nav_3d_m = '
+               'sqrt(3)*sigma_nav_per_axis_m es el convenio que usan las figuras 1, 5, 6 '
+               'y 7; dv_ms es una cota SUPERIOR, porque cam_demo.m limita la busqueda a '
+               'la rama posigrada.')
 write_csv('pc_lead_sweep.csv', ['lead_time_s', 'dv_required_ms', 'miss_m', 'Pc'],
           [[float(s.lead), float(s.dv_req), float(s.miss), float(s.Pc)]
            for s in cells(d['sweep'])],

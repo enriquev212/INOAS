@@ -1,0 +1,14 @@
+# Techo de sigma_nav con el receptor GNSS apagado para siempre, en
+# funcion de la calidad supuesta del sensor auxiliar. En el modelo el
+# sensor auxiliar tiene 100 m por eje.
+sigma_aux_m,ceiling_m
+20,9.91246
+30,13.2647
+50,19.2508
+100,32.1254
+200,53.8533
+300,72.9371
+500,106.953
+1000,179.898
+2000,302.667
+3000,410.337

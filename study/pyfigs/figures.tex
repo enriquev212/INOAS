@@ -7,54 +7,68 @@
 % En el preambulo:
 %   \usepackage{graphicx}
 %   \graphicspath{{figures_py/}}
+%
+% CONVENIO: sigma_nav es el radio 3-D sqrt(trace(P_pos)) en todas las figuras.
+% Donde el codigo fuente trabajaba por eje (cam_demo.m, test_cam_retarget.m) la
+% conversion sqrt(3) esta hecha en los CSV y anotada en su cabecera.
 
 % ======================================================================== 1
 \begin{figure*}[!t]
   \centering
   \includegraphics{fig01_coupling}
   \caption{Coupling between navigation quality and manoeuvre cost is
-  conditional on the object's ephemeris. (a)~Median tangential impulse over
-  $1500$ sampled conjunction geometries against the navigation uncertainty at
-  the encounter, one curve per object ephemeris uncertainty
+  conditional on the object's ephemeris. (a)~Mean tangential impulse over $1500$
+  sampled conjunction geometries against the navigation uncertainty at the
+  encounter, one curve per object ephemeris uncertainty
   $\sigma_{\mathrm{obj}}$; the shaded band is the range spanned by the measured
   duty-cycled GNSS law of Fig.~\ref{fig:nav} ($4.8$--$32.1$\,m). (b)~The same
-  data read as a sensitivity: the increase in median $\Delta v$ across that
-  band. Tightening the navigation only buys something when the object is known
-  better than the band itself, $+3254\,\%$ at $\sigma_{\mathrm{obj}} = 10$\,m
-  against $+0.5\,\%$ at $300$\,m.}
+  data as a sensitivity: the increase in mean $\Delta v$ across that band.
+  Tightening the navigation only buys something when the object is known better
+  than the band itself, $+62\,\%$ at $\sigma_{\mathrm{obj}} = 10$\,m against
+  $+0.5\,\%$ at $300$\,m, a factor of $128$. The mean is used rather than the
+  median because at $\sigma_{\mathrm{obj}} = 10$\,m and
+  $\sigma_{\mathrm{nav}} = 4.8$\,m, $49.7\,\%$ of the geometries need no
+  manoeuvre at all, so the median sits on an atom of probability mass at zero and
+  any ratio taken through it is unstable.}
   \label{fig:coupling}
 \end{figure*}
 
 % ======================================================================== 2
-\begin{figure}[!t]
+\begin{figure*}[!t]
   \centering
   \includegraphics{fig02_koz_consistency}
   \caption{The inflated keep-out radius must be a function of time, not of the
-  prediction mesh. (a)~$d_0 + k\sigma(t)$ over a $500$\,s horizon split three
-  ways. Adding a fixed per-step process-noise increment makes the radius depend
-  on the splitting; discretising the continuous process-noise power spectral
-  density over the step with the van Loan method collapses the three onto one
-  curve. (b)~The spread across the three meshes, which reaches $41.3$\,m at
-  $t = 500$\,s for the per-step scheme and is zero, to the stored precision, for
-  van Loan.}
+  prediction mesh. Adding a fixed per-step process-noise increment makes the
+  radius depend on how the horizon is split; discretising the continuous
+  process-noise power spectral density over the step with the van Loan method
+  removes that dependence, and the three splittings collapse onto one curve.
+  (a)~In the flight configuration the $\sigma$ cap binds after about $90$\,s and
+  saturates both formulations at $249.7$\,m, so the defect is visible only
+  earlier: $17.6$\,m of mesh spread at $t = 60$\,s. (b)~With the cap removed the
+  formulation is seen bare: the per-step scheme spreads $619$\,m across the three
+  meshes and under-inflates the converged radius by a factor of $2$ to $3$. The
+  cap that hides the defect in flight is itself the auxiliary-sensor assumption
+  of Fig.~\ref{fig:nav}, not a property of the guidance law.}
   \label{fig:koz}
-\end{figure}
+\end{figure*}
 
 % ======================================================================== 3
 \begin{figure*}[!t]
   \centering
   \includegraphics{fig03_architecture_cost}
-  \caption{Enforcing the collision constraint inside the QP does not close in
-  real time; planning the manoeuvre outside it does. (a)~Solve-time
-  distribution per configuration, with each configuration's own deadline
-  dashed. The median is not the problem: up to $14.9\,\%$ of solves overrun
-  their guidance step and the worst cases reach $45$ and $77$\,s. (b)~The same
-  data as empirical distributions of solve time normalised by each
-  configuration's deadline. The proposed architecture solves in $2.8$\,ms
-  median and $62$\,ms worst against a $30$\,s deadline. Sample sizes are $41$
-  to $134$ solves for the QP-internal cases, so the extreme quantiles rest on
-  one or two solves each.}
-  \label{fig:timing}
+  \caption{A keep-out constraint sampled on the guidance grid does not see the
+  conjunction. (a)~At the relative velocities of a real plane-crossing encounter
+  the object stays inside the inflated keep-out sphere for $2d/v_{\mathrm{rel}}$,
+  a median of $34$\,ms over the $1500$ sampled geometries, while the guidance
+  grid steps every $h$ seconds: the deployed $30$\,s step is $886$ times longer
+  than the window it is meant to detect. (b)~With the encounter epoch uniform
+  with respect to the grid, the chance that any sample falls inside is
+  $\min(1,\,2d/(v_{\mathrm{rel}}h))$: $0.11\,\%$ at the deployed step and still
+  only $1.1\,\%$ at $h = 3$\,s. Shrinking the step does not fix it, because the
+  probability grows only as $1/h$. The constraint must therefore be imposed where
+  the minimum occurs, by solving for the time of closest approach continuously,
+  which is what the proposed guidance layer does.}
+  \label{fig:blind}
 \end{figure*}
 
 % ======================================================================== 4
@@ -68,25 +82,32 @@
   $19.2$\,mm/s to deliver it: a $53\,\%$ overhead for following a continuous
   reference instead of firing an impulse. The peak command is $39.6\,\mu$m/s$^2$,
   $0.095\,\%$ of the $1$\,N authority. (b)~Tracking error, $0.67$\,m rms and
-  $2.41$\,m peak. The miss distance opens from $120.0$\,m to $257.4$\,m against
-  a required $R_{\mathrm{hb}} + 3\sigma_c = 257.4$\,m; the plan is not revisited
-  after the burn.}
+  $2.41$\,m peak. The miss distance opens from $120.0$\,m to $257.4$\,m against a
+  required $R_{\mathrm{hb}} + 3\sigma_c = 257.4$\,m, where $\sigma_c$ is the
+  combined B-plane uncertainty of $84.1$\,m; the plan is not revisited after the
+  burn. The miss distances are stated, not plotted: the run records no
+  closest-approach time series.}
   \label{fig:exec}
 \end{figure}
 
 % ======================================================================== 5
-\begin{figure}[!t]
+\begin{figure*}[!t]
   \centering
   \includegraphics{fig05_navigation}
-  \caption{Measured cost of duty-cycling the GNSS receiver. (a)~A $900$\,s
-  window of the $4000$\,s record, with the receiver on $19.45\,\%$ of the time.
-  (b)~The same record collapsed onto time since the last fix: the position
-  uncertainty leaves $4.8$\,m, saturates at $32.1$\,m and is within $1\,\%$ of
-  that level after $89$\,s, whatever the length of the gap. The cost of
-  duty-cycling is therefore bounded, and $32.1$\,m is the value that reaches the
-  guidance layer.}
+  \caption{What duty-cycling the GNSS receiver does and does not buy.
+  (a)~Navigation uncertainty against time since the last fix: measured over a
+  $4000$\,s run, reproduced by the filter's covariance recursion, and compared
+  with the level reached when the receiver is never switched on. The three
+  coincide, because the $32.1$\,m ceiling is the Riccati fixed point of an
+  auxiliary measurement channel that is always enabled in the model
+  ($100$\,m per axis on position plus $50$\,m on altitude), not a consequence of
+  the duty cycle. (b)~Sweeping the duty cycle confirms it: the ceiling is flat
+  across the whole range while the time-averaged uncertainty falls from $32.1$ to
+  $3.7$\,m. What the receiver buys is the mean, $24.3$\,m at the $19.45\,\%$ duty
+  cycle flown, and not the bound. The bound follows the assumed auxiliary sensor
+  roughly as its square root: at $300$\,m per axis it would be $72.9$\,m.}
   \label{fig:nav}
-\end{figure}
+\end{figure*}
 
 % ======================================================================== 6
 \begin{figure}[!t]
@@ -116,7 +137,9 @@
   uncertainty, marginalised over ephemeris quality with a uniform weight on the
   four simulated levels. At the operating point the median is $12.5$\,mm/s and
   the $90$th percentile $53.7$\,mm/s, which is the number a tank has to be sized
-  against. Values are per encounter; the study carries no conjunction rate.}
+  against. Values are per encounter; the study carries no conjunction rate. The
+  operating point inherits the auxiliary-sensor assumption of
+  Fig.~\ref{fig:nav}.}
   \label{fig:budget}
 \end{figure*}
 
@@ -127,13 +150,15 @@
   \caption{Why the design constrains a distance and not a collision
   probability. (a)~With the miss distance held at $120$\,m, the collision
   probability computed with the Foster formulation \emph{falls} from
-  $8.8\times10^{-4}$ to $1.6\times10^{-4}$ as the navigation uncertainty grows
-  by a factor of $21$: a larger covariance spreads the same probability mass
-  over a larger area. A guidance law triggered on a $P_c$ threshold would
-  therefore reward worse navigation. (b)~The covariance-inflated keep-out
-  distance instead grows monotonically, $333 \rightarrow 835$\,m, and with it
-  the required impulse, $25.2 \rightarrow 60.5$\,mm/s. This sweep is the
-  standalone conjunction demonstrator, with its own object-covariance
-  assumption of $\sigma_{\mathrm{obj}} = 150$\,m.}
+  $8.8\times10^{-4}$ to $1.6\times10^{-4}$ as the navigation uncertainty grows by
+  a factor of $21$: a larger covariance spreads the same probability mass over a
+  larger area. A guidance law triggered on a $P_c$ threshold would therefore
+  reward worse navigation. (b)~The covariance-inflated keep-out distance instead
+  grows monotonically, $333 \rightarrow 835$\,m, and with it the required
+  impulse. This sweep is the standalone conjunction demonstrator, with its own
+  object-covariance assumption of $\sigma_{\mathrm{obj}} = 150$\,m; its impulses
+  are an upper bound, because that demonstrator searches only the posigrade
+  branch, which costs $13$ to $38\,\%$ more than the retrograde root the flight
+  planner selects. The comparison rests on the monotonicity, which is unaffected.}
   \label{fig:dilution}
 \end{figure}

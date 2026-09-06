@@ -19,11 +19,19 @@
     "v_rel_ms": 9998.568267658968
   },
   "k_sigma": 3.0,
+  "koz_flight": {
+    "k_sigma": 3.0,
+    "sigma_nav_max_m": 32.1
+  },
+  "koz_uncapped": {
+    "k_sigma": 3.0,
+    "sigma_nav_max_m": Infinity
+  },
   "n_geometries": 1500,
   "nav": {
     "on_fraction": 0.1945,
-    "sigma_fresh_m": 4.760327665510801,
-    "sigma_saturated_m": 32.118516339016004,
+    "sigma_fresh_m": 4.760327620847066,
+    "sigma_saturated_m": 32.118515895287956,
     "window_s": 4000.0
   },
   "t_burn_s": 3371.7890747519987

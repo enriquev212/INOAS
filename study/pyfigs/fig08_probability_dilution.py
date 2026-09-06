@@ -38,6 +38,18 @@ rejilla en coordenadas de pantalla, no a ojo:
 Los datos son del demostrador de conjuncion autonomo, con su propia hipotesis de
 covarianza del objeto (sigma_obj = 150 m); no son la misma magnitud que el
 retarget_sweep del resto del articulo y no deben mezclarse en un panel.
+
+Dos advertencias que el pie de figura tiene que recoger:
+
+  * El eje va en radio 3D sqrt(trace(P)), que es el convenio de las figuras 1,
+    5, 6 y 7. cam_demo.m trabaja por eje; la conversion es el factor sqrt(3) y
+    esta hecha en el CSV. La version anterior sombreaba la banda medida
+    4.8-32.1 m, que es radio 3D, sobre un eje graduado por eje.
+  * El impulso es una cota SUPERIOR: cam_demo.m limita la busqueda a la rama
+    posigrada, que es justamente la ley que c2bb207 saco de plan_cam. Resolviendo
+    la misma parabola en la rama retrograda sale entre un 13 y un 38 % mas barato.
+    El sentido del resultado no cambia, porque es la MONOTONIA lo que se compara
+    contra Pc, pero los valores absolutos no son los que planificaria el guiado.
 """
 import matplotlib.patheffects as pe
 import numpy as np
@@ -53,8 +65,11 @@ st.use()
 P = st.read_csv('pc_nav_sweep.csv')
 M = st.meta()
 
-o = np.argsort(P['sigma_nav_m'])
-SN = P['sigma_nav_m'][o]
+# Eje en radio 3D, que es el convenio de las figuras 1, 5, 6 y 7. cam_demo.m
+# trabaja por eje, y sombrear sobre ese eje la banda medida 4.8-32.1 m, que es
+# radio 3D, la ponia un factor sqrt(3) fuera de sitio.
+o = np.argsort(P['sigma_nav_3d_m'])
+SN = P['sigma_nav_3d_m'][o]
 PC_B = P['Pc_before'][o]
 PC_A = P['Pc_after'][o]
 MISS = P['miss_required_m'][o]
@@ -65,8 +80,8 @@ DV = P['dv_ms'][o] * 1e3            # m/s -> mm/s
 MISS_FIXED = M['execution']['miss_before_m']
 BAND = (M['nav']['sigma_fresh_m'], M['nav']['sigma_saturated_m'])
 
-XLIM = (10.0, 300.0)
-XTICKS = [12, 40, 100, 250]
+XLIM = (17.0, 520.0)
+XTICKS = [20, 70, 170, 430]
 
 r_pc = PC_B[0] / PC_B[-1]
 r_sn = SN[-1] / SN[0]

@@ -9,38 +9,38 @@ sin MATLAB. Los CSV valen ademas como material suplementario.
 ## Uso
 
 ```bash
-python export_data.py     # solo si han cambiado los .mat de study/out
-python make_all.py        # regenera las ocho figuras
-python check_figures.py   # audita los PDF antes de enviar
+python export_data.py       # solo si han cambiado los .mat de study/out
+python nav_duty_model.py    # regenera el barrido de ciclo de trabajo (figura 5)
+python make_all.py          # regenera las ocho figuras
+python check_figures.py     # audita los PDF antes de enviar
 ```
 
-La salida va a `study/figures_py`: PDF vectorial para LaTeX y PNG a 600 ppp para
-revisar.
+La salida va a `study/figures_py`: PDF vectorial para LaTeX y PNG a 600 ppp.
 
 ## Piezas
 
 | fichero | que hace |
 |---|---|
 | `export_data.py` | lee `study/out/*.mat` y escribe `data/*.csv` + `data/meta.json`. Unidades explicitas en cada nombre de columna. |
-| `inoas_style.py` | tipografia, paleta, acabado de ejes y guardado. Un solo sitio donde se decide como se ve una figura. |
+| `nav_duty_model.py` | reconstruye la recursion de covarianza del filtro, se valida contra la corrida medida y barre el ciclo de trabajo. Es lo que sostiene la figura 5. |
+| `inoas_style.py` | tipografia, paleta, acabado de ejes y guardado. |
 | `figNN_*.py` | una figura cada uno. Leen solo `data/`, imprimen al final las cifras que dibujan. |
 | `make_all.py` | los llama en orden y avisa si alguno falla. |
 | `check_figures.py` | tamano exacto, fuentes incrustadas, nada de Type 3, nada de mapas de bits. |
 | `figures.tex` | los ocho bloques `\begin{figure}` con sus pies, listos para pegar. |
 
-## Decisiones de estilo
+## Convenios
 
-Times con matematicas STIX, que es lo que compone IEEEtran; marco abierto y
-desplazado 3 pt; rejilla horizontal punteada por detras de los datos; paleta de
-Paul Tol, distinguible con daltonismo y separable en gris, siempre acompanada de
-marcador o trazo distinto porque la figura tiene que sobrevivir a una impresion
-en blanco y negro.
+**sigma_nav es el radio 3-D `sqrt(trace(P_pos))`** en todas las figuras. Parte
+del codigo fuente trabaja por eje (`cam_demo.m`, `test_cam_retarget.m` montan la
+covarianza como `diag([s s s].^2)`); la conversion `sqrt(3)` esta hecha en los
+CSV y anotada en su cabecera. Antes no lo estaba, y la figura 8 llego a sombrear
+la banda medida 4.8-32.1 m, que es radio 3-D, sobre un eje graduado por eje.
 
 `save()` deja el PDF con el tamano exacto que pidio `figure()`, 3.45 in de
-columna o 7.16 in de pagina. Importa: `bbox_inches='tight'` recorta despues de
-dibujar y devolvia PDF de 5.94 in donde se habian pedido 7.16; al estirar eso en
-LaTeX hasta el ancho de pagina se estira tambien la tipografia y los 8 pt dejan
-de ser 8 pt. Por eso las figuras se incluyen **sin escalar**:
+columna o 7.16 in de pagina, porque `bbox_inches='tight'` recorta despues de
+dibujar y devolvia PDF de 5.94 in donde se habian pedido 7.16. Las figuras se
+incluyen **sin escalar**:
 
 ```latex
 \includegraphics{fig01_coupling}          % correcto
@@ -50,78 +50,98 @@ de ser 8 pt. Por eso las figuras se incluyen **sin escalar**:
 ## Las ocho figuras
 
 1. **`fig01_coupling`** (pagina). El acoplamiento navegacion-guiado esta
-   condicionado por la efemeride del objeto: +3254 % de impulso mediano al
-   recorrer la banda medida si el objeto se conoce a 10 m, +0.5 % si se conoce a
-   300 m.
-2. **`fig02_koz_consistency`** (columna). El radio de exclusion inflado tiene que
-   depender del tiempo y no de la particion del horizonte. Por paso, tres
-   particiones del mismo horizonte de 500 s dan tres radios que se separan hasta
-   41.3 m; con van Loan las tres colapsan en una curva.
-3. **`fig03_architecture_cost`** (pagina). Meter la restriccion de colision
-   dentro del QP no cierra en tiempo real: el 14.9 % de los QP tarda mas que su
-   paso de guiado y el peor caso llega a 77 s. Planificar fuera del QP resuelve
-   en 2.8 ms de mediana con 480x de margen sobre el peor caso.
+   condicionado por la efemeride del objeto: +62 % de impulso medio al recorrer
+   la banda medida si el objeto se conoce a 10 m, +0.5 % si se conoce a 300 m.
+2. **`fig02_koz_consistency`** (pagina). El radio de exclusion inflado tiene que
+   depender del tiempo y no de la particion del horizonte. Sin el techo de sigma,
+   tres particiones del mismo horizonte dan radios separados 619 m; con van Loan
+   colapsan en una curva. En configuracion de vuelo el techo satura las dos en
+   249.7 m y solo queda 17.6 m de dispersion a t = 60 s.
+3. **`fig03_architecture_cost`** (pagina). Una restriccion muestreada en la
+   rejilla no ve la conjuncion: el objeto pasa 34 ms dentro de la esfera y el
+   paso de guiado es 886 veces mas largo. Probabilidad de detectarlo, 0.11 %.
 4. **`fig04_execution`** (columna). Un encuentro completo: cruce de planos de
    88.15 deg a 10.0 km/s, impulso retrogrado de 12.6 mm/s a -112.5 min, fallo de
-   120.0 -> 257.4 m contra un objetivo de 257.4 m, error de seguimiento 0.67 m
-   rms. El MPC gasta 19.2 mm/s para entregar un plan de 12.6: un 53 % de
-   sobrecoste por seguir una referencia continua en vez de disparar un impulso.
-5. **`fig05_navigation`** (columna). Lo que cuesta apagar el receptor: encendido
-   el 19.45 % del tiempo, sigma pasa de 4.8 m recien corregido a 32.1 m saturado,
-   y satura en 89 s. El coste de apagarlo esta acotado.
+   120.0 -> 257.4 m, error de seguimiento 0.67 m rms. El MPC gasta 19.2 mm/s
+   para entregar un plan de 12.6: un 53 % de sobrecoste.
+5. **`fig05_navigation`** (pagina). Que hace y que no hace el ciclo de trabajo:
+   el techo de 32.1 m lo pone un canal auxiliar siempre activo y no el receptor;
+   lo que el ciclo compra es la media, 24.3 m al 19.45 % de encendido.
 6. **`fig06_tangential_authority`** (columna). Un impulso tangencial pierde toda
-   autoridad en un encuentro frontal: la envolvente va como cos(dInc/2) y se
-   cierra a cero cuando v_rel tiende a 2 v_orb.
+   autoridad en un encuentro frontal.
 7. **`fig07_dv_distribution`** (pagina). El presupuesto de propulsante es una
-   cola, no una mediana.
+   cola, no una mediana: p90 = 53.7 mm/s en el punto de operacion.
 8. **`fig08_probability_dilution`** (columna). Con el fallo fijo, la probabilidad
-   de colision BAJA al empeorar la navegacion (8.8e-4 -> 1.6e-4). Disenar contra
-   un umbral de Pc premiaria tener mala navegacion; por eso el diseno infla una
-   distancia con la covarianza, que si crece de forma monotona.
+   de colision BAJA al empeorar la navegacion. Disenar contra un umbral de Pc
+   premiaria tener mala navegacion.
 
 ## Lo que estas figuras no dicen
 
 Se deja por escrito para que no se sobreinterprete ninguna y para que el pie de
 figura lo recoja donde haga falta.
 
-- **Fig. 2**: por debajo de t ~ 150 s las tres curvas por paso se separan menos de
-  2 m y se ven como una sola. Solo hay un horizonte (500 s) y tres pasos, asi que
-  la figura no puede ensenar el orden de convergencia del error en h.
-- **Fig. 3**: las muestras son pocas y desiguales (41 a 134 QP por configuracion),
-  de modo que cada peor caso descansa sobre uno o dos QP. No conviene apoyarse en
-  los cuantiles extremos. `pct_converged` en `timing_qp_cases.csv` es
-  `100*mean(exitflag>0)`: cuantos QP resolvio el solver, no cuantos llegaron a
-  tiempo. Son dos fracasos distintos.
+- **Fig. 1**: el estadistico es la MEDIA y no la mediana, a proposito. A
+  sigma_obj = 10 m y sigma_nav = 4.8 m el 49.7 % de las geometrias no necesitan
+  maniobra, asi que la mediana descansa sobre un atomo en cero: un bootstrap
+  emparejado la deja exactamente en cero en el 38.7 % de los remuestreos y el
+  cociente da un intervalo del 95 % de [443 %, infinito). El "+3254 %" que
+  aparecia en versiones anteriores no es defendible; el +62 % si.
+- **Fig. 2**: la version anterior estaba generada con dos constantes de vuelo
+  sobrescritas (sigma_nav_max = inf y safetyCost = 0.2) mientras se rotulaba
+  k = 3. Ahora se dibujan las dos configuraciones y cada una dice cual es. En
+  vuelo el defecto queda casi tapado por el techo de sigma, que a su vez es la
+  hipotesis del sensor auxiliar de la figura 5 y no una propiedad del guiado.
+- **Fig. 3**: no dice nada sobre coste de computo. El argumento anterior, que la
+  restriccion dentro del QP no cerraba en tiempo real, se ha retirado: sus
+  numeros se midieron con codigo anterior a `a7701b4` y `8d55826`, y relanzado
+  contra HEAD el mismo banco cumple todos los plazos. Ademas, con el codigo
+  actual esa restriccion no influye en la solucion: con `dsafe0 = 150` y con
+  `dsafe0 = 0` el mando difiere 9.9e-09 m/s^2 sobre 3.0e-04 m/s^2. El QP que se
+  cronometraba era de seguimiento, no de evitacion. La probabilidad de deteccion
+  supone ademas el instante del encuentro uniforme respecto a la rejilla.
 - **Fig. 4**: el resultado de seguridad, 120.0 -> 257.4 m, es una anotacion y no
   una serie dibujada: `execution.csv` no lleva la distancia de maxima
   aproximacion frente al tiempo. Tampoco lleva las componentes del mando, asi que
-  el caracter retrogrado del impulso solo aparece escrito.
-- **Fig. 5**: el colapso del diente de sierra es exacto, las 12 ventanas coinciden
-  a 1.7e-5 m, asi que el panel (b) demuestra repetibilidad de una propagacion
-  determinista, no dispersion estadistica.
+  el caracter retrogrado del impulso solo aparece escrito. El escenario usa
+  `dsafe0 = R_hb = 5 m`, no los 150 m del demostrador co-orbital.
+- **Fig. 5**: la cota de 32.1 m depende por completo de un canal auxiliar que en
+  el modelo esta siempre activo, con 100 m por eje en posicion y 50 m en altitud,
+  y que el propio init llama "synthetic internal sensor". No hay un sensor de a
+  bordo obvio que entregue eso en un CubeSat, y el pie de figura tiene que
+  presentarlo como hipotesis. La cota va como la raiz de esa calidad: con 300 m
+  por eje serian 72.9 m. El modelo lineal reproduce la corrida medida con 0.0 %
+  de error mediano salvo en la primera casilla, donde el filtro real tiene una
+  puerta por salud del GNSS que el modelo no tiene.
 - **Fig. 6**: el color es un recuento crudo y el estudio muestrea dInc uniforme
   mientras v_rel va como sin(dInc/2), de modo que parte del gradiente de densidad
-  es el muestreo y no la fisica (108 casos en el primer intervalo de v_rel frente
-  a 336 en el ultimo). Ninguna columna registra si un caso alcanzo realmente
-  d_target, asi que la figura no puede senalar que geometrias frontales son
-  simplemente inviables con un solo impulso tangencial.
+  es el muestreo y no la fisica. Ninguna columna registra si un caso alcanzo
+  realmente d_target.
 - **Fig. 7**: marginalizar sobre la calidad de efemeride exige un peso, y el que
   se usa es el uniforme sobre los cuatro niveles simulados. Es una hipotesis
-  sobre el catalogo, no una medida; sin ella esta `mc_percentiles.csv`, celda a
-  celda. La figura da impulso por encuentro: no hay tasa de conjunciones ni
-  duracion de mision en los datos, asi que nada de aqui se convierte en un
-  presupuesto anual ni en un tamano de deposito.
-- **Fig. 8**: el barrido es el del demostrador de conjuncion aislado, con su
-  propia hipotesis de covarianza del objeto (sigma_obj = 150 m). Su "fallo
-  requerido" NO es la misma magnitud que la de `retarget_sweep.csv`, y los dos
-  conjuntos no se mezclan en un panel. El umbral de 1e-4 es convencional y es lo
-  unico de la figura que no sale de los datos.
+  sobre el catalogo, no una medida; sin ella esta `mc_percentiles.csv`. La figura
+  da impulso por encuentro: no hay tasa de conjunciones ni duracion de mision.
+  Su punto de operacion hereda la hipotesis del sensor auxiliar.
+- **Fig. 8**: el barrido es el del demostrador aislado, con su propia hipotesis
+  de covarianza del objeto (sigma_obj = 150 m). Sus impulsos son una cota
+  SUPERIOR, porque ese demostrador solo busca en la rama posigrada, entre un 13 y
+  un 38 % mas cara que la retrograda que elige el planificador de vuelo. La
+  comparacion descansa en la monotonia, que no se ve afectada. El umbral de 1e-4
+  es convencional y es lo unico de la figura que no sale de los datos.
 
-## Nota sobre `mc_summary.mat`
+## Procedencia de los datos
 
-`export_data.py` **no** lo lee. Lleva fecha anterior a la de los `mc_cam_*.mat`
-que deberia resumir y su `fzero` de 1/1500 delata que se calculo sobre 1500 casos
-por sigma, es decir con un solo nivel de `sigma_obj`, cuando los ficheros
-actuales traen 6000. Sus percentiles no se reconcilian con los datos actuales.
-Los percentiles se recalculan aqui a partir de las mismas filas que van a
-`mc_cases.csv`, de modo que las dos tablas no pueden discrepar.
+- `mc_summary.mat` **no se lee**: lleva fecha anterior a la de los `mc_cam_*.mat`
+  que deberia resumir y se calculo con un solo nivel de `sigma_obj`. Los
+  percentiles se recalculan desde las mismas filas que van a `mc_cases.csv`.
+- `bench_consec_quadprog_final.mat` **ya no se lee**: era la fuente de la figura 3
+  anterior. Se conserva en `study/out` junto a `bench_consec_actual.mat`, que es
+  la medida contra HEAD, para que la diferencia quede documentada.
+- `pct_converged` en `timing_qp_cases.csv` es `100*mean(exitflag>0)`, o sea
+  cuantos QP resolvio el solver, no cuantos llegaron a tiempo. Son dos fracasos
+  distintos.
+- Los `mc_cam_*.mat` se generaron con el integrador de referencia anterior a
+  `8d55826`. El error resultante esta acotado y medido: menos de 0.054 mm/s por
+  caso y menos de 0.04 mm/s en cualquier percentil, de modo que las cifras de
+  cabecera no se mueven a la precision con la que se citan.
+
+El detalle completo, con fichero y linea, en `study/AUDITORIA.md`.
