@@ -4,16 +4,16 @@
   "execution": {
     "Np": 60,
     "dInc_deg": 88.15,
-    "d_target_m": 257.3923763588016,
-    "dv_planned_mms": 12.567794274417635,
-    "dv_spent_mms": 19.204422994469535,
+    "d_target_m": 382.59817635579805,
+    "dv_planned_mms": 21.759393304293546,
+    "dv_spent_mms": 33.24908821530753,
     "guidance_step_s": 30.0,
-    "miss_achieved_m": 257.39366612651224,
-    "miss_after_m": 257.3935243331735,
+    "miss_achieved_m": 382.5978778948866,
+    "miss_after_m": 382.59775083205415,
     "miss_before_m": 119.99992638209494,
     "pass_time_s": 0.024003436649654722,
     "retrograde": true,
-    "sigma_bplane_m": 84.13079211960053,
+    "sigma_bplane_m": 77.53272545193268,
     "t_burn_rel_tca_min": -112.5,
     "u_max_ms2": 0.041666666666666664,
     "v_rel_ms": 9998.568267658968
@@ -28,6 +28,7 @@
     "sigma_nav_max_m": Infinity
   },
   "n_geometries": 1500,
+  "n_mc_blocks": 6,
   "nav": {
     "on_fraction": 0.1945,
     "sigma_fresh_m": 4.760327620847066,

@@ -61,9 +61,9 @@ incluyen **sin escalar**:
    rejilla no ve la conjuncion: el objeto pasa 34 ms dentro de la esfera y el
    paso de guiado es 886 veces mas largo. Probabilidad de detectarlo, 0.11 %.
 4. **`fig04_execution`** (columna). Un encuentro completo: cruce de planos de
-   88.15 deg a 10.0 km/s, impulso retrogrado de 12.6 mm/s a -112.5 min, fallo de
-   120.0 -> 257.4 m, error de seguimiento 0.67 m rms. El MPC gasta 19.2 mm/s
-   para entregar un plan de 12.6: un 53 % de sobrecoste.
+   88.15 deg a 10.0 km/s, impulso retrogrado de 21.8 mm/s a -112.5 min, fallo de
+   120.0 -> 382.6 m, error de seguimiento 1.16 m rms. El MPC gasta 33.2 mm/s
+   para entregar un plan de 21.8: un 53 % de sobrecoste.
 5. **`fig05_navigation`** (pagina). Que hace y que no hace el ciclo de trabajo:
    el techo de 32.1 m lo pone un canal auxiliar siempre activo y no el receptor;
    lo que el ciclo compra es la media, 24.3 m al 19.45 % de encendido.
@@ -99,11 +99,13 @@ figura lo recoja donde haga falta.
   `dsafe0 = 0` el mando difiere 9.9e-09 m/s^2 sobre 3.0e-04 m/s^2. El QP que se
   cronometraba era de seguimiento, no de evitacion. La probabilidad de deteccion
   supone ademas el instante del encuentro uniforme respecto a la rejilla.
-- **Fig. 4**: el resultado de seguridad, 120.0 -> 257.4 m, es una anotacion y no
+- **Fig. 4**: el resultado de seguridad, 120.0 -> 382.6 m, es una anotacion y no
   una serie dibujada: `execution.csv` no lleva la distancia de maxima
   aproximacion frente al tiempo. Tampoco lleva las componentes del mando, asi que
-  el caracter retrogrado del impulso solo aparece escrito. El escenario usa
-  `dsafe0 = R_hb = 5 m`, no los 150 m del demostrador co-orbital.
+  el caracter retrogrado del impulso solo aparece escrito. El suelo de seguridad
+  es ya `d0 = 150 m`, el mismo del controlador y del resto del paper: antes usaba
+  el radio de cuerpo duro de 5 m y sigma por eje, de modo que invertia una ley
+  distinta de la de las figuras 1, 6 y 7.
 - **Fig. 5**: la cota de 32.1 m depende por completo de un canal auxiliar que en
   el modelo esta siempre activo, con 100 m por eje en posicion y 50 m en altitud,
   y que el propio init llama "synthetic internal sensor". No hay un sensor de a
@@ -122,10 +124,10 @@ figura lo recoja donde haga falta.
   da impulso por encuentro: no hay tasa de conjunciones ni duracion de mision.
   Su punto de operacion hereda la hipotesis del sensor auxiliar.
 - **Fig. 8**: el barrido es el del demostrador aislado, con su propia hipotesis
-  de covarianza del objeto (sigma_obj = 150 m). Sus impulsos son una cota
-  SUPERIOR, porque ese demostrador solo busca en la rama posigrada, entre un 13 y
-  un 38 % mas cara que la retrograda que elige el planificador de vuelo. La
-  comparacion descansa en la monotonia, que no se ve afectada. El umbral de 1e-4
+  de covarianza del objeto, un elipsoide anisotropo diag(150, 60, 60) m en ECI.
+  Su buscador ya no esta limitado a la rama posigrada: resuelve la misma parabola
+  cerrada que plan_cam y devuelve la raiz de menor modulo, que en las cuatro es
+  retrograda, entre un 13 y un 38 % mas barata que la anterior. El umbral de 1e-4
   es convencional y es lo unico de la figura que no sale de los datos.
 
 ## Procedencia de los datos

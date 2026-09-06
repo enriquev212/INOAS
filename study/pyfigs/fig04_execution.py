@@ -63,9 +63,13 @@ XR = (XBRK, 2.6)
 WR = [2.4, 1.0]
 WSPACE = 0.06
 
-U_TOP = 42.0                 # cabecera sobre el pico, para el rotulo
-DV_TOP = 28.0                # deja libre el cuarto superior del panel (a)
-E_TOP = 2.62
+# Limites atados a los datos y no escritos a mano. Al corregir la ley de guiado
+# (suelo de 150 m en vez del radio de cuerpo duro, y sigma como radio 3D) el pico
+# paso de 39.6 a 68.5 um/s^2 y el error de 2.4 a 4.2 m, y unos limites fijos
+# recortaban las dos curvas.
+U_TOP = float(np.ceil(u_pk / 10.0) * 10.0 + 12.0)
+DV_TOP = float(np.ceil(DV_SPENT / 5.0) * 5.0 + 8.0)
+E_TOP = float(np.ceil(e_pk * 1.35 * 10.0) / 10.0)
 
 coast = t >= XBRK
 e_coast = err[coast].max()
@@ -101,7 +105,8 @@ for ax, a2, xlim in ((axAL, axA2L, XL), (axAR, axA2R, XR)):
         s.set_visible(False)
     a2.tick_params(left=False, right=False, labelleft=False, labelright=False)
 
-axAL.set_yticks([0, 10, 20, 30, 40])
+# Marcas derivadas del limite, para que cubran el pico en vez de quedarse cortas
+axAL.set_yticks(np.arange(0, U_TOP, 20.0))
 axAL.set_ylabel('Commanded acceleration\n' + r'$|u|$  [$\mu$m s$^{-2}$]')
 
 # --- panel (b): error de seguimiento --------------------------------------
@@ -109,7 +114,7 @@ for ax, xlim in ((axBL, XL), (axBR, XR)):
     ax.plot(t, err, color=st.C['green'], lw=1.0, zorder=3)
     ax.set_xlim(*xlim)
     ax.set_ylim(0, E_TOP)
-axBL.set_yticks([0, 1, 2])
+axBL.set_yticks(np.arange(0, E_TOP, 1.0 if E_TOP < 4 else 2.0))
 axBL.set_ylabel('Tracking error\n[m]')
 
 # --- marcas de los dos instantes -----------------------------------------
@@ -140,7 +145,7 @@ axA2R.spines['right'].set_position(('outward', 3))
 axA2R.spines['right'].set_linewidth(0.6)
 axA2R.spines['right'].set_color(st.C['purple'])
 axA2R.yaxis.set_ticks_position('right')
-axA2R.set_yticks([0, 10, 20])
+axA2R.set_yticks(np.arange(0, DV_TOP, 10.0))
 axA2R.tick_params(right=True, labelright=True, colors=st.C['purple'])
 axA2R.set_ylabel(r'$\Delta v$  [mm s$^{-1}$]',
                  color=st.C['purple'], rotation=270, va='bottom', labelpad=13)
@@ -182,7 +187,7 @@ st.label_line(axBL, -95.0, E_TOP * 0.97,
 # cifra que justifica toda la maniobra: va en el hueco que deja el error al caer.
 st.label_line(axBL, -95.0, E_TOP * 0.50,
               'miss  %.1f m $\\rightarrow$ %.1f m\n'
-              'target $R_{\\mathrm{hb}}+3\\sigma_{\\mathrm{c}} = %.1f$ m'
+              'target $d_0+3\\sigma_{\\mathrm{c}} = %.1f$ m'
               % (X['miss_before_m'], X['miss_achieved_m'], X['d_target_m']),
               st.C['grey'], ha='left', va='center', fontsize=6.8,
               linespacing=1.25)

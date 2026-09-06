@@ -881,38 +881,6 @@ end
 
 %% Optimization model
 
-function [J, grad] = MPCObjectiveScaled(Y0, Gamma_extend, Q, R, z, H, u, S, ...
-                                        slackWeight, m, Np, Ddu)
-
-    Ndu = m*Np;
-
-    w = z(1:Ndu);
-    slack = z(Ndu+1:end);
-
-    delta_U = Ddu*w;
-
-    Y = Y0 + Gamma_extend*delta_U;
-
-    U0 = repmat(u, Np, 1);
-    U  = U0 + H*delta_U;
-
-    J = 0.5*Y'*Q*Y + ...
-        0.5*delta_U'*S*delta_U + ...
-        0.5*U'*R*U + ...
-        slackWeight*(slack'*slack);
-
-    grad_deltaU = Gamma_extend.'*Q*Y + ...
-                  S*delta_U + ...
-                  H.'*R*U;
-
-    grad_w = Ddu.'*grad_deltaU;
-
-    grad_slack = 2*slackWeight*slack;
-
-    grad = [grad_w; grad_slack];
-
-end
-
 function [A,b] = MPCLinearConstraints(Umin, Umax, Ymin, Ymax, deltaUmax, ...
     u, E, H, Gamma_extend_select, Y0_select, ...
     LeftHandDebris, RightHandDebris, m, Np, dsafe0)

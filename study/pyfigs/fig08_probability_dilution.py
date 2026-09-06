@@ -73,7 +73,11 @@ SN = P['sigma_nav_3d_m'][o]
 PC_B = P['Pc_before'][o]
 PC_A = P['Pc_after'][o]
 MISS = P['miss_required_m'][o]
-DV = P['dv_ms'][o] * 1e3            # m/s -> mm/s
+# El planificador toma la raiz de menor modulo de la parabola miss(dv), y en las
+# cuatro es la retrograda. El signo lo lleva el CSV; la figura muestra el modulo,
+# que es lo que se presupuesta.
+RETRO = bool(np.all(P['dv_ms'][o] < 0))
+DV = np.abs(P['dv_ms'][o]) * 1e3    # m/s -> mm/s, en modulo
 
 # Distancia de paso del encuentro sin maniobra del propio demostrador: es la
 # que se mantiene fija en el panel (a)
@@ -144,7 +148,9 @@ DV_LABEL_Y = 90.0
 for x, dv in zip(SN, DV):
     axB.text(x, DV_ROW_Y, '%.1f' % dv, ha='center', va='center', fontsize=6.9,
              color=st.C['orange'], zorder=6).set_path_effects(HALO)
-axB.text(XLIM[0] * 1.05, DV_LABEL_Y, '$\\Delta v$ required  [mm s$^{-1}$]',
+axB.text(XLIM[0] * 1.05, DV_LABEL_Y,
+         '$\\Delta v$ required%s  [mm s$^{-1}$]'
+         % (', retrograde' if RETRO else ''),
          ha='left', va='center', fontsize=6.9,
          color=st.C['orange'], zorder=6).set_path_effects(HALO)
 

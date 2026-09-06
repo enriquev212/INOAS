@@ -1,4 +1,15 @@
 %MAKE_FIGURES Figuras para el paper de IEEE Aerospace.
+%  ============================================================================
+%  SUPERSEDIDO. No genera las figuras del articulo.
+%
+%  Las figuras del paper se dibujan ahora en study/pyfigs (Python), a partir de
+%  los CSV que exporta study/pyfigs/export_data.py. Este script se conserva por
+%  historia y porque algunos de sus bloques todavia producen .mat de campana,
+%  pero sus FIGURAS estan obsoletas y algunas de sus fuentes tambien: carga
+%  bench_consec_quadprog_final.mat, medido con codigo anterior a 8d55826.
+%
+%  Para regenerar las figuras:   cd study/pyfigs && python make_all.py
+%  ============================================================================
 % Formato de columna simple IEEE: 3.5 in de ancho, tipografia de 8 pt.
 % Salida en PDF vectorial (para LaTeX) y PNG a 300 dpi (para revisar).
 % --- rutas derivadas de la posicion de este fichero ------------------------

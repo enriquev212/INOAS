@@ -53,9 +53,15 @@ def cells(x):
 # --------------------------------------------------------------------------
 print('Monte Carlo de conjunciones')
 rows = []
-k = 1
-while os.path.exists(os.path.join(OUT, 'mc_cam_%02d.mat' % k)):
-    d = load('mc_cam_%02d.mat' % k)
+# Por glob y no probando mc_cam_01, 02, ... hasta el primer hueco: si faltara un
+# bloque intermedio, el bucle anterior se paraba antes y el Monte Carlo salia
+# recortado sin avisar.
+import glob as _glob
+bloques = sorted(_glob.glob(os.path.join(OUT, 'mc_cam_*.mat')))
+if not bloques:
+    raise SystemExit('no hay bloques mc_cam_*.mat en %s' % OUT)
+for _b in bloques:
+    d = sio.loadmat(_b, squeeze_me=True, struct_as_record=False)
     for m in cells(d['M']):
         rows.append([
             float(m.sig), float(m.sig_obj), float(m.dInc), float(m.vrel),
@@ -66,7 +72,7 @@ while os.path.exists(os.path.join(OUT, 'mc_cam_%02d.mat' % k)):
     META['k_sigma'] = float(d['K_SIGMA'])
     META['T_orb_s'] = float(d['T_orb'])
     META['t_burn_s'] = float(d['T_BURN'])
-    k += 1
+META['n_mc_blocks'] = len(bloques)
 write_csv('mc_cases.csv',
           ['sigma_nav_m', 'sigma_obj_m', 'dInc_deg', 'vrel_ms', 'bplane_angle_deg',
            'miss0_m', 'sens_m_per_mms', 'd_target_m', 'dv_ms', 'converged'],
@@ -271,8 +277,8 @@ write_csv('pc_nav_sweep.csv',
           note='Pc con la formulacion de Foster. Pc_before decrece con sigma por dilucion: '
                'una covarianza mayor reparte la masa de probabilidad. sigma_nav_3d_m = '
                'sqrt(3)*sigma_nav_per_axis_m es el convenio que usan las figuras 1, 5, 6 '
-               'y 7; dv_ms es una cota SUPERIOR, porque cam_demo.m limita la busqueda a '
-               'la rama posigrada.')
+               'y 7. dv_ms es la raiz de menor modulo de la parabola miss(dv), la misma ley '
+               'que usa plan_cam: signo negativo = retrogrado.')
 write_csv('pc_lead_sweep.csv', ['lead_time_s', 'dv_required_ms', 'miss_m', 'Pc'],
           [[float(s.lead), float(s.dv_req), float(s.miss), float(s.Pc)]
            for s in cells(d['sweep'])],

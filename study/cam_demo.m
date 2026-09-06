@@ -173,30 +173,56 @@ end
 
 function [dv, mis, T] = solveForMiss(x_c0, x_d0, t_burn, target, miss0, dv_seed, ...
                                      t_tca_nom, opt)
-%SOLVEFORMISS Delta-v que produce la distancia de maxima aproximacion pedida.
-%   Arranca con una estimacion lineal a partir de un impulso de prueba y refina
-%   por secante sobre la propagacion real. La respuesta miss(dv) no es lineal:
-%   con antelaciones cortas la extrapolacion lineal sobrestima el delta-v en mas
-%   de un 30 %.
-    [m1, ~] = missAfterBurn(x_c0, x_d0, t_burn, dv_seed, t_tca_nom, opt);
-    slope = (m1 - miss0) / dv_seed;
-    if slope <= 0; dv = 0; [mis, T] = missAfterBurn(x_c0,x_d0,t_burn,0,t_tca_nom,opt); return; end
+%SOLVEFORMISS Impulso tangencial que produce la distancia de paso pedida.
+%
+%   Un impulso tangencial mueve el vector de fallo en el plano-B a lo largo de
+%   UNA sola direccion, asi que el cuadrado de la distancia de paso es una
+%   parabola exacta en dv:
+%
+%       m2(dv) = |b0 + dv*D|^2 = |D|^2 dv^2 + 2 (b0.D) dv + |b0|^2
+%
+%   Tres propagaciones la identifican y el impulso sale en forma cerrada. Antes
+%   esto era una secante limitada a dv >= 0, que es la ley que el commit c2bb207
+%   saco de plan_cam.m por estar mal de tres maneras:
+%
+%     - La rama posigrada no siempre es la barata. Aqui cuesta entre un 13 y un
+%       38 % mas que la retrograda.
+%     - La rama posigrada no es monotona: la distancia de paso primero BAJA, de
+%       modo que una quemada parcial deja la nave mas cerca que no maniobrar.
+%       La retrograda es monotona y por tanto tolerante a fallo.
+%     - Decidir alcanzabilidad con el signo de una diferencia finita sobre una
+%       funcion no monotona rechaza casos que si tienen solucion.
+%
+%   Se toma la raiz de menor modulo, descartando la rama cuyo vertice cae entre
+%   cero y la propia raiz, que es justamente la que pasaria por debajo de miss0.
+    p = abs(dv_seed);
+    [mp, ~] = missAfterBurn(x_c0, x_d0, t_burn,  p, t_tca_nom, opt);
+    [mm, ~] = missAfterBurn(x_c0, x_d0, t_burn, -p, t_tca_nom, opt);
+    m0 = miss0;
 
-    dv_a = dv_seed;                 m_a = m1;
-    dv_b = max(1e-6, (target - miss0)/slope);
-    [m_b, T] = missAfterBurn(x_c0, x_d0, t_burn, dv_b, t_tca_nom, opt);
+    C = m0^2;
+    A = (mp^2 + mm^2 - 2*C) / (2*p^2);
+    B = (mp^2 - mm^2) / (2*p);
 
-    for it = 1:12
-        if abs(m_b - target) < 0.5; break; end          % 0.5 m de tolerancia
-        den = (m_b - m_a);
-        if abs(den) < 1e-9; break; end
-        dv_new = dv_b + (target - m_b) * (dv_b - dv_a) / den;
-        dv_new = max(0, dv_new);
-        dv_a = dv_b;  m_a = m_b;
-        dv_b = dv_new;
-        [m_b, T] = missAfterBurn(x_c0, x_d0, t_burn, dv_b, t_tca_nom, opt);
+    dv = 0;
+    if A > 0
+        disc = B^2 - 4*A*(C - target^2);
+        if disc >= 0
+            r = (-B + [1 -1]*sqrt(disc)) / (2*A);
+            vertex = -B / (2*A);            % donde la parabola toca su minimo
+            % Descartar la rama que pasa por el vertice antes de llegar al
+            % objetivo: ahi la distancia de paso baja por debajo de miss0.
+            keep = ~((r > 0 & vertex > 0 & vertex < r) | ...
+                     (r < 0 & vertex < 0 & vertex > r));
+            r = r(keep);
+            if ~isempty(r)
+                [~, i] = min(abs(r));
+                dv = r(i);
+            end
+        end
     end
-    dv = dv_b;  mis = m_b;
+
+    [mis, T] = missAfterBurn(x_c0, x_d0, t_burn, dv, t_tca_nom, opt);
 end
 
 function T2 = setMiss(T, m)

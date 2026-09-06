@@ -32,7 +32,8 @@ MU = 3.986004418e14;
 H_MPC = 30;  NP_MPC = 60;          % el MPC solo tiene que SEGUIR: horizonte corto
 TF    = 12000;
 T_TCA = 10115;
-SIG_TCA = 40;  K_SIGMA = 3;
+SIG_TCA = 40;  K_SIGMA = 3;   % SIG_TCA es un RADIO 3D sqrt(traza(P))
+D_SAFE0 = 150;                % el mismo suelo que usa el controlador
 
 setpref('inoas','skipBatchClear', true);
 setpref('inoas','mpcTuneConfig', struct('h',H_MPC,'Np',NP_MPC));
@@ -47,10 +48,14 @@ fprintf('Conjuncion: cruce %.2f deg | v_rel = %.3f km/s | miss sin maniobra = %.
 
 %% ---- 1) GUIADO: cuanto margen hace falta -------------------------------
 % Margen de K sigma sobre la covarianza COMBINADA, proyectada al plano-B.
-P_comb = diag([SIG_TCA SIG_TCA SIG_TCA].^2) + SC.P_debris;
+% SIG_TCA es el radio 3D que entrega el filtro, asi que la varianza POR EJE
+% es SIG_TCA^2/3. Montarla como diag([s s s].^2) la triplicaba.
+P_comb = (SIG_TCA^2/3)*eye(3) + SC.P_debris;
 u_b = SC.d_nom_eci / norm(SC.d_nom_eci);
 sigma_b = sqrt(u_b.' * P_comb * u_b);
-d_target = SC.R_hb + K_SIGMA * sigma_b;
+% Suelo de 150 m, no el radio de cuerpo duro de 5 m: es el que usa el
+% controlador y el que declara el resto del paper.
+d_target = D_SAFE0 + K_SIGMA * sigma_b;
 fprintf('sigma combinada en la direccion del fallo = %.1f m -> objetivo = %.1f m\n', ...
     sigma_b, d_target);
 
@@ -68,7 +73,7 @@ end
 r_p_full = PLAN.r_p_full;          % <- la nominal ya contiene la maniobra
 dsafe0 = 0;                        % sin restriccion de evasion: solo seguimiento
 mpcDebrisMode = "sphere_grid";
-P_nav = diag([SIG_TCA SIG_TCA SIG_TCA 0.05 0.05 0.05].^2);
+P_nav = blkdiag((SIG_TCA^2/3)*eye(3), diag([0.05 0.05 0.05].^2));
 
 T_START = PLAN.t_burn - 6*h;
 T_END   = SC.t_tca + 2*h;
@@ -116,9 +121,9 @@ fprintf('\n--- Coste de la maniobra frente a la incertidumbre en el TCA ---\n');
 fprintf('  %-10s %10s %12s %12s %12s\n', 'sigma_nav', 'sigma_comb', 'objetivo', 'dv [mm/s]', 'propulsor');
 SW = struct('sig',{},'dt',{},'dv',{},'sig_comb',{});
 for sg = [12 40 100 250]
-    Pc_ = diag([sg sg sg].^2) + SC.P_debris;
+    Pc_ = (sg^2/3)*eye(3) + SC.P_debris;   % sg es radio 3D, no por eje
     sb_ = sqrt(u_b.' * Pc_ * u_b);
-    dt_ = SC.R_hb + K_SIGMA * sb_;
+    dt_ = D_SAFE0 + K_SIGMA * sb_;
     PL_ = plan_cam(x_ref_hist, t_ref, SC, 'd_target', dt_, ...
                    't_burn', SC.t_tca - 1.0*T_orb);
     fprintf('  %7.0f m %9.1f m %10.1f m %12.3f %10.2f s\n', ...

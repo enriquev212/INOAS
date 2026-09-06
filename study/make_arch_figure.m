@@ -1,4 +1,15 @@
 %MAKE_ARCH_FIGURE La figura que justifica la arquitectura.
+%  ============================================================================
+%  SUPERSEDIDO. No genera las figuras del articulo.
+%
+%  Las figuras del paper se dibujan ahora en study/pyfigs (Python), a partir de
+%  los CSV que exporta study/pyfigs/export_data.py. Este script se conserva por
+%  historia y porque algunos de sus bloques todavia producen .mat de campana,
+%  pero sus FIGURAS estan obsoletas y algunas de sus fuentes tambien: carga
+%  bench_consec_quadprog_final.mat, medido con codigo anterior a 8d55826.
+%
+%  Para regenerar las figuras:   cd study/pyfigs && python make_all.py
+%  ============================================================================
 %
 % Contrasta el coste por solve de las dos formas de imponer la evitacion:
 %   (a) restriccion dentro del MPC, muestreada en la rejilla de prediccion

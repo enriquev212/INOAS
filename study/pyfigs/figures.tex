@@ -77,16 +77,16 @@
   \includegraphics{fig04_execution}
   \caption{One encounter executed end to end: an $88.15^\circ$ plane crossing at
   $10.0$\,km/s. (a)~Commanded acceleration and cumulative $\Delta v$. The
-  guidance layer plans a single retrograde tangential impulse of $12.6$\,mm/s at
+  guidance layer plans a single retrograde tangential impulse of $21.8$\,mm/s at
   $-112.5$\,min and the MPC tracks the retargeted reference, spending
-  $19.2$\,mm/s to deliver it: a $53\,\%$ overhead for following a continuous
-  reference instead of firing an impulse. The peak command is $39.6\,\mu$m/s$^2$,
-  $0.095\,\%$ of the $1$\,N authority. (b)~Tracking error, $0.67$\,m rms and
-  $2.41$\,m peak. The miss distance opens from $120.0$\,m to $257.4$\,m against a
-  required $R_{\mathrm{hb}} + 3\sigma_c = 257.4$\,m, where $\sigma_c$ is the
-  combined B-plane uncertainty of $84.1$\,m; the plan is not revisited after the
-  burn. The miss distances are stated, not plotted: the run records no
-  closest-approach time series.}
+  $33.2$\,mm/s to deliver it: a $53\,\%$ overhead for following a continuous
+  reference instead of firing an impulse. The peak command is
+  $68.5\,\mu$m/s$^2$, $0.16\,\%$ of the $1$\,N authority. (b)~Tracking error,
+  $1.16$\,m rms and $4.17$\,m peak. The miss distance opens from $120.0$\,m to
+  $382.6$\,m against a required $d_0 + 3\sigma_c = 382.6$\,m, with
+  $d_0 = 150$\,m and a combined B-plane uncertainty $\sigma_c = 77.5$\,m; the
+  plan is not revisited after the burn. The miss distances are stated, not
+  plotted: the run records no closest-approach time series.}
   \label{fig:exec}
 \end{figure}
 
@@ -155,10 +155,10 @@
   larger area. A guidance law triggered on a $P_c$ threshold would therefore
   reward worse navigation. (b)~The covariance-inflated keep-out distance instead
   grows monotonically, $333 \rightarrow 835$\,m, and with it the required
-  impulse. This sweep is the standalone conjunction demonstrator, with its own
-  object-covariance assumption of $\sigma_{\mathrm{obj}} = 150$\,m; its impulses
-  are an upper bound, because that demonstrator searches only the posigrade
-  branch, which costs $13$ to $38\,\%$ more than the retrograde root the flight
-  planner selects. The comparison rests on the monotonicity, which is unaffected.}
+  impulse, $18.2 \rightarrow 53.5$\,mm/s. This sweep is the standalone
+  conjunction demonstrator, with its own object-covariance assumption, an
+  anisotropic ECI ellipsoid of $\mathrm{diag}(150, 60, 60)$\,m; its impulses are
+  retrograde and are the smaller root of the same miss$(\Delta v)$ parabola the
+  flight planner solves.}
   \label{fig:dilution}
 \end{figure}

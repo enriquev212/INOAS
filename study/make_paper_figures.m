@@ -1,4 +1,15 @@
 %MAKE_PAPER_FIGURES Las seis figuras del paper, con acabado de publicacion.
+%  ============================================================================
+%  SUPERSEDIDO. No genera las figuras del articulo.
+%
+%  Las figuras del paper se dibujan ahora en study/pyfigs (Python), a partir de
+%  los CSV que exporta study/pyfigs/export_data.py. Este script se conserva por
+%  historia y porque algunos de sus bloques todavia producen .mat de campana,
+%  pero sus FIGURAS estan obsoletas y algunas de sus fuentes tambien: carga
+%  bench_consec_quadprog_final.mat, medido con codigo anterior a 8d55826.
+%
+%  Para regenerar las figuras:   cd study/pyfigs && python make_all.py
+%  ============================================================================
 %
 % Un unico estilo (inoas_figstyle / inoas_axstyle), anotaciones colocadas a mano
 % donde antes se pisaban entre ellas o pisaban los datos, y trazo suficiente para

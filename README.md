@@ -88,7 +88,6 @@ Key files:
 
 - `models/inoas_model.slx` - final integrated Simulink model.
 - `matlab/MPC_INOAS.m` - MPC tracking and debris-avoidance controller.
-- `matlab/instrument_decision.m` - GNSS/Kalman mode-selection logic.
 - `tools/visualization/` - optional workflow for regenerating PNG/GIF assets
   from a completed simulation.
 - `docs/assets/` - architecture figure, poster preview, final poster PDF, and
