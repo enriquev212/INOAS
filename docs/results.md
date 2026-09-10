@@ -53,9 +53,9 @@ For reproducible presentation-style assets, see
 | RAAN / argument of perigee / true anomaly | 116.6 / 90 / 131 deg | Current INOAS reference geometry. |
 | Physical platform | STF-1-inspired 3U CubeSat | Bus-level assumptions from duty-cycled GPS CubeSat POD literature. |
 | Approximate mass `m_sat` | 3.99 kg | Three CubeSat units at about 1.33 kg each. |
-| Cross-sectional area `area` | 0.03 m² | STF-1 drag/SRP perturbation assumption. |
-| Drag coefficient `CD` | 2.2 | STF-1 perturbation assumption. |
-| Reflectivity coefficient `ref` | 1.0 | STF-1 SRP perturbation assumption. |
+| Cross-sectional area `area` | 0.03 m² | STF-1 drag/SRP perturbation assumption; documented but not used as an active disturbance in the current guidance validation. |
+| Drag coefficient `CD` | 2.2 | STF-1 perturbation assumption; drag is not currently propagated in the guidance validation. |
+| Reflectivity coefficient `ref` | 1.0 | STF-1 SRP perturbation assumption; SRP is not currently propagated in the guidance validation. |
 | Representative GNSS receiver | NovAtel OEM615 | Dual-frequency receiver used by STF-1. |
 | Proximity-operations reference | NASA/JSC Seeker 1.0 | 3U cold-gas free-flyer inspection demonstrator used to frame the actuation class. |
 
@@ -71,8 +71,8 @@ For reproducible presentation-style assets, see
 | Debris relative offset | `[50, 0, 0] m` | Closest-approach offset in the LVLH frame. |
 | Debris relative velocity | `[0, 10, 0] m/s` | Tangential fly-by velocity in the LVLH frame. |
 | Baseline safety radius `dsafe0` | 150 m | Enlarged by the MPC covariance-aware safety margin. |
-| Effective thrust `F_control` | 0.10 N | Seeker-class per-axis translational authority tied to the published Seeker propulsion-system design point. |
-| Control limit `u_max` | 0.0251 m/s² | Derived from `F_control/m_sat`; per-axis acceleration bound. |
+| Thrust-scale box reference `F_control` | 0.10 N | Seeker-class individual cold-gas thruster scale used to set the optimizer box, not the reported effective manoeuvring thrust. |
+| Control limit `u_max` | 0.0251 m/s² | Derived from `F_control/m_sat`; per-axis optimizer box bound. |
 | Control-rate limit `du_max` | 0.007 m/s² per step | Per-axis command increment bound. |
 | GNSS duty-cycle timers | 90 s / 10 s | GNSS-on and Kalman-propagation windows. |
 | GNSS health thresholds | 4 satellites, PDOP 6, HPE/VPE 5 m | Used by the instrument-decision state machine. |

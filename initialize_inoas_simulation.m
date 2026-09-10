@@ -66,7 +66,7 @@ theta = 131;         % [deg]
 % setup in Lantto (2018). The orbit above intentionally remains the INOAS
 % Sentinel-like reference orbit; only the spacecraft bus assumptions are scaled.
 m_sat = 3 * 1.33;    % [kg]
-F_control = 0.10;    % [N], Seeker-class cold-gas authority per translation axis
+F_control = 0.10;    % [N], Seeker-class individual-thruster box reference
 initMass = m_sat;
 CD = 2.2;            % drag coefficient used for STF-1 perturbation study
 ref = 1.0;           % reflectivity coefficient used for STF-1 SRP study
@@ -212,7 +212,7 @@ S = diag(repmat(S_step, 1, Np));
 
 % Constraints as column vectors!!
 
-u_max = F_control / m_sat;     % [m/s^2] per-axis guidance acceleration bound
+u_max = F_control / m_sat;     % [m/s^2] per-axis optimizer box bound
 
 if isfield(mpcTuneConfig, "u_max")
     u_max = mpcTuneConfig.u_max;

@@ -59,14 +59,16 @@ from Lantto's CubeSat POD study:
 
 The translational actuation reference is kept separate from STF-1. For the
 conference setup, the per-axis acceleration bound is derived from a
-Seeker-class cold-gas effective thrust assumption:
+Seeker-class individual cold-gas thruster scale:
 
-- effective per-axis translational authority: `0.10 N`;
+- optimizer box reference: `F_control = 0.10 N`;
 - acceleration bound: `F_control / m_sat`, approximately `0.025 m/s^2`.
 
 Seeker 1.0 is used as the proximity-operations reference class: a NASA Johnson
-Space Center 3U cold-gas free-flyer inspection demonstrator, with the
-`0.10 N` scale tied to the published Seeker propulsion-system design point.
+Space Center 3U cold-gas free-flyer inspection demonstrator. The `0.10 N`
+number is an acceleration-box reference, not a claim that the manoeuvre uses
+that effective thrust. The achieved command demand should be compared against
+the NASA/JSC cold-gas prototype manoeuvring-thrust scale of roughly `40 mN`.
 
 ## Documentation
 

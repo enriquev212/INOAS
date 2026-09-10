@@ -18,6 +18,10 @@ technical reports are cited here but are not redistributed in this repository.
   Certification, of the Seeker Robotic Free Flier Propulsion System," *AIAA
   Propulsion and Energy 2019 Forum*, AIAA 2019-3956, 2019.
   <https://doi.org/10.2514/6.2019-3956>
+- C. Radke, "Development of an IVE/EVA Compatible Prototype Cold-Gas Cubesat
+  Propulsion System at NASA/JSC," NASA Technical Reports Server,
+  NTRS 20170000809, 2017.
+  <https://ntrs.nasa.gov/citations/20170000809>
 - D. A. Vallado, *Fundamentals of Astrodynamics and Applications*, 4th ed.,
   Microcosm Press, 2013.
 - W. Fehse, *Automated Rendezvous and Docking of Spacecraft*, 2003.

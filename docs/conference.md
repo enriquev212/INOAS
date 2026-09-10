@@ -31,11 +31,21 @@ platform model.
 The actuation assumption is intentionally separated from STF-1, which is a POD
 reference and not a propulsion reference. The conference setup uses NASA/JSC
 Seeker 1.0 as the proximity-operations reference class: a 3U free-flying
-inspection CubeSat with a cold-gas 6-DOF propulsion system. The published
-Seeker propulsion-system design point anchors the `0.10 N` thruster scale used
-here. The MPC acceleration limit is therefore derived from an assumed
-Seeker-class effective translational authority of `F_control = 0.10 N` per axis,
-giving `u_max = F_control/m_sat`.
+inspection CubeSat with a cold-gas 6-DOF propulsion system. The MPC
+acceleration limit is derived from a Seeker-class individual cold-gas thruster
+scale of `F_control = 0.10 N`, giving the per-axis optimizer box constraint
+`u_max = F_control/m_sat`. This bound is a feasibility envelope, not the
+reported effective manoeuvring thrust. For physical interpretation, the achieved
+MPC command demand should be compared against the NASA/JSC cold-gas prototype
+reference of roughly `40 mN` typical manoeuvring thrust for a 3U CubeSat-class
+system.
+
+The Sentinel-6A-derived GNSS-quality profile is retained for its time structure
+and as an optimistic navigation-quality case. It should not be read as the raw
+autonomous performance of an OEM615 receiver on a generic CubeSat. Likewise,
+the STF-1 `CD`, `area`, and `CR` values are documented bus/perturbation
+assumptions; the current guidance validation model does not use drag/SRP as an
+active disturbance model.
 
 ## Citation
 

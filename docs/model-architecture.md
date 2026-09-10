@@ -10,10 +10,12 @@ propagation layer keeps the vehicle state available during GNSS-off periods.
 
 The conference validation keeps the Sentinel-like INOAS reference orbit
 (`a = 7714.43 km`, `e = 0.000095`, `i = 63.04 deg`) together with the
-project's Sentinel-6A-derived GNSS quality profile (`Y24D011`). The physical
-spacecraft assumptions are scaled separately toward an STF-1-inspired 3U
-CubeSat bus, so the model distinguishes orbital geometry from CubeSat platform
-properties.
+project's Sentinel-6A-derived GNSS quality profile (`Y24D011`). That profile is
+used for its temporal structure and as an optimistic navigation-quality case,
+not as a claim of raw autonomous OEM615 receiver accuracy on a generic CubeSat.
+The physical spacecraft assumptions are scaled separately toward an
+STF-1-inspired 3U CubeSat bus, so the model distinguishes orbital geometry from
+CubeSat platform properties.
 
 ## Navigation and Decision Logic
 
@@ -66,7 +68,8 @@ The simulation is organized around four functional layers:
 1. **Scenario and data**
    - Reference orbital trajectory in ECI and LVLH/RTN frames.
    - Debris encounter scenario and propagated relative trajectory.
-   - Real GNSS quality profile from Sentinel-6A telemetry.
+   - Sentinel-6A-derived GNSS quality profile used as an optimistic navigation
+     quality and timing profile.
 
 2. **Truth and sensors**
    - Nonlinear spacecraft plant in Simulink.
