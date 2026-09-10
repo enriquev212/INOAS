@@ -103,8 +103,8 @@ Ts = 1;          % [s] master sample time for sensors and estimator
 var_IMU = 0.01; % accelerometer variance used by the Kalman propagation
 
 % Synthetic internal sensor measurement covariance.
-sigma_pos = 100; % [m]
-sigma_alt = 50;  % [m]
+sigma_pos = 2000; % [m]
+sigma_alt = 2000; % [m]
 var_pos = sigma_pos^2;
 var_alt = sigma_alt^2;
 R_matrix = diag([var_pos, var_pos, var_pos, var_alt]);
