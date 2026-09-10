@@ -8,10 +8,12 @@ power consumption. INOAS explores a software-driven navigation architecture wher
 GNSS is activated only when the estimator needs it, while a Kalman/UKF
 propagation layer keeps the vehicle state available during GNSS-off periods.
 
-The validation uses Sentinel-6A precise orbit determination telemetry (`Y24D011`)
-at approximately 1347 km altitude, with representative scenarios for nominal
-tracking, GNSS signal outage, precision degradation, geometric drift, and
-rendezvous.
+The conference validation keeps the Sentinel-like INOAS reference orbit
+(`a = 7714.43 km`, `e = 0.000095`, `i = 63.04 deg`) together with the
+project's Sentinel-6A-derived GNSS quality profile (`Y24D011`). The physical
+spacecraft assumptions are scaled separately toward an STF-1-inspired 3U
+CubeSat bus, so the model distinguishes orbital geometry from CubeSat platform
+properties.
 
 ## Navigation and Decision Logic
 

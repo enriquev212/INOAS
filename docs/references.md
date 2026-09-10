@@ -49,6 +49,8 @@ technical reports are cited here but are not redistributed in this repository.
 - J. Geng, Q. Wen, Q. Zhang, and G. Li, "GNSS observable-specific phase biases
   for all-frequency PPP ambiguity resolution," *Journal of Geodesy*, vol. 96,
   no. 11, pp. 1-20, 2022.
+- S. Lantto, "Precise Orbit Determination of CubeSats Using Duty Cycled GPS
+  Observations," Master's thesis, West Virginia University, 2018.
 - E. A. Wan and R. van der Merwe, "The unscented Kalman filter for nonlinear
   estimation," *Proceedings of the IEEE Adaptive Systems for Signal Processing,
   Communications, and Control Symposium (AS-SPCC)*, pp. 153-158, 2000.

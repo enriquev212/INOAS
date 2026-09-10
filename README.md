@@ -43,6 +43,20 @@ The control layer uses that navigation confidence directly: the MPC increases
 the debris safety margin when the estimated covariance grows, making avoidance
 guidance more conservative when state knowledge is less certain.
 
+## Conference CubeSat Physical Model
+
+The default conference setup keeps the existing Sentinel-like INOAS reference
+orbit and GNSS-quality profile, while scaling the spacecraft physical
+assumptions toward a CubeSat-class platform. The CubeSat bus and receiver
+assumptions are inspired by the STF-1 duty-cycled GPS case from Lantto's
+CubeSat POD study:
+
+- approximate 3U mass: `3 * 1.33 kg`;
+- cross-sectional area: `0.03 m^2`;
+- drag coefficient: `2.2`;
+- reflectivity coefficient: `1.0`;
+- representative dual-frequency receiver: NovAtel OEM615.
+
 ## Documentation
 
 | Document | Why open it |

@@ -53,6 +53,8 @@ clear preservedModelName preservedStopTime
 gnssCovarianceFile = inoas_data_file("cov_perturb_POS_s6a_Y24D011_fixed.dat");
 referenceTrajectoryFile = inoas_data_path("referenceTrajectory.mat");
 debrisTrajectoryFile = inoas_data_path("debrisTrajectory.mat");
+
+% Sentinel-like LEO reference orbit used by the current INOAS scenario.
 a = 7714.43 * 1000;  % [m]
 ecc = 0.000095;
 inc = 63.04;         % [deg]
@@ -60,11 +62,15 @@ RAAN = 116.6;        % [deg]
 w = 90;              % [deg]
 theta = 131;         % [deg]
 
-F_control = 4 * 220; % [N]
-m_sat = 10 * 1000;   % [kg]
+% Conference CubeSat physical platform, inspired by the STF-1 duty-cycled GPS
+% setup in Lantto (2018). The orbit above intentionally remains the INOAS
+% Sentinel-like reference orbit; only the spacecraft bus assumptions are scaled.
+m_sat = 3 * 1.33;    % [kg]
+F_control = 0.20;    % [N], equivalent to roughly 0.05 m/s^2 for this mass
 initMass = m_sat;
-ref = 1.3;           % reflectivity coefficient
-area = 15;           % [m^2]
+CD = 2.2;            % drag coefficient used for STF-1 perturbation study
+ref = 1.0;           % reflectivity coefficient used for STF-1 SRP study
+area = 0.03;         % [m^2], STF-1 cross-sectional area assumption
 
 start_date = juliandate(datetime(2024, 1, 11));
 end_date = juliandate(datetime(2024, 2, 11));
@@ -202,7 +208,7 @@ S = diag(repmat(S_step, 1, Np));
 
 % Constraints as column vectors!!
 
-u_max = 0.05;%F_control/m_sat;     % [m/s^2] = 5000/10000 = 0.05
+u_max = 0.05;                  % [m/s^2] per-axis guidance acceleration bound
 
 if isfield(mpcTuneConfig, "u_max")
     u_max = mpcTuneConfig.u_max;

@@ -42,6 +42,24 @@ For reproducible presentation-style assets, see
 
 ## Key Parameters
 
+### Scenario and CubeSat Physical Model
+
+| Parameter | Default value | Notes |
+| --- | ---: | --- |
+| Reference orbit | Sentinel-like INOAS orbit | The orbital geometry remains the current INOAS scenario. |
+| Semi-major axis `a` | 7714.43 km | Approximately 1336 km altitude. |
+| Eccentricity `ecc` | 0.000095 | Near-circular reference orbit. |
+| Inclination `inc` | 63.04 deg | Current INOAS reference orbit. |
+| RAAN / argument of perigee / true anomaly | 116.6 / 90 / 131 deg | Current INOAS reference geometry. |
+| Physical platform | STF-1-inspired 3U CubeSat | Bus-level assumptions from duty-cycled GPS CubeSat POD literature. |
+| Approximate mass `m_sat` | 3.99 kg | Three CubeSat units at about 1.33 kg each. |
+| Cross-sectional area `area` | 0.03 m² | STF-1 drag/SRP perturbation assumption. |
+| Drag coefficient `CD` | 2.2 | STF-1 perturbation assumption. |
+| Reflectivity coefficient `ref` | 1.0 | STF-1 SRP perturbation assumption. |
+| Representative GNSS receiver | NovAtel OEM615 | Dual-frequency receiver used by STF-1. |
+
+### Guidance and Navigation
+
 | Parameter | Default value | Notes |
 | --- | ---: | --- |
 | MPC horizon `Np` | 125 | Full validation horizon; reduced to 25 by `open_inoas_fast` and `open_inoas_debris_demo`. |
