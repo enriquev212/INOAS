@@ -8,7 +8,7 @@ power consumption. INOAS explores a software-driven navigation architecture wher
 GNSS is activated only when the estimator needs it, while a Kalman/UKF
 propagation layer keeps the vehicle state available during GNSS-off periods.
 
-The conference validation keeps the Sentinel-like INOAS reference orbit
+The conference validation keeps the INOAS LEO reference orbit
 (`a = 7714.43 km`, `e = 0.000095`, `i = 63.04 deg`) together with the
 project's Sentinel-6A-derived GNSS quality profile (`Y24D011`). That profile is
 used for its temporal structure and as an optimistic navigation-quality case,
@@ -73,6 +73,10 @@ The simulation is organized around four functional layers:
 
 2. **Truth and sensors**
    - Nonlinear spacecraft plant in Simulink.
+   - Solar radiation pressure is propagated as an external acceleration using
+     the configured cross-sectional area and reflectivity coefficient.
+   - Atmospheric drag parameters are documented for scenario traceability, but
+     drag is not currently propagated.
    - Simulated GNSS sensor using realistic noise, time-varying covariance,
      number of visible satellites, PDOP, HPE, and VPE.
    - Internal sensors used during GNSS-off propagation.

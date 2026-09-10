@@ -46,16 +46,17 @@ For reproducible presentation-style assets, see
 
 | Parameter | Default value | Notes |
 | --- | ---: | --- |
-| Reference orbit | Sentinel-like INOAS orbit | The orbital geometry remains the current INOAS scenario. |
+| Reference orbit | INOAS LEO reference orbit | The orbital geometry remains the current INOAS scenario; the Sentinel-6A-derived data are used for the GNSS-quality profile, not to claim a Sentinel-6A orbital reconstruction. |
 | Semi-major axis `a` | 7714.43 km | Approximately 1336 km altitude. |
 | Eccentricity `ecc` | 0.000095 | Near-circular reference orbit. |
 | Inclination `inc` | 63.04 deg | Current INOAS reference orbit. |
 | RAAN / argument of perigee / true anomaly | 116.6 / 90 / 131 deg | Current INOAS reference geometry. |
 | Physical platform | STF-1-inspired 3U CubeSat | Bus-level assumptions from duty-cycled GPS CubeSat POD literature. |
 | Approximate mass `m_sat` | 3.99 kg | Three CubeSat units at about 1.33 kg each. |
-| Cross-sectional area `area` | 0.03 m² | STF-1 drag/SRP perturbation assumption; documented but not used as an active disturbance in the current guidance validation. |
-| Drag coefficient `CD` | 2.2 | STF-1 perturbation assumption; drag is not currently propagated in the guidance validation. |
-| Reflectivity coefficient `ref` | 1.0 | STF-1 SRP perturbation assumption; SRP is not currently propagated in the guidance validation. |
+| Cross-sectional area `area` | 0.03 m² | STF-1 assumption; feeds the solar-radiation-pressure model propagated in the plant. |
+| Drag coefficient `CD` | 2.2 | STF-1 assumption documented for traceability; atmospheric drag is not currently propagated in the guidance validation. |
+| Reflectivity coefficient `ref` | 1.0 | STF-1 assumption; feeds the solar-radiation-pressure model propagated in the plant. |
+| Solar radiation pressure | Active in plant | Propagated through the Simulink SRP block using `area`, `ref`, and `initMass`; the configured values give approximately `6.9e-8 m/s²`, or `2.6e-5 m/s` over the nominal 375 s MPC horizon. |
 | Representative GNSS receiver | NovAtel OEM615 | Dual-frequency receiver used by STF-1. |
 | Actuator architecture reference | NASA/JSC Seeker 1.0 | 3U cold-gas free-flyer inspection demonstrator used only to frame the actuator architecture and individual-thruster scale. |
 | Flight-demonstrated RPO reference | CPOD | Two 3U CubeSats demonstrated autonomous RPO with 3-DOF translational control on orbit. |

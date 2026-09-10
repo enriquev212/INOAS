@@ -54,7 +54,7 @@ gnssCovarianceFile = inoas_data_file("cov_perturb_POS_s6a_Y24D011_fixed.dat");
 referenceTrajectoryFile = inoas_data_path("referenceTrajectory.mat");
 debrisTrajectoryFile = inoas_data_path("debrisTrajectory.mat");
 
-% Sentinel-like LEO reference orbit used by the current INOAS scenario.
+% INOAS LEO reference orbit used by the current conference scenario.
 a = 7714.43 * 1000;  % [m]
 ecc = 0.000095;
 inc = 63.04;         % [deg]
@@ -64,13 +64,13 @@ theta = 131;         % [deg]
 
 % Conference CubeSat physical platform, inspired by the STF-1 duty-cycled GPS
 % setup in Lantto (2018). The orbit above intentionally remains the INOAS
-% Sentinel-like reference orbit; only the spacecraft bus assumptions are scaled.
+% LEO reference orbit; only the spacecraft bus assumptions are scaled.
 m_sat = 3 * 1.33;    % [kg]
 F_control = 0.10;    % [N], Seeker-class individual-thruster box reference
 initMass = m_sat;
-CD = 2.2;            % drag coefficient used for STF-1 perturbation study
-ref = 1.0;           % reflectivity coefficient used for STF-1 SRP study
-area = 0.03;         % [m^2], STF-1 cross-sectional area assumption
+CD = 2.2;            % documented STF-1 drag coefficient; drag is not propagated
+ref = 1.0;           % STF-1 reflectivity coefficient used by SRP block
+area = 0.03;         % [m^2], STF-1 area assumption used by SRP block
 
 start_date = juliandate(datetime(2024, 1, 11));
 end_date = juliandate(datetime(2024, 2, 11));
