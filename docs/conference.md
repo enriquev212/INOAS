@@ -19,13 +19,14 @@ physical system and mission assumptions to better match CubeSat-class
 constraints while preserving the main contribution: robust MPC-based collision
 avoidance coupled with safe duty-cycled GNSS/UKF navigation.
 
-The default simulation setup keeps the existing INOAS LEO reference orbit for
-the guidance geometry, while replacing the original large-spacecraft physical
-assumptions with a representative STF-1-inspired 3U CubeSat-class bus from
-duty-cycled GPS POD literature: an approximate 3U mass, a NovAtel OEM615-class
-dual-frequency GNSS receiver, and STF-1 drag/SRP assumptions (`CD = 2.2`,
-`area = 0.03 m^2`, `CR = 1.0`). The encounter geometry remains a configurable
-INOAS guidance scenario layered on top of this CubeSat-class platform model.
+The default simulation setup keeps the existing Sentinel-6A-inspired INOAS
+reference orbit for the guidance geometry, while replacing the original
+large-spacecraft physical assumptions with a representative STF-1-inspired 3U
+CubeSat-class bus from duty-cycled GPS POD literature: an approximate 3U mass,
+a NovAtel OEM615-class dual-frequency GNSS receiver, and STF-1 drag/SRP
+assumptions (`CD = 2.2`, `area = 0.03 m^2`, `CR = 1.0`). The encounter geometry
+remains a configurable INOAS guidance scenario layered on top of this
+CubeSat-class platform model.
 
 The actuation assumption is intentionally separated from STF-1, which is a POD
 reference and not a propulsion reference. The conference setup uses NASA/JSC

@@ -45,11 +45,11 @@ guidance more conservative when state knowledge is less certain.
 
 ## Conference CubeSat Physical Model
 
-The default conference setup keeps the existing INOAS LEO reference orbit and
-the Sentinel-6A-derived GNSS-quality timing/profile data, while replacing the
-original large-spacecraft physical assumptions with a representative 3U
-CubeSat-class bus. The CubeSat bus and receiver assumptions are inspired by the
-STF-1 duty-cycled GPS case from Lantto's CubeSat POD study:
+The default conference setup keeps the existing Sentinel-6A-inspired INOAS
+reference orbit and Sentinel-6A-derived GNSS-quality timing/profile data, while
+replacing the original large-spacecraft physical assumptions with a
+representative 3U CubeSat-class bus. The CubeSat bus and receiver assumptions
+are inspired by the STF-1 duty-cycled GPS case from Lantto's CubeSat POD study:
 
 - approximate 3U mass: `3 * 1.33 kg`;
 - cross-sectional area: `0.03 m^2`, used by the propagated SRP model;

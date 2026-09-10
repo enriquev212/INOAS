@@ -46,7 +46,7 @@ For reproducible presentation-style assets, see
 
 | Parameter | Default value | Notes |
 | --- | ---: | --- |
-| Reference orbit | INOAS LEO reference orbit | The orbital geometry remains the current INOAS scenario; the Sentinel-6A-derived data are used for the GNSS-quality profile, not to claim a Sentinel-6A orbital reconstruction. |
+| Reference orbit | Sentinel-6A-inspired INOAS reference orbit | The orbital geometry remains the current INOAS scenario and is treated as the Sentinel-intended reference for the conference setup. |
 | Semi-major axis `a` | 7714.43 km | Approximately 1336 km altitude. |
 | Eccentricity `ecc` | 0.000095 | Near-circular reference orbit. |
 | Inclination `inc` | 63.04 deg | Current INOAS reference orbit. |

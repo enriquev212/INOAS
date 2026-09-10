@@ -54,7 +54,7 @@ gnssCovarianceFile = inoas_data_file("cov_perturb_POS_s6a_Y24D011_fixed.dat");
 referenceTrajectoryFile = inoas_data_path("referenceTrajectory.mat");
 debrisTrajectoryFile = inoas_data_path("debrisTrajectory.mat");
 
-% INOAS LEO reference orbit used by the current conference scenario.
+% Sentinel-6A-inspired INOAS reference orbit used by the current conference scenario.
 a = 7714.43 * 1000;  % [m]
 ecc = 0.000095;
 inc = 63.04;         % [deg]
@@ -64,7 +64,7 @@ theta = 131;         % [deg]
 
 % Conference CubeSat physical platform, inspired by the STF-1 duty-cycled GPS
 % setup in Lantto (2018). The orbit above intentionally remains the INOAS
-% LEO reference orbit; only the spacecraft bus assumptions are scaled.
+% Sentinel-6A-inspired reference orbit; only the spacecraft bus assumptions are scaled.
 m_sat = 3 * 1.33;    % [kg]
 F_control = 0.10;    % [N], Seeker-class individual-thruster box reference
 initMass = m_sat;
