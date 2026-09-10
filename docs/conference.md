@@ -26,8 +26,16 @@ from duty-cycled GPS POD literature: an approximate 3U mass, a NovAtel
 OEM615-class dual-frequency GNSS receiver, and STF-1 drag/SRP assumptions
 (`CD = 2.2`, `area = 0.03 m^2`, `CR = 1.0`). The encounter geometry remains a
 configurable INOAS guidance scenario layered on top of this CubeSat-class
-platform model. The translational actuation limit is treated as a mission-level
-assumption, not as a parameter inherited from STF-1.
+platform model.
+
+The actuation assumption is intentionally separated from STF-1, which is a POD
+reference and not a propulsion reference. The conference setup uses NASA/JSC
+Seeker 1.0 as the proximity-operations reference class: a 3U free-flying
+inspection CubeSat with a cold-gas 6-DOF propulsion system. The published
+Seeker propulsion-system design point anchors the `0.10 N` thruster scale used
+here. The MPC acceleration limit is therefore derived from an assumed
+Seeker-class effective translational authority of `F_control = 0.10 N` per axis,
+giving `u_max = F_control/m_sat`.
 
 ## Citation
 

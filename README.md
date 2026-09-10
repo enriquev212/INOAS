@@ -57,8 +57,16 @@ from Lantto's CubeSat POD study:
 - reflectivity coefficient: `1.0`;
 - representative dual-frequency receiver: NovAtel OEM615.
 
-The translational actuation limit is treated as a mission-level assumption, not
-as a parameter inherited from STF-1.
+The translational actuation reference is kept separate from STF-1. For the
+conference setup, the per-axis acceleration bound is derived from a
+Seeker-class cold-gas effective thrust assumption:
+
+- effective per-axis translational authority: `0.10 N`;
+- acceleration bound: `F_control / m_sat`, approximately `0.025 m/s^2`.
+
+Seeker 1.0 is used as the proximity-operations reference class: a NASA Johnson
+Space Center 3U cold-gas free-flyer inspection demonstrator, with the
+`0.10 N` scale tied to the published Seeker propulsion-system design point.
 
 ## Documentation
 

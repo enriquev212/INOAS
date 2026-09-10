@@ -57,6 +57,7 @@ For reproducible presentation-style assets, see
 | Drag coefficient `CD` | 2.2 | STF-1 perturbation assumption. |
 | Reflectivity coefficient `ref` | 1.0 | STF-1 SRP perturbation assumption. |
 | Representative GNSS receiver | NovAtel OEM615 | Dual-frequency receiver used by STF-1. |
+| Proximity-operations reference | NASA/JSC Seeker 1.0 | 3U cold-gas free-flyer inspection demonstrator used to frame the actuation class. |
 
 ### Guidance and Navigation
 
@@ -70,7 +71,8 @@ For reproducible presentation-style assets, see
 | Debris relative offset | `[50, 0, 0] m` | Closest-approach offset in the LVLH frame. |
 | Debris relative velocity | `[0, 10, 0] m/s` | Tangential fly-by velocity in the LVLH frame. |
 | Baseline safety radius `dsafe0` | 150 m | Enlarged by the MPC covariance-aware safety margin. |
-| Control limit `u_max` | 0.05 m/s² | Per-axis acceleration bound. |
+| Effective thrust `F_control` | 0.10 N | Seeker-class per-axis translational authority tied to the published Seeker propulsion-system design point. |
+| Control limit `u_max` | 0.0251 m/s² | Derived from `F_control/m_sat`; per-axis acceleration bound. |
 | Control-rate limit `du_max` | 0.007 m/s² per step | Per-axis command increment bound. |
 | GNSS duty-cycle timers | 90 s / 10 s | GNSS-on and Kalman-propagation windows. |
 | GNSS health thresholds | 4 satellites, PDOP 6, HPE/VPE 5 m | Used by the instrument-decision state machine. |
