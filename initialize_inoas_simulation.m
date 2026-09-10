@@ -57,7 +57,7 @@ debrisTrajectoryFile = inoas_data_path("debrisTrajectory.mat");
 % Sentinel-6A-inspired INOAS reference orbit used by the current conference scenario.
 a = 7714.43 * 1000;  % [m]
 ecc = 0.000095;
-inc = 63.04;         % [deg]
+inc = 66.04;         % [deg]
 RAAN = 116.6;        % [deg]
 w = 90;              % [deg]
 theta = 131;         % [deg]

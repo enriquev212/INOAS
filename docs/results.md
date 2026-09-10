@@ -49,7 +49,7 @@ For reproducible presentation-style assets, see
 | Reference orbit | Sentinel-6A-inspired INOAS reference orbit | The orbital geometry remains the current INOAS scenario and is treated as the Sentinel-intended reference for the conference setup. |
 | Semi-major axis `a` | 7714.43 km | Approximately 1336 km altitude. |
 | Eccentricity `ecc` | 0.000095 | Near-circular reference orbit. |
-| Inclination `inc` | 63.04 deg | Current INOAS reference orbit. |
+| Inclination `inc` | 66.04 deg | Sentinel-6A-inspired INOAS reference orbit. |
 | RAAN / argument of perigee / true anomaly | 116.6 / 90 / 131 deg | Current INOAS reference geometry. |
 | Physical platform | STF-1-inspired 3U CubeSat | Bus-level assumptions from duty-cycled GPS CubeSat POD literature. |
 | Approximate mass `m_sat` | 3.99 kg | Three CubeSat units at about 1.33 kg each. |
