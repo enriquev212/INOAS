@@ -14,14 +14,14 @@ technical reports are cited here but are not redistributed in this repository.
   Mission Overview," 33rd Annual AIAA/USU Conference on Small Satellites,
   paper SSC19-XI-04, 2019.
   <https://digitalcommons.usu.edu/smallsat/2019/all2019/151/>
+- I. A. Spiegel, B. Zhou, R. Goodloe, B. Fox, and J. DiMatteo, "CubeSat
+  Proximity Operations Demonstration (CPOD) Mission Results," 37th Annual
+  AIAA/USU Conference on Small Satellites, paper SSC23-XI-01, 2023.
+  <https://doi.org/10.26077/ffd0-qc25>
 - C. D. Radke, M. Atwell, and B. Studak, "Design, Development, and
   Certification, of the Seeker Robotic Free Flier Propulsion System," *AIAA
   Propulsion and Energy 2019 Forum*, AIAA 2019-3956, 2019.
   <https://doi.org/10.2514/6.2019-3956>
-- C. Radke, "Development of an IVE/EVA Compatible Prototype Cold-Gas Cubesat
-  Propulsion System at NASA/JSC," NASA Technical Reports Server,
-  NTRS 20170000809, 2017.
-  <https://ntrs.nasa.gov/citations/20170000809>
 - D. A. Vallado, *Fundamentals of Astrodynamics and Applications*, 4th ed.,
   Microcosm Press, 2013.
 - W. Fehse, *Automated Rendezvous and Docking of Spacecraft*, 2003.

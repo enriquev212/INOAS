@@ -57,7 +57,8 @@ For reproducible presentation-style assets, see
 | Drag coefficient `CD` | 2.2 | STF-1 perturbation assumption; drag is not currently propagated in the guidance validation. |
 | Reflectivity coefficient `ref` | 1.0 | STF-1 SRP perturbation assumption; SRP is not currently propagated in the guidance validation. |
 | Representative GNSS receiver | NovAtel OEM615 | Dual-frequency receiver used by STF-1. |
-| Proximity-operations reference | NASA/JSC Seeker 1.0 | 3U cold-gas free-flyer inspection demonstrator used to frame the actuation class. |
+| Actuator architecture reference | NASA/JSC Seeker 1.0 | 3U cold-gas free-flyer inspection demonstrator used only to frame the actuator architecture and individual-thruster scale. |
+| Flight-demonstrated RPO reference | CPOD | Two 3U CubeSats demonstrated autonomous RPO with 3-DOF translational control on orbit. |
 
 ### Guidance and Navigation
 
@@ -71,7 +72,7 @@ For reproducible presentation-style assets, see
 | Debris relative offset | `[50, 0, 0] m` | Closest-approach offset in the LVLH frame. |
 | Debris relative velocity | `[0, 10, 0] m/s` | Tangential fly-by velocity in the LVLH frame. |
 | Baseline safety radius `dsafe0` | 150 m | Enlarged by the MPC covariance-aware safety margin. |
-| Thrust-scale box reference `F_control` | 0.10 N | Seeker-class individual cold-gas thruster scale used to set the optimizer box, not the reported effective manoeuvring thrust. |
+| Thrust-scale box reference `F_control` | 0.10 N | Seeker-class individual cold-gas thruster scale used to set the optimizer box, not reported effective manoeuvring thrust. |
 | Control limit `u_max` | 0.0251 m/s² | Derived from `F_control/m_sat`; per-axis optimizer box bound. |
 | Control-rate limit `du_max` | 0.007 m/s² per step | Per-axis command increment bound. |
 | GNSS duty-cycle timers | 90 s / 10 s | GNSS-on and Kalman-propagation windows. |

@@ -64,11 +64,12 @@ Seeker-class individual cold-gas thruster scale:
 - optimizer box reference: `F_control = 0.10 N`;
 - acceleration bound: `F_control / m_sat`, approximately `0.025 m/s^2`.
 
-Seeker 1.0 is used as the proximity-operations reference class: a NASA Johnson
+Seeker 1.0 is used as the actuator-architecture reference class: a NASA Johnson
 Space Center 3U cold-gas free-flyer inspection demonstrator. The `0.10 N`
-number is an acceleration-box reference, not a claim that the manoeuvre uses
-that effective thrust. The achieved command demand should be compared against
-the NASA/JSC cold-gas prototype manoeuvring-thrust scale of roughly `40 mN`.
+number is an acceleration-box reference, not a claim that the manoeuvre uses the
+full box-limit thrust. CPOD is the flight-demonstrated 3U RPO reference: two
+autonomous CubeSats with 3-DOF translational control that demonstrated
+rendezvous and proximity operations on orbit.
 
 ## Documentation
 

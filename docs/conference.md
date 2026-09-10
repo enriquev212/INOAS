@@ -30,15 +30,21 @@ platform model.
 
 The actuation assumption is intentionally separated from STF-1, which is a POD
 reference and not a propulsion reference. The conference setup uses NASA/JSC
-Seeker 1.0 as the proximity-operations reference class: a 3U free-flying
-inspection CubeSat with a cold-gas 6-DOF propulsion system. The MPC
-acceleration limit is derived from a Seeker-class individual cold-gas thruster
-scale of `F_control = 0.10 N`, giving the per-axis optimizer box constraint
-`u_max = F_control/m_sat`. This bound is a feasibility envelope, not the
-reported effective manoeuvring thrust. For physical interpretation, the achieved
-MPC command demand should be compared against the NASA/JSC cold-gas prototype
-reference of roughly `40 mN` typical manoeuvring thrust for a 3U CubeSat-class
-system.
+Seeker 1.0 as an actuator-architecture reference: a 3U free-flying inspection
+CubeSat with a cold-gas 6-DOF propulsion architecture. Seeker is used only to
+frame the actuator architecture and individual-thruster scale, not as a claim of
+full operational mission success. The MPC acceleration limit is derived from a
+Seeker-class individual cold-gas thruster scale of `F_control = 0.10 N`, giving
+the per-axis optimizer box constraint `u_max = F_control/m_sat`. This bound is a
+feasibility envelope, not the reported effective manoeuvring thrust.
+
+For flight-demonstrated proximity operations, the more direct reference is CPOD:
+two 3U CubeSats that performed autonomous RPO on orbit with 3-DOF translational
+control, including experiments from intersatellite distances up to `997 km` and
+a reported minimum separation of `361 m`. Propulsive feasibility should
+therefore be argued from the measured MPC command and impulse demand, and then
+contextualized against Seeker-class actuator scale and CPOD-class flown 3U RPO
+capability.
 
 The Sentinel-6A-derived GNSS-quality profile is retained for its time structure
 and as an optimistic navigation-quality case. It should not be read as the raw
