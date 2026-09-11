@@ -109,8 +109,11 @@ var_pos = sigma_pos^2;
 var_alt = sigma_alt^2;
 R_matrix = diag([var_pos, var_pos, var_pos, var_alt]);
 
-% Process-noise covariance for the 6-state orbital estimator.
-Q_matrix = diag([1, 1, 1, 1e-2, 1e-2, 1e-2]);
+% Process noise: continuous white-noise acceleration (CWNA), discretized over
+% the step that uses it. sigma_a is the MEMS accelerometer noise scale that
+% the UKF integrates in its propagation.
+sigma_a = sqrt(var_IMU);                 % [m/s^2]
+Q_matrix = cwnaProcessNoise(sigma_a, Ts); % UKF, dt = Ts
 
 % Nominal GNSS measurement covariance used by the estimator.
 sigma_pos_gnss = 5;   % [m]
@@ -515,7 +518,9 @@ end
 %% MPC covariance inflation for debris avoidance
 % This extends the keep-out radius with the propagated navigation covariance
 % used by the MPC over the prediction horizon.
-Q_cov_mpc = Q_matrix;
+% Use the same acceleration-noise scale as the UKF, but discretize it over the
+% MPC step so the covariance tube scales with elapsed prediction time.
+Q_cov_mpc = cwnaProcessNoise(sigma_a, h);
 covarianceFrameMpc = "eci";
 covarianceMetricMpc = "sqrt_trace_pos";
 logDsafeMpc = true;
@@ -738,4 +743,14 @@ function [a, ecc, inc, RAAN, argp, theta] = rv2coe_from_state(r, v, mu)
         theta = theta + 360;
     end
 
+end
+
+function Qd = cwnaProcessNoise(sigma_a, dt)
+%CWNAPROCESSNOISE Discrete process noise for white acceleration noise.
+%   This is the standard double-integrator covariance obtained by
+%   discretizing continuous white-noise acceleration over a step dt.
+q = sigma_a^2;
+I3 = eye(3);
+Qd = [q * dt^3 / 3 * I3, q * dt^2 / 2 * I3;
+      q * dt^2 / 2 * I3, q * dt     * I3];
 end
