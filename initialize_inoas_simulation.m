@@ -505,7 +505,8 @@ load(debrisTrajectoryFile, "x_debris_hist", "r_debris_full", ...
 rk_debris = rk_debris_encounter;
 
 dsafe0 = 150;
-safetyCost = 0.2;
+% Three-sigma covariance margin applied to sqrt(lambda_max(P_pos)).
+safetyCost = 3.0;
 
 if isfield(mpcTuneConfig, "dsafe0")
     dsafe0 = mpcTuneConfig.dsafe0;
