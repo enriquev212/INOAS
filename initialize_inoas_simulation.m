@@ -522,7 +522,7 @@ end
 % MPC step so the covariance tube scales with elapsed prediction time.
 Q_cov_mpc = cwnaProcessNoise(sigma_a, h);
 covarianceFrameMpc = "eci";
-covarianceMetricMpc = "sqrt_trace_pos";
+covarianceMetricMpc = "sqrt_lambda_max_pos";
 logDsafeMpc = true;
 
 if isfield(mpcTuneConfig, "Q_cov_mpc")
