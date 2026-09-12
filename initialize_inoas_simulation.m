@@ -123,6 +123,14 @@ R_gnss = diag([sigma_pos_gnss^2, sigma_pos_gnss^2, sigma_pos_gnss^2, ...
 
 % Initial Kalman covariance: 1 km position error and 10 m/s velocity error.
 P0_kalman = diag([1e6, 1e6, 1e6, 100, 100, 100]);
+ukfAlpha = 1e-3;
+ukfBeta = 2;
+ukfKappa = 0;
+
+% Shared by the real supervisor and the nominal navigation forecast.
+gnssOnDuration = 60;    % [s]
+gnssOffDuration = 300;  % [s]
+pseudoNisThreshold = 12; % heuristic residual score, not a chi-square NIS gate
 
 % Instrument-decision observable:
 % J = trace(S_inv * P * S_T_inv), with position/velocity scaling in S.
@@ -517,14 +525,23 @@ if isfield(mpcTuneConfig, "safetyCost")
 end
 
 %% MPC covariance inflation for debris avoidance
-% This extends the keep-out radius with the propagated navigation covariance
-% used by the MPC over the prediction horizon.
-% Use the same acceleration-noise scale as the UKF, but discretize it over the
-% MPC step so the covariance tube scales with elapsed prediction time.
+% The default forecast runs the navigation model at Ts, with auxiliary
+% corrections and no assumed future GNSS fixes. Q_cov_mpc is legacy-only.
+covariancePredictionModeMpc = "navigation_aux_only";
 Q_cov_mpc = cwnaProcessNoise(sigma_a, h);
 covarianceFrameMpc = "eci";
 covarianceMetricMpc = "sqrt_lambda_max_pos";
 logDsafeMpc = true;
+logNavigationPredictionMpc = true;
+gnssFixEpoch = 0; % [s], phase of the periodic fresh-fix enable signal
+
+if isfield(mpcTuneConfig, "covariancePredictionModeMpc")
+    covariancePredictionModeMpc = string(mpcTuneConfig.covariancePredictionModeMpc);
+end
+
+if isfield(mpcTuneConfig, "logNavigationPredictionMpc")
+    logNavigationPredictionMpc = logical(mpcTuneConfig.logNavigationPredictionMpc);
+end
 
 if isfield(mpcTuneConfig, "Q_cov_mpc")
     Q_cov_mpc = mpcTuneConfig.Q_cov_mpc;

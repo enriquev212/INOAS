@@ -44,5 +44,40 @@ The Python script creates:
 - `inoas_debris_avoidance.gif`
 - `inoas_visualization_summary.txt`
 
+## CSV Campaign Figures
+
+For paper-quality figures, use the CSV campaign workflow. This is the preferred
+route when running the Simulink model in MATLAB Online and rendering figures
+locally with Python.
+
+In MATLAB or MATLAB Online:
+
+```matlab
+run_baseline_campaign
+```
+
+This writes:
+
+```text
+results/campaign/baseline/
+  raw_visualization_data.mat
+  timeseries.csv
+  control.csv
+  navigation.csv
+  metrics.csv
+```
+
+Then, from the repository root in Python:
+
+```powershell
+python tools\visualization\render_campaign_figures.py --case results\campaign\baseline
+```
+
+The generated PDF/PNG figures are written to:
+
+```text
+results/campaign/baseline/figures/
+```
+
 The lower-level tool documentation is available in
 [`tools/visualization/README.md`](../tools/visualization/README.md).

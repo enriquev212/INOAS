@@ -26,7 +26,7 @@ end
 simOut = evalin("base", "out");
 logsout = simOut.logsout;
 
-truthSignal = getRequiredLogSignal(logsout, "X_perfect_sensor");
+truthSignal = getRequiredLogSignal(logsout, ["truth_position_eci", "X_perfect_sensor"]);
 estimatedSignal = getRequiredLogSignal(logsout, "Estimated_Pos_x");
 controlSignal = getRequiredLogSignal(logsout, ["u_MPC", "u_discret"]);
 
@@ -65,7 +65,7 @@ sample_time_s = scalarBase("h", NaN);
 [dynamic_safe_time_s, dynamic_safe_first_m, dynamic_safe_horizon_m] = dynamicSafetyLog();
 
 [lambda_time_s, lambda] = optionalSignal(logsout, ...
-    ["lambda", "instrument_lambda", "gnss_lambda", "GNSS_selector", ...
+    ["lambda", "lamda", "instrument_lambda", "gnss_lambda", "GNSS_selector", ...
      "InstrumentDecision", "instrument_decision", "lambda_decision"]);
 
 [gnss_quality_time_s, gnss_nsv, gnss_pdop, gnss_hpe_m, gnss_vpe_m, gnss_solution_flag] = gnssQualitySignals();

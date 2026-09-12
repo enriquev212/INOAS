@@ -27,7 +27,7 @@ y_est = x_est_data(:,2);
 z_est = x_est_data(:,3);
 
 %% True state
-real_log = out.logsout.get("X_perfect_sensor").Values;
+real_log = get_logsout_signal(out.logsout, ["truth_position_eci", "X_perfect_sensor"]);
 t_real = real_log.Time;
 x_real_data = squeeze(real_log.Data);
 

@@ -6,6 +6,7 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
 %   covariance_estim Estimated state covariance, either 6x6, 3x3, or vectorized.
 %   t_sim            Current simulation time [s]. If omitted, an internal clock is
 %                    advanced using the model sample time.
+%   varargin{1}      Effective navigation status [lambda; mode age; healthy].
 %
 % Outputs:
 %   u                Commanded absolute acceleration in ECI [3x1].
@@ -14,6 +15,10 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
 
     %% Configuration and persistent controller state
     cfg = getMpcConfig(varargin{:});
+    navStatus = [];
+    if ~isempty(varargin)
+        navStatus = varargin{1};
+    end
     hasExternalTime = (nargin >= 3) && ~isempty(t_sim);
 
     x_estim = x_estim(:);
@@ -56,6 +61,7 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
     persistent dsafe_snapshot_time_log dsafe_snapshot_profile_log
     persistent dsafe_snapshot_distance_log dsafe_snapshot_margin_log dsafe_snapshot_slack_log
     persistent t_internal
+    persistent navigation_prediction_log
 
     if isempty(u_abs_current)
         u_abs_current = cfg.u0(:);
@@ -75,7 +81,7 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
         t_sim = double(t_sim);
     end
 
-    if t_sim <= 1e-9
+    if t_sim <= 1e-9 || isempty(navigation_prediction_log)
         u_abs_current = cfg.u0(:);
         delta_Ulast_internal = zeros(m*Np,1);
         last_solved_step = [];
@@ -89,6 +95,10 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
         dsafe_snapshot_margin_log = [];
         dsafe_snapshot_slack_log = [];
         t_internal = 0;
+        navigation_prediction_log = struct('origin_time', [], 'target_time', [], ...
+            'P_eci', [], 'gnss_updates', [], 'nominal_input_eci', [], ...
+            'mode', cfg.covariancePredictionMode);
+        assignin('base', 'mpc_navigation_prediction_log', navigation_prediction_log);
     end
 
     if numel(delta_Ulast_internal) ~= m*Np
@@ -117,7 +127,7 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
     r_p = zeros(nx*Np,1);
 
     for i = 1:Np
-        refStep = timeStep + i - 1;
+        refStep = timeStep + i;
         refStep = min(refStep, Ntimesteps);
 
         idx_mpc = (i-1)*nx + (1:nx);
@@ -264,9 +274,40 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
 
     if dsafe0 > 0
         dsafe_profile = zeros(Np,1);
+        predictionMode = validatestring(cfg.covariancePredictionMode, ...
+            {'navigation_aux_only', 'navigation_scheduled', 'legacy_open_loop'});
+        useNavigationPrediction = ~strcmp(predictionMode, 'legacy_open_loop');
+        if useNavigationPrediction
+            assert(strcmpi(covarianceFrame, 'eci'), 'INOAS:NavigationFrame', ...
+                'The navigation forecast requires UKF covariance in ECI.');
+            cfg.navigation.mode = 'aux_only';
+            if strcmp(predictionMode, 'navigation_scheduled')
+                cfg.navigation.mode = 'scheduled';
+            end
+            targetTimes = t_sim + (1:Np).' * h;
+            [P_nav, navForecast] = predictNavigationCovarianceProfile( ...
+                x_estim, covariance_estim, double(t_sim), targetTimes, ...
+                u_abs_current, navStatus, cfg.navigation);
+            if cfg.logNavigationPrediction
+                nLog = numel(navigation_prediction_log.origin_time) + 1;
+                navigation_prediction_log.origin_time(nLog,1) = t_sim;
+                navigation_prediction_log.target_time(:,nLog) = targetTimes;
+                navigation_prediction_log.P_eci(:,:,:,nLog) = P_nav;
+                counts = cumsum(navForecast.gnss_update);
+                navigation_prediction_log.gnss_updates(:,nLog) = counts(navForecast.node_steps);
+                navigation_prediction_log.nominal_input_eci(:,nLog) = u_abs_current;
+                assignin('base', 'mpc_navigation_prediction_log', navigation_prediction_log);
+            end
+        end
         P_k = P_mpc;
         for i = 1:Np
-            P_k = Phi * P_k * Phi.' + Q_cov;
+            if useNavigationPrediction
+                % Use the same axes as the current relative prediction.
+                % lambda_max and trace of P_pos are rotation-invariant.
+                P_k = T_cov * P_nav(:,:,i) * T_cov.';
+            else
+                P_k = Phi * P_k * Phi.' + Q_cov;
+            end
             P_k = symmetrizeCovariance(P_k);
 
             dsafe_k = dsafe0 + safetyCost * covarianceRadiusFromPosition(P_k(1:3,1:3), covarianceMetric);
@@ -274,7 +315,7 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
 
             idx_state_i = (i-1)*nx + (1:nx);
             idx_pos     = (i-1)*nx + (1:3);
-            refStep = min(timeStep + i - 1, Ntimesteps);
+            refStep = min(timeStep + i, Ntimesteps);
 
             x_ref_i = r_p(idx_state_i);
             r_ref_i = x_ref_i(1:3);
@@ -407,7 +448,7 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
             for i = 1:Np
                 idx_state_i = (i-1)*nx + (1:nx);
                 idx_pos = (i-1)*nx + (1:3);
-                refStep = min(timeStep + i - 1, Ntimesteps);
+                refStep = min(timeStep + i, Ntimesteps);
 
                 x_ref_i = r_p(idx_state_i);
                 r_ref_i = x_ref_i(1:3);
@@ -508,6 +549,24 @@ function cfg = getMpcConfig(varargin)
     cfg.Q_cov = resolveCovarianceMatrix({'Q_cov_mpc', 'Q_process_mpc', 'Q_covariance_mpc'}, n, zeros(n));
     cfg.covarianceFrame = getBaseWorkspaceVar('covarianceFrameMpc', 'eci');
     cfg.covarianceMetric = getBaseWorkspaceVar('covarianceMetricMpc', 'sqrt_lambda_max_pos');
+    cfg.covariancePredictionMode = getBaseWorkspaceVar('covariancePredictionModeMpc', 'navigation_aux_only');
+    cfg.logNavigationPrediction = getBaseWorkspaceVar('logNavigationPredictionMpc', true);
+    if ~strcmpi(cfg.covariancePredictionMode, 'legacy_open_loop')
+        cfg.navigation.sampleTime = getBaseWorkspaceVar('Ts');
+        cfg.navigation.Q = getBaseWorkspaceVar('Q_matrix');
+        cfg.navigation.Raux = getBaseWorkspaceVar('R_matrix');
+        cfg.navigation.Rgnss = getBaseWorkspaceVar('R_gnss');
+        cfg.navigation.alpha = getBaseWorkspaceVar('ukfAlpha');
+        cfg.navigation.beta = getBaseWorkspaceVar('ukfBeta');
+        cfg.navigation.kappa = getBaseWorkspaceVar('ukfKappa');
+        cfg.navigation.stateTransitionFcn = @myStateTransitionFcn;
+        cfg.navigation.measurementFcn = @myMeasurementFcn;
+        cfg.navigation.gnssSampleTime = getBaseWorkspaceVar('gnss_sample_time');
+        cfg.navigation.gnssEpoch = getBaseWorkspaceVar('gnssFixEpoch');
+        cfg.navigation.onDuration = getBaseWorkspaceVar('gnssOnDuration');
+        cfg.navigation.offDuration = getBaseWorkspaceVar('gnssOffDuration');
+        cfg.navigation.scoreThreshold = getBaseWorkspaceVar('pseudoNisThreshold');
+    end
     cfg.logDsafe = getBaseWorkspaceVar('logDsafeMpc', false);
     cfg.dsafeSnapshotTimes = getBaseWorkspaceVar('dsafeSnapshotTimesMpc', []);
     cfg.useReferenceFeedforward = getBaseWorkspaceVar('useReferenceFeedforward', false);

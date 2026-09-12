@@ -21,9 +21,13 @@ initialization script, and result post-processing.
 - `MPC_INOAS.m` - Model Predictive Control law for reference tracking and
   debris-avoidance guidance. It builds the prediction model, applies actuator and
   safety constraints, and returns the commanded control acceleration.
-- `instrument_decision.m` - Finite-state navigation selector. It decides whether
-  the system should use GNSS-updated navigation or Kalman propagation based on
-  covariance, satellite visibility, PDOP, HPE, VPE, and solution validity.
+- `instrument_decision.m` - GNSS supervisor using shared on/off durations,
+  a heuristic residual score, satellite visibility, and GNSS quality. Exposes
+  a status snapshot for the optional scheduled navigation forecast.
+- `navigationDutyCycleStep.m` - Pure supervisor transition shared by the real
+  state machine and the nominal forecast.
+- `predictNavigationCovarianceProfile.m` - UKF posterior covariance forecast
+  at the estimator rate, including auxiliary and optional scheduled GNSS updates.
 - `myStateTransitionFcn.m` - State-transition model used by the Unscented Kalman
   Filter. It propagates the spacecraft state between measurement updates.
 - `myMeasurementFcn.m` - Measurement function for the Kalman/UKF position

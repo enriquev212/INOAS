@@ -78,6 +78,7 @@ rendezvous and proximity operations on orbit.
 |---|---|
 | [How to run](docs/how-to-run.md) | Simulink setup, simulation modes, dependencies and common MATLAB notes. |
 | [Model architecture](docs/model-architecture.md) | System layers, navigation decision logic and covariance-aware safety equations. |
+| [Navigation covariance prediction](docs/navigation-covariance-prediction.md) | UKF/MPC wiring changes, forecast assumptions, MATLAB tests, and CSV validation. |
 | [Results](docs/results.md) | Generated plots, key parameters and the debris-avoidance demo. |
 | [Visualization workflow](docs/visualization-workflow.md) | MATLAB-to-Python pipeline for regenerating PNG and GIF assets. |
 | [Conference adaptation](docs/conference.md) | IEEE Aerospace 2027 adaptation, citation details and paper context. |
@@ -85,6 +86,10 @@ rendezvous and proximity operations on orbit.
 | [References](docs/references.md) | Bibliography and external technical sources. |
 
 ## Quick Start
+
+For the navigation-covariance trial in MATLAB Online, see
+[MATLAB Online trial](MATLAB_ONLINE_TRIAL.md). From the extracted `INOAS`
+folder, `run_navigation_trial` runs the 1000 s case and exports CSV/MAT files.
 
 From the repository root in MATLAB:
 
