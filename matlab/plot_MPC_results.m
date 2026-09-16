@@ -213,7 +213,7 @@ ylabel("||e_r|| [m]");
 title("Position-error norm");
 
 %% ============================================================
-% 5. APPLIED INERTIAL CONTROL
+% 5. APPLIED INERTIAL CONTROL AND LOCAL RTN CONTROL
 % ============================================================
 
 figure;
@@ -232,6 +232,7 @@ if exist("u_max","var")
     yline(u_max,  "r--", "u_{max}");
     yline(-u_max, "r--", "-u_{max}");
 end
+
 
 %% ============================================================
 % 6. DEBRIS DISTANCE
@@ -425,6 +426,24 @@ end
 
 figure;
 
+plot(t_u, u_MPC_lvlh(:,1), "LineWidth", 1.3); hold on;
+plot(t_u, u_MPC_lvlh(:,2), "LineWidth", 1.3);
+plot(t_u, u_MPC_lvlh(:,3), "LineWidth", 1.3);
+grid on;
+
+xlabel("t [s]");
+ylabel("u [m/s^2]");
+title("MPC applied control in RTN");
+legend("u_r","u_t","u_n");
+
+if exist("u_max","var")
+    yline(u_max,  "r--", "u_{max}");
+    yline(-u_max, "r--", "-u_{max}");
+end
+
+
+figure;
+
 subplot(3,1,1);
 plot(t_real, x_rel_lvlh(:,1), "LineWidth", 1.3); hold on;
 plot(t_u, u_MPC_lvlh(:,1)*1e4, "LineWidth", 1.1);
@@ -523,3 +542,115 @@ end
 fprintf("Final position error: %.6f m\n", e_norm(end));
 fprintf("Maximum position error: %.6f m\n", max(e_norm));
 fprintf("===================================\n\n");
+
+%% Closes approach radius
+figure;
+plot(t_CA_log, sigma_CA_log, 'o-');
+grid on;
+xlabel('Simulation time [s]');
+ylabel('\sigma_{CA} [m]');
+title('Predicted uncertainty at closest approach');
+
+figure;
+
+plot(t_CA_log, dsafe_CA_log, 'LineWidth', 1.5);
+
+grid on;
+xlabel('Simulation time [s]');
+ylabel('d_{safe,CA} [m]');
+title('Dynamic safety radius at closest approach');
+
+%% Dynamic safety radius when debris enters MPC horizon
+
+if exist('dsafe_profile_entry','var')
+
+    figure;
+
+    plot(dsafe_profile_entry_nodes, ...
+        dsafe_profile_entry, ...
+        'o-', ...
+        'LineWidth', 1.5);
+
+    grid on;
+    xlabel('MPC prediction node');
+    ylabel('Dynamic safety radius [m]');
+    title(sprintf( ...
+        'Dynamic safety radius when debris enters horizon (t = %.0f s)', ...
+        dsafe_profile_entry_tsim));
+
+end
+
+%%
+
+figure;
+
+nSnap = numel(mpc_dsafe_snapshot_time);
+
+for j = 1:nSnap
+
+    subplot(ceil(nSnap/2), 2, j);
+
+    tpred = mpc_dsafe_snapshot_target_times(:,j);
+
+    plot(tpred, ...
+        mpc_dsafe_snapshot_nominal_distance(:,j), ...
+        '--', 'LineWidth', 1.2);
+    hold on;
+
+    plot(tpred, ...
+        mpc_dsafe_snapshot_distance(:,j), ...
+        'LineWidth', 1.5);
+
+    plot(tpred, ...
+        mpc_dsafe_snapshot_profile(:,j), ...
+        'LineWidth', 1.5);
+
+    xline(t_debris, '--');
+
+    grid on;
+
+    title(sprintf('MPC at t = %.0f s', ...
+        mpc_dsafe_snapshot_time(j)));
+
+    xlabel('Predicted absolute time [s]');
+    ylabel('Distance [m]');
+
+    legend( ...
+        'Nominal distance', ...
+        'MPC predicted distance', ...
+        'Safety radius', ...
+        'TCA', ...
+        'Location','best');
+
+end
+
+fprintf('\n');
+fprintf('===== MPC DEBRIS DIAGNOSTIC =====\n');
+
+for j = 1:numel(mpc_dsafe_snapshot_time)
+
+    tpred = mpc_dsafe_snapshot_target_times(:,j);
+
+    [~,kCA] = min(abs(tpred - t_debris));
+
+    fprintf('\nMPC solve at t = %.0f s\n', ...
+        mpc_dsafe_snapshot_time(j));
+
+    fprintf('  predicted node time : %.0f s\n', ...
+        tpred(kCA));
+
+    fprintf('  nominal distance    : %.2f m\n', ...
+        mpc_dsafe_snapshot_nominal_distance(kCA,j));
+
+    fprintf('  safety radius       : %.2f m\n', ...
+        mpc_dsafe_snapshot_profile(kCA,j));
+
+    fprintf('  predicted distance  : %.2f m\n', ...
+        mpc_dsafe_snapshot_distance(kCA,j));
+
+    fprintf('  predicted margin    : %.2f m\n', ...
+        mpc_dsafe_snapshot_margin(kCA,j));
+
+    fprintf('  slack               : %.6f\n', ...
+        mpc_dsafe_snapshot_slack(kCA,j));
+end

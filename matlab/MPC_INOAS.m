@@ -57,6 +57,9 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
     persistent dsafe_snapshot_distance_log dsafe_snapshot_margin_log dsafe_snapshot_slack_log
     persistent t_internal
 
+    persistent dsafe_snapshot_nominal_distance_log
+    persistent dsafe_snapshot_target_times_log
+
     if isempty(u_abs_current)
         u_abs_current = cfg.u0(:);
     end
@@ -89,6 +92,9 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
         dsafe_snapshot_margin_log = [];
         dsafe_snapshot_slack_log = [];
         t_internal = 0;
+
+        dsafe_snapshot_nominal_distance_log = [];
+        dsafe_snapshot_target_times_log = [];
     end
 
     if numel(delta_Ulast_internal) ~= m*Np
@@ -117,7 +123,7 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
     r_p = zeros(nx*Np,1);
 
     for i = 1:Np
-        refStep = timeStep + i - 1;
+        refStep = timeStep + i;
         refStep = min(refStep, Ntimesteps);
 
         idx_mpc = (i-1)*nx + (1:nx);
@@ -261,49 +267,166 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
     %% Linearized debris-avoidance constraints
     LeftHandDebris = zeros(Np, m*Np + Np);
     RightHandDebris = zeros(Np,1);
-
+    
     if dsafe0 > 0
         dsafe_profile = zeros(Np,1);
-        P_k = P_mpc;
+    
+        targetTimes = t_sim + (1:Np).' * h;
+    
+        P_nav = predictNavigationCovarianceProfile( ...
+            x_estim, covariance_estim, t_sim, targetTimes, ...
+            u_abs_current, cfg.navigation);
+    
         for i = 1:Np
-            P_k = Phi * P_k * Phi.' + Q_cov;
+    
+            % New navigation covariance prediction
+            P_k = T_cov * P_nav(:,:,i) * T_cov.';
             P_k = symmetrizeCovariance(P_k);
-
-            dsafe_k = dsafe0 + safetyCost * covarianceRadiusFromPosition(P_k(1:3,1:3), covarianceMetric);
+    
+            % Position uncertainty
+            sigma_pos = covarianceRadiusFromPosition( ...
+                P_k(1:3,1:3), covarianceMetric);
+    
+            % Dynamic safety radius
+            dsafe_k = dsafe0 + safetyCost * sigma_pos;
             dsafe_profile(i) = dsafe_k;
-
+    
+            % Debris constraint
             idx_state_i = (i-1)*nx + (1:nx);
             idx_pos     = (i-1)*nx + (1:3);
-            refStep = min(timeStep + i - 1, Ntimesteps);
-
+    
+            refStep = min(timeStep + i, Ntimesteps);
+    
             x_ref_i = r_p(idx_state_i);
             r_ref_i = x_ref_i(1:3);
-            r_debris_i = getDebrisPositionAtStep(x_debris_hist, refStep, nx, rk_debris);
+    
+            r_debris_i = getDebrisPositionAtStep( ...
+                x_debris_hist, refStep, nx, rk_debris);
 
             d_nom = T_abs_to_ref * (r_ref_i - r_debris_i);
 
             Gamma_k = Gamma_extend(idx_pos,:);
             Y0_k = Y0(idx_pos);
+            
 
-            scaleDebris = max([norm(d_nom)^2, dsafe_k^2, 1]);
-
-            LeftHandDebris(i,1:m*Np) = (-2*d_nom' * Gamma_k) / scaleDebris;
-            LeftHandDebris(i,m*Np+i) = -1 / scaleDebris;
-
-            RightHandDebris(i) = (norm(d_nom)^2 - dsafe_k^2 + ...
-                2*d_nom'*Y0_k) / scaleDebris;
+            %% New linearization point
+            % Instead of linearizing around d_nom, project d_nom onto
+            % the safety boundary and linearize there.
+            
+            d_nom_norm = norm(d_nom);
+            
+            if d_nom_norm > 1e-9
+                d_lin = dsafe_k * d_nom / d_nom_norm;
+            else
+                % Numerical fallback
+                d_lin = dsafe_k * [1; 0; 0];
+            end
+            
+            %% Linearized squared-distance constraint
+            %
+            % True constraint:
+            %
+            %       ||d||^2 >= dsafe_k^2
+            %
+            % with:
+            %
+            %       d = d_nom + Y0_k + Gamma_k*delta_U
+            %
+            % First-order Taylor approximation around d_lin:
+            %
+            %       ||d||^2 ≈ ||d_lin||^2
+            %                   + 2*d_lin'*(d - d_lin)
+            %
+            % which gives:
+            %
+            %       2*d_lin'*d - ||d_lin||^2 >= dsafe_k^2
+            
+            scaleDebris = max([norm(d_lin)^2, dsafe_k^2, 1]);
+            
+            LeftHandDebris(i,1:m*Np) = ...
+                (-2*d_lin' * Gamma_k) / scaleDebris;
+            
+            LeftHandDebris(i,m*Np+i) = ...
+                -1 / scaleDebris;
+            
+            RightHandDebris(i) = ...
+                (2*d_lin'*(d_nom + Y0_k) ...
+                 - norm(d_lin)^2 ...
+                 - dsafe_k^2) ...
+                / scaleDebris;    
+%            d_nom = T_abs_to_ref * (r_ref_i - r_debris_i);
+%    
+%            Gamma_k = Gamma_extend(idx_pos,:);
+%            Y0_k = Y0(idx_pos);
+%    
+%            scaleDebris = max([norm(d_nom)^2, dsafe_k^2, 1]);
+%    
+%            LeftHandDebris(i,1:m*Np) = ...
+%                (-2*d_nom' * Gamma_k) / scaleDebris;
+%    
+%            LeftHandDebris(i,m*Np+i) = ...
+%                -1 / scaleDebris;
+%    
+%            RightHandDebris(i) = ...
+%                (norm(d_nom)^2 - dsafe_k^2 + 2*d_nom'*Y0_k) ...
+%                / scaleDebris;
         end
 
+        %% Log uncertainty and safety radius at closest approach
+
+        i_CA = round((1500 - t_sim)/h);
+
+        if i_CA >= 1 && i_CA <= Np
+
+            P_CA = T_cov * P_nav(:,:,i_CA) * T_cov.';
+            P_CA = symmetrizeCovariance(P_CA);
+
+            sigma_CA = covarianceRadiusFromPosition( ...
+                P_CA(1:3,1:3), covarianceMetric);
+
+            dsafe_CA = dsafe_profile(i_CA);
+
+            if evalin('base','exist(''t_CA_log'',''var'')')
+                t_CA_log     = evalin('base','t_CA_log');
+                sigma_CA_log = evalin('base','sigma_CA_log');
+                dsafe_CA_log = evalin('base','dsafe_CA_log');
+            else
+                t_CA_log     = [];
+                sigma_CA_log = [];
+                dsafe_CA_log = [];
+            end
+
+            t_CA_log(end+1,1)     = t_sim;
+            sigma_CA_log(end+1,1) = sigma_CA;
+            dsafe_CA_log(end+1,1) = dsafe_CA;
+
+            assignin('base','t_CA_log',t_CA_log);
+            assignin('base','sigma_CA_log',sigma_CA_log);
+            assignin('base','dsafe_CA_log',dsafe_CA_log);
+
+        end
+    
+        %% Save dynamic safety-radius profile when debris first enters horizon
+    
+        t_CA = 1500;                      % [s]
+        t_entry = t_CA - Np*h;            % first instant CA enters prediction horizon
+    
+        if abs(t_sim - t_entry) < 1e-6
+            assignin('base', 'dsafe_profile_entry', dsafe_profile);
+            assignin('base', 'dsafe_profile_entry_nodes', (1:Np).');
+            assignin('base', 'dsafe_profile_entry_times', targetTimes);
+            assignin('base', 'dsafe_profile_entry_tsim', t_sim);
+        end
+    
         if logDsafe
             dsafe_log_time(end+1,1) = t_sim;
             dsafe_log_first(end+1,1) = dsafe_profile(1);
             dsafe_log_max(end+1,1) = max(dsafe_profile);
-
+    
             assignin('base', 'mpc_dsafe_log_time', dsafe_log_time);
             assignin('base', 'mpc_dsafe_log_first', dsafe_log_first);
             assignin('base', 'mpc_dsafe_log_max', dsafe_log_max);
         end
-
     end
 
     %% Decision-variable bounds
@@ -401,21 +524,30 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
 
         if ~isempty(matchIdx) && ~alreadyLoggedPred
             Y_pred = Y0 + Gamma_extend * delta_U;
+            
             distance_profile = zeros(Np,1);
+            nominal_distance_profile = zeros(Np,1);
             margin_profile = zeros(Np,1);
 
             for i = 1:Np
                 idx_state_i = (i-1)*nx + (1:nx);
                 idx_pos = (i-1)*nx + (1:3);
-                refStep = min(timeStep + i - 1, Ntimesteps);
+                refStep = min(timeStep + i, Ntimesteps);
 
                 x_ref_i = r_p(idx_state_i);
                 r_ref_i = x_ref_i(1:3);
                 r_debris_i = getDebrisPositionAtStep(x_debris_hist, refStep, nx, rk_debris);
+
                 d_nom = T_abs_to_ref * (r_ref_i - r_debris_i);
 
+                % Nominal reference-to-debris distance
+                nominal_distance_profile(i) = norm(d_nom);
+
+                % MPC predicted spacecraft-to-debris distance
                 rel_vec_to_debris = Y_pred(idx_pos) + d_nom;
                 distance_profile(i) = norm(rel_vec_to_debris);
+
+                % Robust safety margin
                 margin_profile(i) = distance_profile(i) - dsafe_profile(i);
             end
 
@@ -425,11 +557,25 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
             dsafe_snapshot_margin_log(:,end+1) = margin_profile;
             dsafe_snapshot_slack_log(:,end+1) = slack_opt_internal(:);
 
+            dsafe_snapshot_nominal_distance_log(:,end+1) = ...
+                nominal_distance_profile;
+
+            dsafe_snapshot_target_times_log(:,end+1) = ...
+                targetTimes;
+
             assignin('base', 'mpc_dsafe_snapshot_time', dsafe_snapshot_time_log);
             assignin('base', 'mpc_dsafe_snapshot_profile', dsafe_snapshot_profile_log);
             assignin('base', 'mpc_dsafe_snapshot_distance', dsafe_snapshot_distance_log);
             assignin('base', 'mpc_dsafe_snapshot_margin', dsafe_snapshot_margin_log);
             assignin('base', 'mpc_dsafe_snapshot_slack', dsafe_snapshot_slack_log);
+
+            assignin('base', ...
+                'mpc_dsafe_snapshot_nominal_distance', ...
+                dsafe_snapshot_nominal_distance_log);
+
+            assignin('base', ...
+                'mpc_dsafe_snapshot_target_times', ...
+                dsafe_snapshot_target_times_log);
         end
     end
 
@@ -508,6 +654,18 @@ function cfg = getMpcConfig(varargin)
     cfg.Q_cov = resolveCovarianceMatrix({'Q_cov_mpc', 'Q_process_mpc', 'Q_covariance_mpc'}, n, zeros(n));
     cfg.covarianceFrame = getBaseWorkspaceVar('covarianceFrameMpc', 'eci');
     cfg.covarianceMetric = getBaseWorkspaceVar('covarianceMetricMpc', 'sqrt_trace_pos');
+    
+    cfg.navigation.sampleTime = getBaseWorkspaceVar('Ts');
+    cfg.navigation.Q = getBaseWorkspaceVar('Q_matrix');
+    cfg.navigation.Raux = getBaseWorkspaceVar('R_matrix');
+
+    cfg.navigation.alpha = getBaseWorkspaceVar('ukfAlpha');
+    cfg.navigation.beta = getBaseWorkspaceVar('ukfBeta');
+    cfg.navigation.kappa = getBaseWorkspaceVar('ukfKappa');
+
+    cfg.navigation.stateTransitionFcn = @myStateTransitionFcn;
+    cfg.navigation.measurementFcn = @myMeasurementFcn;
+
     cfg.logDsafe = getBaseWorkspaceVar('logDsafeMpc', false);
     cfg.dsafeSnapshotTimes = getBaseWorkspaceVar('dsafeSnapshotTimesMpc', []);
     cfg.useReferenceFeedforward = getBaseWorkspaceVar('useReferenceFeedforward', false);

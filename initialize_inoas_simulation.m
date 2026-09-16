@@ -98,19 +98,24 @@ clear requestedStopTime
 k_p = 5;
 k_d = 20;
 
-%% Kalman/UKF tuning and decision observable
+%% Kalman/UKF tuning and decision observable --> Cambio de conexion de entrada al ukf, ahora están puesta la u comanded del MPC
 Ts = 1;          % [s] master sample time for sensors and estimator
-var_IMU = 0.01; % accelerometer variance used by the Kalman propagation
+error_cmd = 0.05; % NO ACCELEROMETER USED. Order of magnitude of error associated to commanded accelerations in % of u_MPC
 
 % Synthetic internal sensor measurement covariance.
-sigma_pos = 100; % [m]
-sigma_alt = 50;  % [m]
+sigma_pos = 2000; % [m]
+sigma_alt = 2000; % [m]
+
 var_pos = sigma_pos^2;
 var_alt = sigma_alt^2;
 R_matrix = diag([var_pos, var_pos, var_pos, var_alt]);
 
-% Process-noise covariance for the 6-state orbital estimator.
-Q_matrix = diag([1, 1, 1, 1e-2, 1e-2, 1e-2]);
+% Process noise: continuous white-noise acceleration (CWNA), discretized over
+% the step that uses it. sigma_a is the MEMS accelerometer noise scale that
+% the UKF integrates in its propagation.
+sigma_a = 1e-5;                 % [m/s^2]
+Q_matrix = cwnaProcessNoise(sigma_a, Ts); % UKF, dt = Ts
+
 
 % Nominal GNSS measurement covariance used by the estimator.
 sigma_pos_gnss = 5;   % [m]
@@ -120,6 +125,15 @@ R_gnss = diag([sigma_pos_gnss^2, sigma_pos_gnss^2, sigma_pos_gnss^2, ...
 
 % Initial Kalman covariance: 1 km position error and 10 m/s velocity error.
 P0_kalman = diag([1e6, 1e6, 1e6, 100, 100, 100]);
+ukfAlpha = 1e-3;
+ukfBeta = 2;
+ukfKappa = 0;
+
+% Shared by the real supervisor and the nominal navigation forecast.
+gnssOnDuration = 60;    % [s]
+gnssOffDuration = 300;  % [s]
+pseudoNisThreshold = 12; % heuristic residual score, not a chi-square NIS gate
+
 
 % Instrument-decision observable:
 % J = trace(S_inv * P * S_T_inv), with position/velocity scaling in S.
@@ -151,8 +165,8 @@ referencePropModel = "j2-rk4";
 
 % MPC/reference parameters. The real GNSS sensor sampling is loaded from the
 % .dat file in prepare_gnss_sensor_workspace.
-Np = 125;     % GNSS/MPC prediction-horizon length
-h  = 3;      % MPC reference sample time [s]
+Np = 60;     % GNSS/MPC prediction-horizon length
+h  = 12;      % MPC reference sample time [s]
 
 %% MPC tuning
 
@@ -168,15 +182,14 @@ end
 
 % Cost matrices
 Q_step = 1e-7*[ ...
-    5  5  5 ...      
-    10  10  10 ];
+    5.96   5.96   5.96 ...
+    1.19   1.19   2.39 ];
 
-R_step = 3e3*[ ...
-    2  1.5  1.2 ];
+R_step = 1e3*[ ...
+    5.13917454   3.85438091   3.08350473 ];
 
 S_step = 1e4*[ ...
-    2  5  8 ];
-
+    9.87803264   24.6950816   39.5121306 ];
 
 slackWeight = 1e5;
 
@@ -200,7 +213,7 @@ if isfield(mpcTuneConfig, "Np")
     Np = mpcTuneConfig.Np;
 end
 
-mpcOutputNpMax = max(Np, 125);
+mpcOutputNpMax = Np;
 
 if isfield(mpcTuneConfig, "h")
     h = mpcTuneConfig.h;
@@ -477,7 +490,7 @@ if ispref("inoas", "debrisConfig")
     rmpref("inoas", "debrisConfig");
 end
 
-t_debris = 800;              % [s]
+t_debris = 1500;              % [s]
 rel_pos_debris_lvlh = [50; 0; 0];   % [m] closest-approach offset in LVLH
 rel_vel_debris_lvlh = [0; 10; 0];   % [m/s] tangential fly-by velocity in LVLH
 
@@ -501,8 +514,8 @@ load(debrisTrajectoryFile, "x_debris_hist", "r_debris_full", ...
 
 rk_debris = rk_debris_encounter;
 
-dsafe0 = 150;
-safetyCost = 0.2;
+dsafe0 = 100;
+safetyCost = 3;
 
 if isfield(mpcTuneConfig, "dsafe0")
     dsafe0 = mpcTuneConfig.dsafe0;
@@ -515,10 +528,38 @@ end
 %% MPC covariance inflation for debris avoidance
 % This extends the keep-out radius with the propagated navigation covariance
 % used by the MPC over the prediction horizon.
-Q_cov_mpc = Q_matrix;
+% The default forecast runs the navigation model at Ts, with auxiliary
+% corrections and no assumed future GNSS fixes. Q_cov_mpc is legacy-only.
+covariancePredictionModeMpc = "navigation_aux_only";
+Q_cov_mpc = cwnaProcessNoise(sigma_a, h);
+
 covarianceFrameMpc = "eci";
-covarianceMetricMpc = "sqrt_trace_pos";
+covarianceMetricMpc = "sqrt_lambda_max_pos";
+
 logDsafeMpc = true;
+
+% Detailed MPC debris-constraint snapshots
+dsafeSnapshotTimesMpc = [ ...
+    780, ...  % debris first enters the 720 s MPC horizon
+    900, ...
+    1020, ...
+    1140, ...
+    1260, ...
+    1380, ...
+    1500, ...  % closest approach
+    1620];     % post-CA
+
+logNavigationPredictionMpc = true;
+gnssFixEpoch = 0; % [s], phase of the periodic fresh-fix enable signal
+
+if isfield(mpcTuneConfig, "covariancePredictionModeMpc")
+    covariancePredictionModeMpc = string(mpcTuneConfig.covariancePredictionModeMpc);
+end
+
+if isfield(mpcTuneConfig, "logNavigationPredictionMpc")
+    logNavigationPredictionMpc = logical(mpcTuneConfig.logNavigationPredictionMpc);
+end
+
 
 if isfield(mpcTuneConfig, "Q_cov_mpc")
     Q_cov_mpc = mpcTuneConfig.Q_cov_mpc;
@@ -739,3 +780,15 @@ function [a, ecc, inc, RAAN, argp, theta] = rv2coe_from_state(r, v, mu)
     end
 
 end
+
+function Qd = cwnaProcessNoise(sigma_a, dt)
+%CWNAPROCESSNOISE Discrete process noise for white acceleration noise.
+%   This is the standard double-integrator covariance obtained by
+%   discretizing continuous white-noise acceleration over a step dt.
+q = sigma_a^2;
+I3 = eye(3);
+Qd = [q * dt^3 / 3 * I3, q * dt^2 / 2 * I3;
+    q * dt^2 / 2 * I3, q * dt     * I3];
+end
+
+
