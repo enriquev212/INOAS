@@ -353,6 +353,11 @@ fprintf('  trace(R) at t=850s: %.4f m^2\n', ...
 gnssMeta = gnssProfile.meta;
 gnss_sensor_mode = gnssSensor.mode;
 gnss_sample_time = gnssSensor.sample_time;
+
+% Modificaciones acquisition/tracking
+gnss_min_cfg = inoasMinimalGnssConfig(Ts, gnss_sample_time);
+gnss_min_cfg.acquisitionTime = 35; % Espera de ensayo, en segundos
+
 lamda_init = 1;
 %ts_gnss_pos_noise_eci = gnssSensor.ts_pos_noise_eci;
 %ts_gnss_vel_noise_eci = gnssSensor.ts_vel_noise_eci;
