@@ -113,7 +113,7 @@ function x_dot = debrisStateDerivative(x)
         end
 
         scale = (mu_earth / r^2) * (R_earth / r)^n * Jn;
-        bracket = (n + 1) * Pn * (r_vec / r) - dPn * ((z / r^2) * r_vec - z_hat);
+        bracket = (n + 1) * Pn * (r_vec / r) + dPn * ((z / r^2) * r_vec - z_hat);
         a_zonales = a_zonales + scale * bracket;
     end
 
