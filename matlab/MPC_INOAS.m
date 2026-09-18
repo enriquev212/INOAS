@@ -273,7 +273,7 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
     
         targetTimes = t_sim + (1:Np).' * h;
     
-        P_nav = predictNavigationCovarianceProfile( ...
+        [P_nav, P_nav_ticks] = predictNavigationCovarianceProfile( ...
             x_estim, covariance_estim, t_sim, targetTimes, ...
             u_abs_current, cfg.navigation);
     
@@ -303,7 +303,8 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
             r_debris_i = getDebrisPositionAtStep( ...
                 x_debris_hist, refStep, nx, rk_debris);
 
-            d_nom = T_abs_to_ref * (r_ref_i - r_debris_i);
+            [T_future,~] = referenceFrameTransform(r_ref_i, x_ref_i(4:6));
+            d_nom = T_future * (r_ref_i - r_debris_i);
 
             Gamma_k = Gamma_extend(idx_pos,:);
             Y0_k = Y0(idx_pos);
@@ -494,8 +495,74 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
         'OptimalityTolerance',1e-2, ...
         'StepTolerance',1e-5);
     
-    [z_opt,fval,exitflag,output] = fmincon(fun,z0,A_scaled,b,[],[],lb,ub,[],options);
-    
+    %[z_opt,fval,exitflag,output] = fmincon(fun,z0,A_scaled,b,[],[],lb,ub,[],options);
+    %% Intermodal debris avoidance
+    % Check swept cubic relative trajectories and add exact fractional-CW
+    % supporting planes where their minima violate the safety envelope.
+    % This is a numerical collocation check, not a continuous-time proof.
+    refinement = 0;
+    worstSweptViolation = 0;
+    if dsafe0 > 0
+        refHistory = reshape(r_p_full,nx,[]);
+        horizonIndices = min(timeStep+(0:Np),Ntimesteps);
+        refEndpoints = refHistory(:,horizonIndices);
+        debrisEndpoints = x_debris_hist(:,horizonIndices);
+        radiusTicks = zeros(size(P_nav_ticks,3)+1,1);
+        radiusTicks(1) = dsafe0+safetyCost*covarianceRadiusFromPosition( ...
+            covariance_estim(1:3,1:3),covarianceMetric);
+        for k = 1:size(P_nav_ticks,3)
+            radiusTicks(k+1) = dsafe0+safetyCost*covarianceRadiusFromPosition( ...
+                P_nav_ticks(1:3,1:3,k),covarianceMetric);
+        end
+        intervalRadii = zeros(Np,1);
+        for i = 1:Np
+            ticks = round((i-1)*h/cfg.navigation.sampleTime): ...
+                round(i*h/cfg.navigation.sampleTime);
+            intervalRadii(i) = max(radiusTicks(ticks+1));
+        end
+    end
+    while true
+        [z_opt,fval,exitflag,output] = fmincon(fun,z0,A_scaled,b,[],[],lb,ub,[],options);
+        assert(all(isfinite(z_opt)), 'INOAS:InvalidMpcSolution', ...
+            'Nonfinite MPC decision at t=%g.',t_sim);
+        if dsafe0 <= 0, break; end
+        candidateDelta = Ddu*z_opt(1:Ndu);
+        [offsets,distances] = inoasIntersampleMinima(x_rel_estim, ...
+            Y0+Gamma_extend*candidateDelta,refEndpoints,debrisEndpoints,h);
+        worstSweptViolation = max(intervalRadii-distances);
+        bad = find(intervalRadii-distances > 0.01);
+        if isempty(bad), break; end
+        assert(refinement < 12, 'INOAS:IntersampleAvoidance', ...
+            'Intersample refinement failed at t=%g: violation %.3f m.', ...
+            t_sim,worstSweptViolation);
+        refinement = refinement+1;
+        for k = bad(:).'
+            offset = offsets(k);
+            [free,forced,interval] = inoasFractionalPrediction( ...
+                offset,h,A_c,B_c,x_rel_estim,u,Y0,Gamma_extend,H);
+            xRef = inoasHermiteState(cfg.t_ref,refHistory,t_sim+offset);
+            xDebris = inoasHermiteState(cfg.t_ref,x_debris_hist,t_sim+offset);
+            [futureFrame,~] = referenceFrameTransform(xRef(1:3),xRef(4:6));
+            nominal = futureFrame*(xRef(1:3)-xDebris(1:3));
+            anchor = nominal+free(1:3)+forced(1:3,:)*candidateDelta;
+            if norm(anchor) < 1e-9, anchor = [1;0;0]; end
+            radius = intervalRadii(k);
+            tangent = radius*anchor/norm(anchor);
+            scale = max(radius^2,1);
+            row = zeros(1,Ndu+Np);
+            row(1:Ndu) = -2*tangent.'*forced(1:3,:)/scale;
+            row(Ndu+interval) = -1/scale;
+            rhs = (2*tangent.'*(nominal+free(1:3))-2*radius^2)/scale;
+            A(end+1,:) = row;
+            b(end+1,1) = rhs;
+            row(1:Ndu) = row(1:Ndu)*Ddu;
+            A_scaled(end+1,:) = row;
+        end
+        z0 = z_opt;
+    end
+    %% Recovery of the result
+
+
     w_opt = z_opt(1:Ndu);
     delta_U = Ddu*w_opt;
 
@@ -538,7 +605,8 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
                 r_ref_i = x_ref_i(1:3);
                 r_debris_i = getDebrisPositionAtStep(x_debris_hist, refStep, nx, rk_debris);
 
-                d_nom = T_abs_to_ref * (r_ref_i - r_debris_i);
+                [T_future, ~] = referenceFrameTransform(r_ref_i, x_ref_i(4:6));
+                d_nom = T_future * (r_ref_i - r_debris_i);
 
                 % Nominal reference-to-debris distance
                 nominal_distance_profile(i) = norm(d_nom);
@@ -586,9 +654,6 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
     slack_opt = padColumnVector(slack_opt_internal, cfg.outputNp);
 
     u_abs = T_ref_to_abs * u_ref;
-
-    u_abs_max = cfg.Umax(1);
-    u_abs = max(min(u_abs, u_abs_max), -u_abs_max);
 
     u_abs_current = u_abs;
     u = u_abs;
@@ -1001,4 +1066,70 @@ function S = skewSymmetric(v)
     S = [0,    -v(3),  v(2);
          v(3),  0,    -v(1);
         -v(2),  v(1),  0];
+end
+
+%% Internodal debris avoidance
+function [offsets, distances] = inoasIntersampleMinima(x0, predicted, ref, debris, h)
+states = [x0,reshape(predicted,6,[])];
+count = size(states,2); relative = zeros(6,count);
+for k = 1:count
+    [~,toEci] = referenceFrameTransform(ref(1:3,k),ref(4:6,k));
+    omega = [0;0;norm(cross(ref(1:3,k),ref(4:6,k)))/norm(ref(1:3,k))^2];
+    relative(:,k) = ref(:,k)-debris(:,k) + ...
+        [toEci*states(1:3,k);toEci*(states(4:6,k)+cross(omega,states(1:3,k)))];
+end
+offsets = zeros(count-1,1); distances = offsets;
+for k = 1:count-1
+    [fraction,distances(k)] = inoasHermiteClosestFraction(relative(:,k),relative(:,k+1),h);
+    offsets(k) = (k-1+fraction)*h;
+end
+end
+function [fraction, distance] = inoasHermiteClosestFraction(x0, x1, dt)
+a = 2*x0(1:3)-2*x1(1:3)+dt*(x0(4:6)+x1(4:6));
+b = -3*x0(1:3)+3*x1(1:3)-dt*(2*x0(4:6)+x1(4:6));
+c = dt*x0(4:6); d = x0(1:3);
+coeff = [a,b,c,d].';
+derivative = zeros(1,6);
+for axis = 1:3
+    derivative = derivative + conv(coeff(:,axis).', [3*a(axis),2*b(axis),c(axis)]);
+end
+scale = max(abs(derivative));
+if scale == 0, candidates = [0;1];
+else
+    first = find(abs(derivative)>1e-13*scale,1);
+    stationary = roots(derivative(first:end)/scale);
+    stationary = real(stationary(abs(imag(stationary))<1e-8));
+    candidates = [0;1;stationary(stationary>0 & stationary<1)];
+end
+positions = ((a*candidates.'+b).*candidates.'+c).*candidates.'+d;
+[distance,index] = min(vecnorm(positions));
+fraction = candidates(index);
+end
+function x = inoasHermiteState(times, states, t)
+assert(t >= times(1)-1e-8 && t <= times(end)+1e-8, ...
+    'INOAS:TrajectoryTime', 'Requested time is outside the stored trajectory.');
+k = find(times <= t, 1, 'last');
+k = min(k, numel(times)-1);
+dt = times(k+1)-times(k);
+s = (t-times(k))/dt;
+x0 = states(:,k); x1 = states(:,k+1);
+a = 2*x0(1:3)-2*x1(1:3)+dt*(x0(4:6)+x1(4:6));
+b = -3*x0(1:3)+3*x1(1:3)-dt*(2*x0(4:6)+x1(4:6));
+c = dt*x0(4:6);
+x = [((a*s+b)*s+c)*s+x0(1:3); (3*a*s^2+2*b*s+c)/dt];
+end
+function [free, forced, interval] = inoasFractionalPrediction(offset, h, A, B, x0, u, Y0, Gamma, H)
+nx = numel(x0); m = numel(u); Np = size(H,1)/m;
+interval = max(1,min(Np,ceil(offset/h-1e-10)));
+tau = offset-(interval-1)*h;
+if interval == 1
+    prior = x0; priorGamma = zeros(nx,m*Np);
+else
+    rows = (interval-2)*nx+(1:nx);
+    prior = Y0(rows); priorGamma = Gamma(rows,:);
+end
+transition = expm([A,B;zeros(m,nx+m)]*tau);
+F = transition(1:nx,1:nx); G = transition(1:nx,nx+1:end);
+free = F*prior+G*u;
+forced = F*priorGamma+G*H((interval-1)*m+(1:m),:);
 end

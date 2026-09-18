@@ -36,7 +36,7 @@ y_real = x_real_data(:,2);
 z_real = x_real_data(:,3);
 
 %% MPC control
-u_log = get_logsout_signal(out.logsout, {"u_MPC", "u_discret"});
+u_log = get_logsout_signal(out.logsout, {"u_applied"});
 t_u = u_log.Time;
 u_MPC = squeeze(u_log.Data);
 

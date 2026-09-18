@@ -3,7 +3,7 @@
 % scenario definition, GNSS sensor profile, Kalman tuning, nominal reference,
 % debris encounter, and MPC configuration.
 clc; close all;
-
+ 
 rng('shuffle');
 
 %% Repository setup
@@ -112,7 +112,7 @@ R_matrix = diag([var_pos, var_pos, var_pos, var_alt]);
 
 %% UKF process noise
 % External/unmodelled acceleration uncertainty: FIXED
-sigma_a = 1e-5;  % [m/s^2]
+sigma_a = sqrt(5e-6);  % [m/s^2]
 
 Q_external = cwnaProcessNoise(sigma_a, Ts);
 
@@ -357,6 +357,7 @@ gnss_sample_time = gnssSensor.sample_time;
 % Modificaciones acquisition/tracking
 gnss_min_cfg = inoasMinimalGnssConfig(Ts, gnss_sample_time);
 gnss_min_cfg.acquisitionTime = 35; % Espera de ensayo, en segundos
+acquisitionTime = gnss_min_cfg.acquisitionTime;
 
 lamda_init = 1;
 %ts_gnss_pos_noise_eci = gnssSensor.ts_pos_noise_eci;

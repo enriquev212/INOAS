@@ -1,4 +1,4 @@
-function P_nodes = predictNavigationCovarianceProfile( ...
+function [P_nodes, P_all] = predictNavigationCovarianceProfile( ...
     x0, P0, t0, targetTimes, uNominal, cfg)
 
 dt = cfg.sampleTime;
@@ -12,7 +12,7 @@ steps = round(steps);
 
 uNominal = uNominal(:);
 
-% 5% actuator execution uncertainty per commanded axis
+% 10% actuator execution uncertainty per commanded axis
 Sigma_act = diag((cfg.errorCmd .* uNominal).^2);
 
 % Propagate acceleration uncertainty into [position; velocity]
