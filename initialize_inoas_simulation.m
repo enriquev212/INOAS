@@ -108,7 +108,10 @@ sigma_alt = 2000; % [m]
 
 var_pos = sigma_pos^2;
 var_alt = sigma_alt^2;
-R_matrix = diag([var_pos, var_pos, var_pos, var_alt]);
+% Auxiliary measurement: position only. The derived altitude channel was
+% removed (redundant with [x y z]); sigma_alt/var_alt are kept for the run
+% record but no longer enter the filter.
+R_matrix = diag([var_pos, var_pos, var_pos]);
 
 %% UKF process noise
 % External/unmodelled acceleration uncertainty: FIXED
