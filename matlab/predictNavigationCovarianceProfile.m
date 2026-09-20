@@ -60,7 +60,7 @@ for k = 1:steps(end)
 
     predict(filter, uNominal);
 
-    innovationAtZero = residual(filter, zeros(4,1));
+    innovationAtZero = residual(filter, zeros(3,1));
     correct(filter, -innovationAtZero);
 
     P_all(:,:,k) = 0.5 * ...

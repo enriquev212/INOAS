@@ -50,7 +50,8 @@ end
 clear preservedModelName preservedStopTime
 
 %% Input files and physical scenario
-gnssCovarianceFile = inoas_data_file("cov_perturb_POS_s6a_Y24D011_fixed.dat");
+%gnssCovarianceFile = inoas_data_file("cov_perturb_POS_s6a_Y24D011_fixed.dat");
+gnssCovarianceFile = inoas_data_file("full_perturb_POS_s6a_Y24D011_fixed.dat");
 referenceTrajectoryFile = inoas_data_path("referenceTrajectory.mat");
 debrisTrajectoryFile = inoas_data_path("debrisTrajectory.mat");
 
@@ -74,7 +75,7 @@ area = 0.03;         % [m^2], STF-1 area assumption used by SRP block
 
 start_date = juliandate(datetime(2024, 1, 11));
 end_date = juliandate(datetime(2024, 2, 11));
-tf = 4000;           % [s] nominal simulation duration
+tf = 6743; %4000;           % [s] nominal simulation duration
 
 requestedStopTime = [];
 if exist("simulationStopTime", "var") && ~isempty(simulationStopTime)
@@ -108,7 +109,7 @@ sigma_alt = 2000; % [m]
 
 var_pos = sigma_pos^2;
 var_alt = sigma_alt^2;
-R_matrix = diag([var_pos, var_pos, var_pos, var_alt]);
+R_matrix = diag([var_pos, var_pos, var_pos]);% var_alt]);
 
 %% UKF process noise
 % External/unmodelled acceleration uncertainty: FIXED

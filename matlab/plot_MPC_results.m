@@ -656,3 +656,78 @@ for j = 1:numel(mpc_dsafe_snapshot_time)
 end
 
 
+%% Error de posición: estimación frente a estado real
+
+% Recuperar los tiempos originales de cada señal
+%t_nav   = est_log.Time(:);
+%t_truth = real_log.Time(:);
+
+% Comparar solo dentro del intervalo con datos reales
+%idx = t_nav >= t_truth(1) & t_nav <= t_truth(end);
+%t_nav = t_nav(idx);
+
+% Evaluar la posición real en los instantes del estimador
+%pos_real_i = interp1(t_truth, x_real_data(:,1:3), t_nav, 'pchip');
+
+% Error vectorial de posición y su norma 3D
+%error_vectorial = x_est_data(idx,1:3) - pos_real_i;
+%norma_error = vecnorm(error_vectorial, 2, 2);
+
+% Gráfica
+%figure;
+%plot(t_nav, norma_error, 'LineWidth', 1.5);
+%grid on;
+%xlabel('Tiempo [s]');
+%ylabel('Error de posición 3D [m]');
+%title('Error de navegación: posición estimada frente a real');
+
+%% Error de posición: estimación frente a estado real (Sin interpolar, buscando coincidencias exactas)
+
+% 1. Recuperar los tiempos originales
+t_est  = est_log.Time(:);
+t_real = real_log.Time(:);
+
+% 2. Buscar en qué índices de t_real ocurren exactamente los instantes de t_est.
+% OJO: MATLAB tiene problemas comparando números decimales por precisión flotante,
+% así que usamos una tolerancia muy pequeña (1e-6) para encontrar las coincidencias.
+
+% Pre-asignamos un vector para guardar los índices
+indices_coincidentes = zeros(length(t_est), 1);
+
+for i = 1:length(t_est)
+    % Encuentra el índice en t_real más cercano a t_est(i)
+    [diferencia_minima, idx] = min(abs(t_real - t_est(i)));
+    
+    % Comprobamos que realmente sea el mismo instante (tolerancia de 1 microsegundo)
+    if diferencia_minima < 1e-6
+        indices_coincidentes(i) = idx;
+    else
+        warning(['No se encontró un instante exacto en t_real para t_est = ', num2str(t_est(i))]);
+        % Podrías asignar NaN o manejarlo de otra forma si esto ocurre
+    end
+end
+
+% Filtrar t_est para quedarnos solo con los que encontraron pareja (por si acaso)
+indices_validos = indices_coincidentes > 0;
+indices_finales_real = indices_coincidentes(indices_validos);
+
+t_est_filtrado = t_est(indices_validos);
+pos_est_filtrada = x_est_data(indices_validos, 1:3);
+
+% 3. Extraer solo las filas de la posición real que coinciden con los instantes del estimador
+pos_real_sincronizada = x_real_data(indices_finales_real, 1:3);
+
+% 4. Resta directa (ahora ambas matrices tienen exactamente el mismo tamaño: ~6744 filas)
+error_vectorial = pos_est_filtrada - pos_real_sincronizada;
+
+% 5. Calcular la norma euclídea 3D (módulo)
+norma_error = vecnorm(error_vectorial, 2, 2);
+
+% 6. Graficar a cada instante de tiempo discreto
+figure;
+plot(t_est_filtrado, norma_error, 'LineWidth', 1.5, 'Color', '#0072BD');
+grid on;
+xlabel('Tiempo [s]');
+ylabel('Error de posición 3D [m]');
+title('Error de Navegación: Estimación vs. Realidad (Puntos exactos)');
+
