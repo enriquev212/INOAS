@@ -13,8 +13,6 @@ cfg.offTime = 300;
 cfg.auxThreshold = 10.3;
 cfg.nsvMin = 4;
 cfg.pdopMax = 6;
-cfg.hpeMax = 5;
-cfg.vpeMax = 5;
 assert(Ts > 0 && fixInterval >= Ts);
 assert(abs(fixInterval / Ts - round(fixInterval / Ts)) < 1e-10);
 end

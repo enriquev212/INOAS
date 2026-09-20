@@ -6,7 +6,7 @@ function lambda = instrument_decision(J, n_sat, PDOP, HPE, VPE, gnss_sol)
 %   J        - trace(S_inv * P * S_T_inv)  covariance observable [scalar]
 %   n_sat    - number of GNSS satellites used (NSV)
 %   PDOP     - position dilution of precision
-%   HPE,VPE  - horizontal / vertical position error [m]
+%   HPE,VPE  - unused reference-error inputs, kept for interface compatibility
 %   gnss_sol - GNSS solution validity flag (1 valid, 0 no-fix)
 %
 % BEHAVIOUR
@@ -24,8 +24,6 @@ T_kalman_on = 10; % [s] Kalman ON period before returning to GNSS
 max_cov   = 2000; % J threshold for forced return to GNSS
 n_sat_min = 4;    % minimum satellites for a valid fix  (Table 3.1)
 PDOP_max  = 6;    % PDOP limit                          (Table 3.1)
-HPE_max   = 5;    % horizontal position error limit [m] (Table 3.1)
-VPE_max   = 5;    % vertical   position error limit [m] (Table 3.1)
 Ts        = 1;    % [s] execution sample time of this decision block
 
 GNSS_STATE   = int32(0);
@@ -36,11 +34,10 @@ if isempty(state)
     timer_count = int32(0);
 end
 
-% --- Table-3.1 emergency conditions -------------------------------------
-signal_outage   = (n_sat < n_sat_min) || (gnss_sol < 0.5);
-precision_loss  = (HPE > HPE_max)     || (VPE > VPE_max);
-geometric_drift = (PDOP > PDOP_max);
-emergency       = signal_outage || precision_loss || geometric_drift;
+% Only receiver-observable quantities enter acceptance, never truth errors.
+quality_ok = all(isfinite([n_sat, PDOP, gnss_sol])) && ...
+    n_sat >= n_sat_min && PDOP > 0 && PDOP <= PDOP_max && gnss_sol >= 0.5;
+emergency = ~quality_ok;
 
 timer_count = timer_count + int32(Ts);
 

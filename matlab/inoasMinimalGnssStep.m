@@ -2,6 +2,8 @@ function [lambda, receiver_on, mode, quality_ok] = ...
     inoasMinimalGnssStep(aux_score, n_sat, PDOP, HPE, VPE, gnss_sol, t, cfg)
 %#codegen
 % OFF=0, ACQUIRING=1, TRACKING=2. Call exactly once per estimator step.
+% HPE/VPE are retained for interface compatibility, not used for acceptance:
+% dataset reference errors are unavailable to an autonomous receiver.
 persistent state enteredAt
 OFF = uint8(0);
 ACQUIRING = uint8(1);
@@ -11,10 +13,9 @@ if isempty(state)
     enteredAt = t;
 end
 
-quality_ok = all(isfinite([n_sat, PDOP, HPE, VPE, gnss_sol])) && ...
+quality_ok = all(isfinite([n_sat, PDOP, gnss_sol])) && ...
     n_sat >= cfg.nsvMin && PDOP > 0 && PDOP <= cfg.pdopMax && ...
-    HPE >= 0 && HPE <= cfg.hpeMax && ...
-    VPE >= 0 && VPE <= cfg.vpeMax && gnss_sol >= 0.5;
+    gnss_sol >= 0.5;
 aux_alarm = ~isfinite(aux_score) || aux_score >= cfg.auxThreshold;
 fresh = inoasMinimalGnssTick(t, cfg);
 elapsed = t - enteredAt;
