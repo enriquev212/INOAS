@@ -50,7 +50,7 @@ end
 clear preservedModelName preservedStopTime
 
 %% Input files and physical scenario
-gnssCovarianceFile = inoas_data_file("cov_perturb_POS_s6a_Y24D011_fixed.dat");
+gnssCovarianceFile = inoas_data_file("full_perturb_POS_s6a_Y24D011_fixed.dat");
 referenceTrajectoryFile = inoas_data_path("referenceTrajectory.mat");
 debrisTrajectoryFile = inoas_data_path("debrisTrajectory.mat");
 

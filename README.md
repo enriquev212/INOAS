@@ -98,6 +98,15 @@ Use `open_inoas_fast` for a short setup check and `open_inoas_model` for the
 full validation setup. See [How To Run](docs/how-to-run.md) for requirements,
 simulation modes, and common MATLAB notes.
 
+The default GNSS input is the **S2 degraded scenario** in
+[`data/full_perturb_POS_s6a_Y24D011_fixed.dat`](data/full_perturb_POS_s6a_Y24D011_fixed.dat).
+It is included in the repository; no file from Downloads is needed. See
+[Data Files](data/README.md) for the controlled perturbations, quality-rejection
+intervals, and the distinction between this input and the legacy datasets.
+Selecting this dataset alone does not reproduce every paper figure: receiver
+policy, auxiliary faults, random seeds, run duration, and MPC settings must also
+match the experiment being compared.
+
 ## Repository Layout
 
 ```text

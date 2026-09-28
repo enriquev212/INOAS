@@ -9,7 +9,7 @@ function load_gnss_quality_signals(datFile)
 %     10=HPE 11=VPE 12=EPE 13=NPE 14=UPE 15=HDOP 16=VDOP 17=PDOP
 
 if nargin < 1 || isempty(datFile)
-    datFile = 'cov_perturb_POS_s6a_Y24D011_fixed.dat';
+    datFile = 'full_perturb_POS_s6a_Y24D011_fixed.dat';
 end
 
 datFile = inoas_data_file(datFile);

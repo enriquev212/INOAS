@@ -6,7 +6,7 @@ function profile = load_gnss_sensor_profile(filename, startDateJulian, varargin)
 % satellite count, and dataset replay signals for comparison.
 
     if nargin < 1 || strlength(string(filename)) == 0
-        filename = "cov_perturb_POS_s6a_Y24D011_fixed.dat";
+        filename = "full_perturb_POS_s6a_Y24D011_fixed.dat";
     end
 
     filename = inoas_data_file(filename);

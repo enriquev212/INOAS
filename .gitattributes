@@ -1,0 +1,2 @@
+# Preserve the archived S2 input byte-for-byte across platforms.
+data/full_perturb_POS_s6a_Y24D011_fixed.dat -text
