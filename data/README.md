@@ -43,11 +43,20 @@ the archived S2 input; this update does not generate new perturbations.
 
 In the 6743 s study arc, the three degradation intervals rejected by the quality
 gate are **[700, 980), [2000, 2260), and [3500, 3550) s**. The gate uses finite
-SOL, NSV and PDOP values, with SOL >= 0.5, NSV >= 4 and 0 < PDOP <= 6. HPE/VPE
+SOL, NSV and PDOP values, with SOL >= 0.5, NSV >= 5 and 0 < PDOP <= 6. HPE/VPE
 are reference-error metrics, not onboard acceptance criteria. Initial no-fix
-placeholders and the existing loader's initial-quality padding are unchanged.
+placeholders are handled by the loader's initial-quality padding.
 These intervals describe input quality; actual updates also depend on receiver
 state and measurement epochs.
+
+The five-satellite count threshold is consistent with a GPS/Galileo position
+solution estimating three position components and two receiver clock terms.
+It is a necessary count condition for that formulation, not a guarantee of
+full geometry-matrix rank. The replay supervisor uses NSV (satellites used),
+not NSVVIS (satellites visible), together with solution validity and PDOP.
+None of the three versioned GNSS files contains an NSV value of exactly four,
+so changing this threshold from four to five leaves their quality decisions
+unchanged. This equivalence must be checked again for other input profiles.
 
 The file does not contain the auxiliary-sensor fault injections, actuator
 noise, receiver policy, or MPC settings. The 10 s data spacing and the model's

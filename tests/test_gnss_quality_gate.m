@@ -20,7 +20,7 @@ errors = [0, 5, 5000, -1, NaN, Inf, -Inf];
 for hpe = errors
     for vpe = errors
         clear inoasMinimalGnssStep
-        [~, ~, ~, quality] = inoasMinimalGnssStep(0, 4, 6, hpe, vpe, 1, 0, cfg);
+        [~, ~, ~, quality] = inoasMinimalGnssStep(0, 5, 6, hpe, vpe, 1, 0, cfg);
         verifyTrue(testCase, quality);
     end
 end
@@ -28,10 +28,12 @@ end
 
 function testReceiverValidityBoundary(testCase)
 cfg = inoasMinimalGnssConfig(1, 3);
-cases = [4, 6, 1, 1; 4, eps, 1, 1; 3, 2, 1, 0; ...
-    4, 0, 1, 0; 4, -1, 1, 0; 4, 6+eps(6), 1, 0; ...
-    4, 2, 0, 0; NaN, 2, 1, 0; Inf, 2, 1, 0; ...
-    4, NaN, 1, 0; 4, Inf, 1, 0; 4, 2, NaN, 0; 4, 2, Inf, 0];
+verifyEqual(testCase, cfg.nsvMin, 5);
+cases = [5, 6, 1, 1; 5, eps, 1, 1; 6, 2, 1, 1; ...
+    3, 2, 1, 0; 4, 2, 1, 0; ...
+    5, 0, 1, 0; 5, -1, 1, 0; 5, 6+eps(6), 1, 0; ...
+    5, 2, 0, 0; NaN, 2, 1, 0; Inf, 2, 1, 0; ...
+    5, NaN, 1, 0; 5, Inf, 1, 0; 5, 2, NaN, 0; 5, 2, Inf, 0];
 for k = 1:size(cases, 1)
     clear inoasMinimalGnssStep
     [~, ~, ~, quality] = inoasMinimalGnssStep(0, cases(k,1), cases(k,2), ...
@@ -49,7 +51,7 @@ for t = 0:36
     verifyEqual(testCase, lambda, t == 36);
     verifyEqual(testCase, mode, uint8(1 + (t == 36)));
 end
-[lambda, on, mode] = inoasMinimalGnssStep(0, 3, 2, 0, 0, 1, 37, cfg);
+[lambda, on, mode] = inoasMinimalGnssStep(0, 4, 2, 0, 0, 1, 37, cfg);
 verifyFalse(testCase, lambda);
 verifyTrue(testCase, on);
 verifyEqual(testCase, mode, uint8(1));
@@ -57,11 +59,24 @@ end
 
 function testLegacyReferenceErrorsDoNotGate(testCase)
 clear instrument_decision
-verifyEqual(testCase, instrument_decision(0, 4, 6, NaN, Inf, 1), 1);
+verifyEqual(testCase, instrument_decision(0, 5, 6, NaN, Inf, 1), 1);
 clear instrument_decision
-verifyEqual(testCase, instrument_decision(0, 4, 0, 0, 0, 1), 0);
+verifyEqual(testCase, instrument_decision(0, 5, 0, 0, 0, 1), 0);
+clear instrument_decision
+verifyEqual(testCase, instrument_decision(0, 4, 2, 0, 0, 1), 0);
 clear instrument_decision
 verifyEqual(testCase, instrument_decision(0, NaN, 2, 0, 0, 1), 0);
+end
+
+function testFourSatellitesCannotCompleteAcquisition(testCase)
+cfg = inoasMinimalGnssConfig(1, 3);
+clear inoasMinimalGnssStep
+for t = 0:60
+    [lambda, on, mode, quality] = inoasMinimalGnssStep(0, 4, 2, 0, 0, 1, t, cfg);
+    verifyEqual(testCase, [lambda, on, double(mode), quality], [0, 1, 1, 0]);
+end
+[lambda, on, mode, quality] = inoasMinimalGnssStep(0, 5, 2, 0, 0, 1, 63, cfg);
+verifyEqual(testCase, [lambda, on, double(mode), quality], [1, 1, 2, 1]);
 end
 
 function testNoReferenceErrorThresholds(testCase)

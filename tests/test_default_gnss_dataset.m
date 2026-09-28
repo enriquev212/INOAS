@@ -9,6 +9,7 @@ testCase.TestData.root = root;
 testCase.TestData.oldPath = path;
 testCase.TestData.oldRng = rng;
 addpath(fullfile(root, 'matlab'));
+addpath(fullfile(root, 'tests'));
 testCase.TestData.filename = 'full_perturb_POS_s6a_Y24D011_fixed.dat';
 testCase.TestData.legacy = 'cov_perturb_POS_s6a_Y24D011_fixed.dat';
 testCase.TestData.data = readmatrix(inoas_data_file(testCase.TestData.filename), ...
@@ -73,7 +74,7 @@ nsv = evalin('base', 'ts_gnss_nsv');
 pdop = evalin('base', 'ts_gnss_pdop');
 t = sol.Time;
 quality = isfinite(sol.Data) & isfinite(nsv.Data) & isfinite(pdop.Data) & ...
-    sol.Data >= 0.5 & nsv.Data >= 4 & pdop.Data > 0 & pdop.Data <= 6;
+    sol.Data >= 0.5 & nsv.Data >= 5 & pdop.Data > 0 & pdop.Data <= 6;
 expected = ~((t >= 700 & t < 980) | (t >= 2000 & t < 2260) | ...
     (t >= 3500 & t < 3550));
 arc = t <= 6743;
@@ -84,6 +85,33 @@ function testSensorProfileDefault(testCase)
 profile = load_gnss_sensor_profile();
 verifyEqual(testCase, profile.filename, string(inoas_data_file(testCase.TestData.filename)));
 verifyEqual(testCase, profile.sample_time, 10);
+end
+
+function testInitialQualityPaddingRequiresFiveSatellites(testCase)
+data = testCase.TestData.data(1:4, :);
+data(:, 7) = 1;
+data(:, 9) = [0; 4; 5; 6];
+data(:, 17) = 2;
+filename = [tempname '.dat'];
+cleanup = onCleanup(@() delete(filename)); %#ok<NASGU>
+writetable(array2table(data), filename, 'FileType', 'text', 'Delimiter', ' ');
+load_gnss_quality_signals(filename);
+nsv = evalin('base', 'ts_gnss_nsv');
+verifyEqual(testCase, nsv.Data, [5; 5; 5; 6]);
+end
+
+function testVersionedInputsKeepSameReceiverDecisions(testCase)
+filenames = {testCase.TestData.filename, testCase.TestData.legacy, ...
+    'perturb_POS_s6a_Y24D011.dat'};
+for k = 1:numel(filenames)
+    report = compare_gnss_minimum_replay(inoas_data_file(filenames{k}), 6743);
+    verifyEqual(testCase, report.recordsWithFourUsedSatellites, 0);
+    verifyEqual(testCase, report.qualityDifferences24h, 0);
+    for j = 1:numel(report.receiverCases)
+        verifyEqual(testCase, report.receiverCases(j).differingSteps, zeros(1, 4));
+        verifyEqual(testCase, report.receiverCases(j).acceptedFixDifferences, 0);
+    end
+end
 end
 
 function testSensorWorkspaceDefault(testCase)

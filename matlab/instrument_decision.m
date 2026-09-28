@@ -22,7 +22,7 @@ persistent state timer_count;
 T_gnss_on = 90;   % [s] GNSS ON period before switching to Kalman
 T_kalman_on = 10; % [s] Kalman ON period before returning to GNSS
 max_cov   = 2000; % J threshold for forced return to GNSS
-n_sat_min = 4;    % minimum satellites for a valid fix  (Table 3.1)
+n_sat_min = 5;    % GPS/Galileo position plus two receiver clock terms
 PDOP_max  = 6;    % PDOP limit                          (Table 3.1)
 Ts        = 1;    % [s] execution sample time of this decision block
 
