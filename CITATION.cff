@@ -1,17 +1,17 @@
 cff-version: 1.2.0
-message: "If you use this project, please cite the accepted conference-paper adaptation."
+message: "If you use this project, please cite the IEEE Aerospace 2027 paper."
 title: "Integrated Navigation and Orbital Awareness System (INOAS)"
 type: software
 authors:
   - given-names: Alberto
-    family-names: Fernandez-Acero Campoamor
+    family-names: Fernández-Acero Campoamor
   - given-names: Enrique
     family-names: Valverde Sacristán
   - given-names: Álvaro
     family-names: Yuste Pubill
   - given-names: Guzmán
     family-names: Grande González
-  - given-names: Julia
+  - given-names: Júlia
     family-names: Soler i Pla
   - given-names: Changxiang
     family-names: Xu
@@ -26,14 +26,14 @@ preferred-citation:
   title: "Robust MPC-Based Collision Avoidance Guidance and Safe Duty-Cycled GNSS Navigation for LEO CubeSats"
   authors:
     - given-names: Alberto
-      family-names: Fernandez-Acero Campoamor
+      family-names: Fernández-Acero Campoamor
     - given-names: Enrique
       family-names: Valverde Sacristán
     - given-names: Álvaro
       family-names: Yuste Pubill
     - given-names: Guzmán
       family-names: Grande González
-    - given-names: Julia
+    - given-names: Júlia
       family-names: Soler i Pla
     - given-names: Changxiang
       family-names: Xu

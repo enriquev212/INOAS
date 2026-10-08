@@ -5,7 +5,8 @@ project, developed by the Supaero Astra Iberian Team for WP7: Reusable
 Propulsion / Maintenance of the
 [Student Aerospace Challenge 2025/2026](https://www.studentaerospacechallenge.eu/index.php/en).
 The project was presented at the challenge final, Aerospace Challenge Day, at
-Paris-Le Bourget on June 25, 2026.
+Paris-Le Bourget on June 25, 2026, and was then extended into a paper for the
+2027 IEEE Aerospace Conference.
 
 INOAS studies how a LEO servicing spacecraft can reduce GNSS receiver duty cycle
 while keeping enough navigation accuracy and collision-avoidance authority for
@@ -14,15 +15,39 @@ Simulink orbital plant, simulated GNSS measurements, UKF/Kalman state estimation
 instrument decision logic, and an MPC controller with covariance-aware safety
 margins.
 
-![Debris-avoidance playback](docs/assets/debris-avoidance-playback.gif)
+![Debris-avoidance playback from the challenge-final model](docs/assets/debris-avoidance-playback.gif)
 
-**Headline results:** 82% GNSS energy reduction | below 40 m outage position
-error | 483.2 m minimum debris separation vs 154 m robust safety radius.
+*Debris-avoidance playback from the model presented at the challenge final
+(June 2026).*
+
+**Paper results** (IEEE Aerospace 2027; medians over 50 paired Monte Carlo runs
+with degraded GNSS):
+
+- Reactive receiver management saves 66.0% of the receiver-module energy
+  relative to continuous GNSS operation.
+- With the constant 295 m radius, the maximum position-estimation error drops
+  from 21.1 m with fixed-time duty cycling to 8.0 m with reactive management,
+  and is lower in all 50 paired runs.
+- With reactive management and the covariance-adaptive safety radius, the
+  minimum separation is 194.2 m and the applied Δv is 32% lower than with a
+  constant 295 m radius. Every run stays outside the 150 m keep-out distance.
+
+> **Code status.** `main` contains the September 2026 conference-adaptation
+> model. The final paper uses a later configuration (encounter, MPC horizon,
+> receiver supervisor, auxiliary sensors, noise settings, atmospheric drag and
+> the Monte Carlo campaign, among others) that has not been merged into `main`
+> yet, so the default runs in this repository do not reproduce the paper
+> results.
 
 ## Project Materials
 
 [Final poster PDF](docs/assets/final-poster-supaero-astra-iberian-team.pdf) |
 [Final presentation PPTX](https://github.com/enriquev212/INOAS/releases/download/inoas-project-materials-v1/INOAS_full_quality_final_presentation.pptx)
+
+The poster and presentation are the challenge-final material (June 2026). Their
+figures come from the challenge model, a 10 t spacecraft, before the CubeSat
+adaptation and the corrections made for the paper, and are superseded by the
+paper results; see [Results](docs/results.md).
 
 <details>
 <summary>Poster preview</summary>
@@ -33,19 +58,21 @@ error | 483.2 m minimum debris separation vs 154 m robust safety radius.
 
 ## Core Idea
 
-INOAS uses uncertainty-driven GNSS duty cycling. When navigation covariance
-remains below the selected threshold, GNSS is switched off and the estimator
-propagates the state autonomously. When uncertainty grows, GNSS quality degrades,
-or NIS indicates filter divergence, GNSS is reactivated and the navigation
-solution is corrected.
+INOAS couples GNSS duty cycling with navigation uncertainty. A receiver
+supervisor powers the GNSS receiver on a nominal ON/OFF schedule and accepts
+fixes only after quality checks, while an auxiliary-sensor discrepancy alarm
+(pseudo-NIS) can bring the next activation forward. In the paper's reactive
+policy, poor tracking also triggers reacquisition and the alarm can extend
+powered operation. Between GNSS fixes, the UKF propagates the state and
+covariance and keeps fusing the auxiliary measurements.
 
-The control layer uses that navigation confidence directly: the MPC increases
-the debris safety margin when the estimated covariance grows, making avoidance
-guidance more conservative when state knowledge is less certain.
+The control layer uses that navigation confidence directly: the MPC inflates its
+debris safety radius with the forecast navigation covariance, so avoidance
+guidance becomes more conservative only when state knowledge is less certain.
 
-## Conference CubeSat Physical Model
+## CubeSat Physical Model
 
-The default conference setup keeps the existing Sentinel-6A-inspired INOAS
+The default setup on `main` keeps the existing Sentinel-6A-inspired INOAS
 reference orbit and Sentinel-6A-derived GNSS-quality timing/profile data, while
 replacing the original large-spacecraft physical assumptions with a
 representative 3U CubeSat-class bus. The CubeSat bus and receiver assumptions
@@ -72,6 +99,11 @@ full box-limit thrust. CPOD is the flight-demonstrated 3U RPO reference: two
 autonomous CubeSats with 3-DOF translational control that demonstrated
 rendezvous and proximity operations on orbit.
 
+The final paper keeps this platform, but takes the Pumpkin GPSRM 1 (NovAtel
+OEM719) as GNSS module reference for its receiver power model and also
+propagates atmospheric drag; see
+[IEEE Aerospace 2027 paper](docs/conference.md#paper-configuration).
+
 ## Documentation
 
 | Document | Why open it |
@@ -79,9 +111,9 @@ rendezvous and proximity operations on orbit.
 | [How to run](docs/how-to-run.md) | Simulink setup, simulation modes, dependencies and common MATLAB notes. |
 | [Model architecture](docs/model-architecture.md) | System layers, navigation decision logic and covariance-aware safety equations. |
 | [Navigation covariance prediction](docs/navigation-covariance-prediction.md) | UKF/MPC wiring changes, forecast assumptions, MATLAB tests, and CSV validation. |
-| [Results](docs/results.md) | Generated plots, key parameters and the debris-avoidance demo. |
+| [Results](docs/results.md) | Paper results, superseded challenge-final figures, default parameters and generated plots. |
 | [Visualization workflow](docs/visualization-workflow.md) | MATLAB-to-Python pipeline for regenerating PNG and GIF assets. |
-| [Conference adaptation](docs/conference.md) | IEEE Aerospace 2027 adaptation, citation details and paper context. |
+| [IEEE Aerospace 2027 paper](docs/conference.md) | Paper configuration, how it differs from the code on `main`, and citation. |
 | [MATLAB function index](matlab/README.md) | File-by-file guide to the MATLAB scripts and model helpers. |
 | [References](docs/references.md) | Bibliography and external technical sources. |
 
@@ -146,9 +178,10 @@ paper-review material unless separately authorized by the project team.
 
 ## Conference and Citation
 
-The project is being adapted into a paper for the **2027 IEEE Aerospace
-Conference**. The abstract was accepted on **July 6, 2026** under paper number
-**2437**.
+The project was extended into the paper *Robust MPC-Based Collision Avoidance
+Guidance and Safe Duty-Cycled GNSS Navigation for LEO CubeSats* for the **2027
+IEEE Aerospace Conference** (Big Sky, Montana, March 6-13, 2027; session 12.01,
+paper 2437). The abstract was accepted on **July 6, 2026**.
 
 Citation details are available in [docs/conference.md](docs/conference.md) and
 [`CITATION.cff`](CITATION.cff).
@@ -163,8 +196,8 @@ Maintainer/contact: Enrique Valverde Sacristán
 ([enriquev212](https://github.com/enriquev212),
 [enriquevalverdesacristan@gmail.com](mailto:enriquevalverdesacristan@gmail.com)).
 
-Alberto Fernandez-Acero Campoamor · Enrique Valverde Sacristán · Álvaro Yuste
-Pubill · Guzmán Grande González · Julia Soler i Pla · Changxiang Xu
+Alberto Fernández-Acero Campoamor · Enrique Valverde Sacristán · Álvaro Yuste
+Pubill · Guzmán Grande González · Júlia Soler i Pla · Changxiang Xu
 
 ## License
 

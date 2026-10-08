@@ -1,5 +1,12 @@
 # Model Architecture
 
+The navigation-selector description below predates the September 2026 changes
+on `main`, where the MPC always receives the UKF estimate and the GNSS/UKF
+switches no longer feed it; see
+[Navigation covariance prediction](navigation-covariance-prediction.md). The
+configuration used for the final IEEE Aerospace 2027 paper is summarised in
+[IEEE Aerospace 2027 paper](conference.md#paper-configuration).
+
 ## Context
 
 Future orbital servicing missions need precise autonomous navigation for docking,

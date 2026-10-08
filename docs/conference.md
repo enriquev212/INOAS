@@ -1,67 +1,109 @@
-# Conference Adaptation and Citation
+# IEEE Aerospace 2027 Paper and Citation
 
-## IEEE Aerospace Conference Adaptation
-
-The project is currently being adapted into a paper for the **2027 IEEE
-Aerospace Conference**, held at the Yellowstone Conference Center in Big Sky,
-Montana, March 6-13, 2027.
-
-The abstract was accepted on **July 6, 2026**:
+## Paper
 
 - **Title:** Robust MPC-Based Collision Avoidance Guidance and Safe Duty-Cycled
   GNSS Navigation for LEO CubeSats
+- **Authors:** Alberto Fernández-Acero Campoamor, Enrique Valverde Sacristán,
+  Álvaro Yuste Pubill, Guzmán Grande González, Júlia Soler i Pla and
+  Changxiang Xu (ISAE-SUPAERO)
+- **Conference:** 2027 IEEE Aerospace Conference, Yellowstone Conference Center,
+  Big Sky, Montana, March 6-13, 2027
 - **Session:** 12.01 Orbital, Surface and Payload/Instrument Mission Operations
-- **Paper number:** 2437
+- **Paper number:** 2437 (abstract accepted on July 6, 2026)
 
-For the conference version, the original Student Aerospace Challenge architecture
-is being adapted toward a LEO CubeSat scenario. This includes scaling the
-physical system and mission assumptions to better match CubeSat-class
-constraints while preserving the main contribution: robust MPC-based collision
-avoidance coupled with safe duty-cycled GNSS/UKF navigation.
+The paper is the CubeSat adaptation of the INOAS architecture developed for the
+Student Aerospace Challenge, evaluated in a paired Monte Carlo campaign under
+degraded GNSS. The results are summarised in
+[Results](results.md#paper-results).
 
-The default simulation setup keeps the existing Sentinel-6A-inspired INOAS
-reference orbit for the guidance geometry, while replacing the original
-large-spacecraft physical assumptions with a representative STF-1-inspired 3U
-CubeSat-class bus from duty-cycled GPS POD literature: an approximate 3U mass,
-a NovAtel OEM615-class dual-frequency GNSS receiver, and STF-1 drag/SRP
-assumptions (`CD = 2.2`, `area = 0.03 m^2`, `CR = 1.0`). The encounter geometry
-remains a configurable INOAS guidance scenario layered on top of this
-CubeSat-class platform model.
+## From the Challenge Model to the Paper
 
-The actuation assumption is intentionally separated from STF-1, which is a POD
-reference and not a propulsion reference. The conference setup uses NASA/JSC
-Seeker 1.0 as an actuator-architecture reference: a 3U free-flying inspection
-CubeSat with a cold-gas 6-DOF propulsion architecture. Seeker is used only to
-frame the actuator architecture and individual-thruster scale, not as a claim of
-full operational mission success. The MPC acceleration limit is derived from a
-Seeker-class individual cold-gas thruster scale of `F_control = 0.10 N`, giving
-the per-axis optimizer box constraint `u_max = F_control/m_sat`. This bound is a
-feasibility envelope, not the reported effective manoeuvring thrust.
+The original Student Aerospace Challenge architecture was adapted to a
+CubeSat-class platform while keeping its main contribution: covariance-aware
+MPC collision avoidance coupled with safe duty-cycled GNSS/UKF navigation.
 
-For flight-demonstrated proximity operations, the more direct reference is CPOD:
-two 3U CubeSats that performed autonomous RPO on orbit with 3-DOF translational
-control, including experiments from intersatellite distances up to `997 km` and
-a reported minimum separation of `361 m`. Propulsive feasibility should
-therefore be argued from the measured MPC command and impulse demand, and then
-contextualized against Seeker-class actuator scale and CPOD-class flown 3U RPO
-capability.
+- **Platform.** The reference orbit is inspired by Sentinel-6A, and the
+  spacecraft is a 3U CubeSat-class platform. Its cross-sectional area, drag
+  coefficient and reflectivity coefficient follow the STF-1 assumptions; its
+  mass and GNSS module reference are assumptions of the study.
+- **GNSS receiver.** The receiver power model takes the Pumpkin GPSRM 1, which
+  integrates a NovAtel OEM719, as reference. The dual-frequency GPS/Galileo
+  processing assumed in the paper would need one of the optional
+  multi-frequency OEM719 variants.
+- **Actuation.** The per-axis acceleration bound
+  `u_max = F_max / m = 0.10 N / 3.99 kg ≈ 0.02506 m/s^2` is motivated by
+  Seeker-class cold-gas propulsion. It is a feasibility envelope, not the
+  reported effective manoeuvring thrust.
+- **GNSS data.** GNSS error and availability profiles are derived from
+  Sentinel-6A positioning data over a 24-hour arc, with controlled degradations
+  in the number of tracked satellites and in satellite geometry. Raw PPP
+  processing is not executed inside the closed-loop simulations.
+- **Auxiliary sensors.** The auxiliary channel is represented by three synthetic
+  Cartesian position measurements with a 2000 m standard deviation. It feeds the
+  UKF and the pseudo-NIS discrepancy alarm.
 
-The Sentinel-6A-derived GNSS-quality profile is retained for its time structure
-and as an optimistic navigation-quality case. It should not be read as the raw
-autonomous performance of an OEM615 receiver on a generic CubeSat. Likewise,
-the STF-1 `CD`, `area`, and `CR` values are documented bus/perturbation
-assumptions. Atmospheric drag is not currently propagated in the guidance
-validation, while solar radiation pressure is propagated in the plant through
-the `area` and `CR` parameters.
+## Paper Configuration
+
+| Parameter | Value |
+| --- | --- |
+| Reference orbit | `a = 7714.43 km`, `e = 9.5e-5`, `i = 66.04 deg`, RAAN 116.6 deg, argument of perigee 90 deg, initial true anomaly 131 deg |
+| Platform | 3.99 kg, area 0.03 m², `CR = 1.0`, `CD = 2.2` |
+| Plant forces | Earth gravity to degree 2, Sun and Moon point masses, solar radiation pressure, atmospheric drag with constant density 1.35e-13 kg/m³ |
+| UKF and reference/debris propagators | Central gravity and J2 |
+| Guidance model | Unperturbed Clohessy-Wiltshire dynamics |
+| Simulation duration | 6743 s (about one orbital period) |
+| Estimator / GNSS / MPC steps | 1 s / 3 s / 12 s |
+| MPC horizon | 60 steps (720 s) |
+| Encounter | Design epoch `te = 1500 s`; relative position `[50, 0, 0] m` and velocity `[300, 100, 0] m/s` at `te`; without avoidance, the reference passes 15.8 m from the debris |
+| Safety radius | Keep-out `d0 = 150 m` and inflation factor `γ = 3`; constant 295 m radius for comparison |
+| Actuation | 0.02506 m/s² per axis, 0.007 m/s² per MPC step, 10% actuator uncertainty |
+| GNSS quality gate | Valid solution, `Nsat ≥ 5`, `0 < PDOP ≤ 6` |
+| GNSS rejection intervals | [700, 980), [2000, 2260) and [3500, 3550) s |
+| Receiver timing | 35 s minimum acquisition delay for every policy, 60 s nominal tracking, 300 s nominal OFF |
+| Receiver policies | Full GNSS (always powered); Fixed-Time (fixed 96 s ON / 300 s OFF calendar); Reactive (nominal timing, reacquisition on poor tracking, and a pseudo-NIS alarm with threshold 10.3) |
+| Auxiliary faults | +5000 m per axis over [600, 620) s; +3500 m per axis over [2000, 2020) s |
+| Receiver power model | OFF 0.025 W, TRACKING 1.8 W, ACQUIRING 1.3 × TRACKING |
+| Monte Carlo campaign | 50 paired replicates × 5 configurations (250 runs) |
+
+Debris position uncertainty is neglected in the paper to isolate the behavior of
+the controller.
+
+### Differences from the Code on `main`
+
+The September 2026 model on `main` predates this configuration. The main
+differences, among others, are:
+
+- encounter at 800 s with relative velocity `[0, 10, 0] m/s`, instead of 1500 s
+  with `[300, 100, 0] m/s`;
+- 3 s MPC step with a 125-step horizon, instead of 12 s and 60 steps;
+- 4000 s runs instead of 6743 s;
+- a two-state ON/OFF supervisor without an acquisition phase, in which the
+  pseudo-NIS score can bring the switch-on forward but cannot extend the ON
+  window;
+- GNSS health check with `Nsat ≥ 4`, `PDOP ≤ 6` and HPE/VPE ≤ 5 m, instead of
+  `Nsat ≥ 5` and `0 < PDOP ≤ 6`, and pseudo-NIS threshold 12 instead of 10.3;
+- four auxiliary measurements (ECI position and altitude) instead of three
+  position measurements;
+- larger UKF process noise and a fixed initial estimation error, instead of the
+  paper's process-noise envelope and random initial errors;
+- no atmospheric drag in the plant;
+- no Full GNSS / Fixed-Time / Reactive comparison and no paired Monte Carlo
+  campaign.
+
+## Acknowledgements
+
+The paper acknowledges Prof. Miguel Gómez-López and Dr. Iñigo Cortés Vidal for
+their guidance and feedback during its preparation.
 
 ## Citation
 
-If you refer to this project or the conference adaptation, please use:
+If you refer to this project or the paper, please use:
 
 ```bibtex
 @inproceedings{fernandezacero2027inoas,
   title = {Robust {MPC}-Based Collision Avoidance Guidance and Safe Duty-Cycled {GNSS} Navigation for {LEO} {CubeSats}},
-  author = {Fernandez-Acero Campoamor, Alberto and Valverde Sacristán, Enrique and Yuste Pubill, Álvaro and Grande González, Guzmán and Soler i Pla, Julia and Xu, Changxiang},
+  author = {Fernández-Acero Campoamor, Alberto and Valverde Sacristán, Enrique and Yuste Pubill, Álvaro and Grande González, Guzmán and Soler i Pla, Júlia and Xu, Changxiang},
   booktitle = {Proceedings of the 2027 IEEE Aerospace Conference},
   address = {Big Sky, Montana, USA},
   year = {2027},
