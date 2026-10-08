@@ -1,117 +1,99 @@
 # Model Architecture
 
-The navigation-selector description below predates the September 2026 changes
-on `main`, where the MPC always receives the UKF estimate and the GNSS/UKF
-switches no longer feed it; see
-[Navigation covariance prediction](navigation-covariance-prediction.md). The
-configuration used for the final IEEE Aerospace 2027 paper is summarised in
-[IEEE Aerospace 2027 paper](conference.md#paper-configuration).
+This page describes the AUX3 model used by the current default. The challenge
+poster, GIF and architecture image are retained as historical communication
+assets; they are not configuration evidence for the current receiver logic.
 
-## Context
+## Plant and Navigation
 
-Future orbital servicing missions need precise autonomous navigation for docking,
-rendezvous, and collision avoidance, but continuous GNSS operation increases
-power consumption. INOAS explores a software-driven navigation architecture where
-GNSS is activated only when the estimator needs it, while a Kalman/UKF
-propagation layer keeps the vehicle state available during GNSS-off periods.
+The spacecraft truth plant includes Earth gravity to degree 2, Sun/Moon
+point-mass gravity, SRP and drag with a constant atmospheric density. Its mass
+is 3.99 kg and area is 0.03 m^2. The UKF and the nominal reference/debris
+propagators use central gravity and J2. The estimator supplies a continuous
+six-state ECI estimate and covariance to the MPC, including during GNSS-OFF.
+See [configuration](conference.md#paper-configuration).
 
-The conference validation keeps the Sentinel-6A-inspired INOAS reference orbit
-(`a = 7714.43 km`, `e = 0.000095`, `i = 66.04 deg`) together with the
-project's Sentinel-6A-derived GNSS quality profile (`Y24D011`). That profile is
-used for its temporal structure and as an optimistic navigation-quality case,
-not as a claim of raw autonomous OEM615 receiver accuracy on a generic CubeSat.
-The physical spacecraft assumptions are scaled separately toward an
-STF-1-inspired 3U CubeSat bus, so the model distinguishes orbital geometry from
-CubeSat platform properties.
+The simulated GNSS observation contains truth position/velocity plus replayed
+disturbances. The dataset's `[NPE,EPE,UPE]` errors are reused componentwise as
+ECI x/y/z disturbances **without** an ENU-to-ECI rotation. Velocity errors are
+numerical derivatives of those series, not independent receiver measurements.
+Truth is sampled every 3 s; errors are linearly interpolated from 10 s records.
+Raw PPP processing is not executed in the closed loop. See [data](../data/README.md).
 
-## Navigation and Decision Logic
+The auxiliary channel is a synthetic three-component ECI position observation
+with nominal covariance `(2000 m)^2 I_3`. Bias pulses of 5000 m per axis over
+[600,620) s and 3500 m per axis over [2000,2020) s are injected. It is not a
+physical magnetometer/sun-sensor measurement model.
 
-The Simulink model separates the truth plant, simulated GNSS sensor, estimator,
-navigation selector and MPC controller. The selector outputs the `lambda` flag,
-where `lambda = 1` routes the GNSS-updated navigation solution and `lambda = 0`
-routes the Kalman/UKF propagated solution.
+## Receiver Supervisor
 
-At each decision step, the instrument-decision block checks GNSS health
-indicators (`n_sat`, `PDOP`, `HPE`, `VPE` and fix validity), a covariance
-observable `J`, and the duty-cycle timers. Here `J` is a normalized covariance
-trace, implemented as `trace(S_inv * P * S_T_inv)` with `S` a fixed scaling
-matrix, used to force a return to GNSS when propagation uncertainty grows too
-much. GNSS can be switched off after its scheduled on-window, while Kalman/UKF
-propagation continues providing the state estimate during GNSS-off intervals.
-GNSS is reactivated when the propagation window expires or when the covariance
-observable exceeds its threshold, provided the GNSS solution is healthy again.
+The active implementation is `inoasMinimalGnssStep.m`; the similarly named
+legacy `instrument_decision.m` is not called by the current Simulink model.
+`lambda` means **GNSS corrections enabled**, not receiver powered.
 
-Innovation and NIS diagnostics are logged alongside this selector state to
-inspect filter consistency during degraded-GNSS and outage scenarios. The MPC
-then receives the selected state and covariance, and uses that covariance to
-inflate the debris-avoidance safety margin.
+| State (`receiver_mode`) | `receiver_on` | `lambda` |
+| --- | ---: | ---: |
+| OFF (0) | 0 | 0 |
+| ACQUIRING (1) | 1 | 0 |
+| TRACKING (2) | 1 | 1 |
 
-## Key Equations
+Reactive starts in ACQUIRING. Its transitions are:
 
-The MPC safety margin is inflated with the relative-position covariance used in
-the collision-avoidance frame:
+- OFF -> ACQUIRING after 300 s or an auxiliary alarm; GNSS health is not
+  required to request power-on.
+- ACQUIRING -> TRACKING after at least 35 s, a fresh 3 s GNSS epoch and good
+  quality. The first nominal correction is at 36 s.
+- TRACKING -> ACQUIRING immediately on quality loss, without powering off.
+- TRACKING -> OFF after 60 s, provided quality is good and no alarm is active.
+
+The minimum acquisition delay restarts on every entry into ACQUIRING. There
+is no Reactive ACQUIRING -> OFF transition. Good quality means finite Sol,
+Nsat and PDOP, Sol >= 0.5, Nsat >= 5 and 0 < PDOP <= 6. HPE/VPE are offline
+reference-error metrics and do not gate fixes or power-on requests.
+
+The alarm is the post-update auxiliary residual quadratic score normalized
+by the nominal auxiliary covariance, averaged over ten samples and delayed
+one estimator step. Its threshold is 10.3. This empirical **pseudo-NIS** is
+not the standard pre-update NIS and has no asserted chi-square calibration.
+
+Full GNSS remains powered but retains acquisition and quality screening.
+Fixed-Time follows a 96 s ON / 300 s OFF calendar independent of quality and
+the alarm; it can power off while still acquiring. Both use the same minimum
+acquisition delay and quality conditions for accepting corrections.
+
+## Guidance and Safety Radius
+
+The MPC uses CW relative dynamics in RTN axes, executes every 12 s and predicts
+60 steps (720 s). It always uses the UKF estimate, not a GNSS/UKF state selector.
+Acceleration and increment limits are imposed per axis; state-box bounds are
+empty. The inherited startup switch inhibits applied control through 135 s;
+commands before that time are not applied thrust. The 150 m physical keep-out
+distance is distinct from the planning radius:
 
 ```math
-d_{\mathrm{safe},k}
-=
-d_0 + k_\sigma \sqrt{\lambda_{\max}\!\left(P_{r,k}\right)}
+d_{\mathrm{safe},i} = d_0 + \gamma\sqrt{\lambda_{\max}(P_{r,i})},
+\qquad d_0=150\ \mathrm{m},\quad\gamma=3.
 ```
 
-The debris-avoidance constraint then enforces robust separation at each
-prediction step:
+The constant-radius comparator uses 295 m and no covariance inflation.
+Adaptive radii come from a nonlinear UKF covariance forecast with auxiliary
+updates and no future GNSS corrections. They are updated at each MPC execution.
+Debris uncertainty is omitted. This is not a collision-probability certificate.
 
-```math
-\left\|r_{\mathrm{rel},k}\right\|_2
-\ge
-d_{\mathrm{safe},k}
-```
+Node constraints use planes oriented by the nominal debris-to-reference
+direction. Every 12 s interval is also checked with cubic Hermite interpolation;
+if a between-node violation greater than 0.01 m is detected, a supporting plane
+oriented by the candidate debris-to-spacecraft direction is added and the
+problem is re-solved. See [forecast details](navigation-covariance-prediction.md).
 
-## System Architecture
+## Energy and Scope
 
-![INOAS architecture](assets/inoas-architecture.png)
+Receiver-module energy is integrated from **receiver state**, not from lambda:
+OFF 0.025 W, TRACKING 1.8 W and ACQUIRING 2.34 W. This model does not include
+the power of all spacecraft subsystems or characterize receiver hardware in flight.
+The historical visual below predates the AUX3 observation and supervisor changes.
 
-The simulation is organized around four functional layers:
+![Historical INOAS architecture](assets/inoas-architecture.png)
 
-1. **Scenario and data**
-   - Reference orbital trajectory in ECI and LVLH/RTN frames.
-   - Debris encounter scenario and propagated relative trajectory.
-   - Sentinel-6A-derived GNSS quality profile used as an optimistic navigation
-     quality and timing profile.
-
-2. **Truth and sensors**
-   - Nonlinear spacecraft plant in Simulink.
-   - Solar radiation pressure is propagated as an external acceleration using
-     the configured cross-sectional area and reflectivity coefficient.
-   - Atmospheric drag parameters are documented for scenario traceability, but
-     drag is not currently propagated.
-   - Simulated GNSS sensor using realistic noise, time-varying covariance,
-     number of visible satellites, PDOP, HPE, and VPE.
-   - Internal sensors used during GNSS-off propagation.
-
-3. **Estimation and decision**
-   - UKF/Kalman estimator for continuous state and covariance propagation.
-   - Instrument decision finite-state machine.
-   - GNSS/Kalman navigation selector driven by NIS, GNSS health, and covariance
-     growth.
-
-4. **Control and outputs**
-   - MPC controller for reference tracking and debris avoidance.
-   - Covariance-aware safety margins for robust separation.
-   - Plotting and diagnostics for tracking, NIS, innovation, duty cycle,
-     ΔV, and control effort.
-
-## Scope Note
-
-This document describes the model architecture and operating logic. For what the
-public repository includes and excludes, see [Public Scope](../README.md#public-scope).
-
-## Technical Notes
-
-- Reference and debris trajectories are expressed in orbital frames and
-  transformed as needed for MPC tracking.
-- The controller operates in a relative RTN/LVLH frame and uses a robust safety
-  distance that grows with navigation uncertainty.
-- GNSS duty cycling is represented by the selector variable `lambda`, described
-  in the navigation and decision logic section above.
-- The estimator continues propagating during GNSS-off intervals, so control
-  remains available even when GNSS is inactive or degraded.
+For source traceability and reproducibility limits, see
+[model provenance](model-provenance.md).

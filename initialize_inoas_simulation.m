@@ -4,8 +4,6 @@
 % debris encounter, and MPC configuration.
 clc; close all;
 
-rng('shuffle');
-
 %% Repository setup
 scriptPath = mfilename("fullpath");
 if strlength(scriptPath) > 0
@@ -20,6 +18,10 @@ addpath(fullfile(repoRoot, "models"));
 
 preservedModelName = "";
 preservedStopTime = [];
+preservedRunConfig = inoasPaperConfig();
+if exist("inoasRunConfig", "var")
+    preservedRunConfig = inoasRunConfig;
+end
 
 if exist("modelName", "var")
     preservedModelName = string(modelName);
@@ -35,7 +37,7 @@ if ispref("inoas", "skipBatchClear")
 end
 
 if ~skipBatchClear
-    clearvars -except preservedModelName preservedStopTime skipBatchClear repoRoot;
+    clearvars -except preservedModelName preservedStopTime preservedRunConfig skipBatchClear repoRoot;
 end
 clc
 
@@ -47,12 +49,16 @@ if ~isempty(preservedStopTime)
     simulationStopTime = preservedStopTime;
 end
 
-clear preservedModelName preservedStopTime
+inoasRunConfig = preservedRunConfig;
+rng(inoasRunConfig.Seed, 'twister');
+clear preservedModelName preservedStopTime preservedRunConfig
 
 %% Input files and physical scenario
-gnssCovarianceFile = inoas_data_file("cov_perturb_POS_s6a_Y24D011_fixed.dat");
-referenceTrajectoryFile = inoas_data_path("referenceTrajectory.mat");
-debrisTrajectoryFile = inoas_data_path("debrisTrajectory.mat");
+gnssCovarianceFile = inoas_data_file("full_perturb_POS_s6a_Y24D011_fixed.dat");
+runtimeDataDir = fullfile(repoRoot, "results", "cache");
+if ~isfolder(runtimeDataDir), mkdir(runtimeDataDir); end
+referenceTrajectoryFile = fullfile(runtimeDataDir, "referenceTrajectory.mat");
+debrisTrajectoryFile = fullfile(runtimeDataDir, "debrisTrajectory.mat");
 
 % Sentinel-6A-inspired INOAS reference orbit used by the current conference scenario.
 a = 7714.43 * 1000;  % [m]
@@ -68,13 +74,13 @@ theta = 131;         % [deg]
 m_sat = 3 * 1.33;    % [kg]
 F_control = 0.10;    % [N], Seeker-class individual-thruster box reference
 initMass = m_sat;
-CD = 2.2;            % documented STF-1 drag coefficient; drag is not propagated
+CD = 2.2;            % drag coefficient used by the plant
 ref = 1.0;           % STF-1 reflectivity coefficient used by SRP block
-area = 0.03;         % [m^2], STF-1 area assumption used by SRP block
+area = 0.03;         % [m^2], area used by plant drag and SRP
 
 start_date = juliandate(datetime(2024, 1, 11));
 end_date = juliandate(datetime(2024, 2, 11));
-tf = 4000;           % [s] nominal simulation duration
+tf = 6743;           % [s] full-orbit paper scenario
 
 requestedStopTime = [];
 if exist("simulationStopTime", "var") && ~isempty(simulationStopTime)
@@ -82,7 +88,7 @@ if exist("simulationStopTime", "var") && ~isempty(simulationStopTime)
 elseif exist("modelName", "var") && strlength(string(modelName)) > 0
     requestedStopTime = getModelStopTimeSeconds(modelName);
 else
-    requestedStopTime = getOpenModelStopTimeSeconds();
+    requestedStopTime = inoasRunConfig.StopTime;
 end
 
 if ~isempty(requestedStopTime)
@@ -98,22 +104,38 @@ clear requestedStopTime
 k_p = 5;
 k_d = 20;
 
-%% Kalman/UKF tuning and decision observable
+%% Kalman/UKF tuning and decision observable --> Cambio de conexion de entrada al ukf, ahora están puesta la u comanded del MPC
 Ts = 1;          % [s] master sample time for sensors and estimator
-var_IMU = 0.01; % accelerometer variance used by the Kalman propagation
+error_cmd = 0.1; % NO ACCELEROMETER USED. Order of magnitude of error associated to commanded accelerations in % of u_MPC
 
 % Synthetic internal sensor measurement covariance.
 sigma_pos = 2000; % [m]
 sigma_alt = 2000; % [m]
+
 var_pos = sigma_pos^2;
 var_alt = sigma_alt^2;
-R_matrix = diag([var_pos, var_pos, var_pos, var_alt]);
+% Auxiliary measurement: position only. The derived altitude channel was
+% removed (redundant with [x y z]); sigma_alt/var_alt are kept for the run
+% record but no longer enter the filter.
+R_matrix = diag([var_pos, var_pos, var_pos]);
 
-% Process noise: continuous white-noise acceleration (CWNA), discretized over
-% the step that uses it. sigma_a is the MEMS accelerometer noise scale that
-% the UKF integrates in its propagation.
-sigma_a = sqrt(var_IMU);                 % [m/s^2]
-Q_matrix = cwnaProcessNoise(sigma_a, Ts); % UKF, dt = Ts
+%% UKF process noise
+% External/unmodelled acceleration uncertainty: FIXED
+sigma_a = sqrt(5e-6);  % [m/s^2]
+
+Q_external = cwnaProcessNoise(sigma_a, Ts);
+
+% Commanded-acceleration execution uncertainty
+% u_real = u_cmd + error_cmd*u_cmd*N(0,1)
+
+I3 = eye(3);
+
+G_cmd = [ ...
+    0.5*Ts^2*I3;
+        Ts   *I3 ];
+
+% Initial value. During simulation Q will be updated dynamically.
+Q_matrix = Q_external;
 
 % Nominal GNSS measurement covariance used by the estimator.
 sigma_pos_gnss = 5;   % [m]
@@ -130,7 +152,8 @@ ukfKappa = 0;
 % Shared by the real supervisor and the nominal navigation forecast.
 gnssOnDuration = 60;    % [s]
 gnssOffDuration = 300;  % [s]
-pseudoNisThreshold = 12; % heuristic residual score, not a chi-square NIS gate
+pseudoNisThreshold = 10.3; % empirical post-update residual score, not a NIS gate
+
 
 % Instrument-decision observable:
 % J = trace(S_inv * P * S_T_inv), with position/velocity scaling in S.
@@ -147,7 +170,7 @@ max_cov = 2000;
 nx = 6; % State Variables
 m = 3; % Control variables
 
-%% Control System parameters      
+%% Control System parameters
 targetModelName = "";
 if exist("modelName", "var")
     targetModelName = string(modelName);
@@ -162,8 +185,8 @@ referencePropModel = "j2-rk4";
 
 % MPC/reference parameters. The real GNSS sensor sampling is loaded from the
 % .dat file in prepare_gnss_sensor_workspace.
-Np = 125;     % GNSS/MPC prediction-horizon length
-h  = 3;      % MPC reference sample time [s]
+Np = 60;     % GNSS/MPC prediction-horizon length
+h  = 12;      % MPC reference sample time [s]
 
 %% MPC tuning
 
@@ -179,15 +202,14 @@ end
 
 % Cost matrices
 Q_step = 1e-7*[ ...
-    5  5  5 ...      
-    10  10  10 ];
+    5.96   5.96   5.96 ...
+    1.19   1.19   2.39 ];
 
-R_step = 3e3*[ ...
-    2  1.5  1.2 ];
+R_step = 1e3*[ ...
+    5.13917454   3.85438091   3.08350473 ];
 
 S_step = 1e4*[ ...
-    2  5  8 ];
-
+    9.87803264   24.6950816   39.5121306 ];
 
 slackWeight = 1e5;
 
@@ -211,7 +233,7 @@ if isfield(mpcTuneConfig, "Np")
     Np = mpcTuneConfig.Np;
 end
 
-mpcOutputNpMax = max(Np, 125);
+mpcOutputNpMax = Np;
 
 if isfield(mpcTuneConfig, "h")
     h = mpcTuneConfig.h;
@@ -239,7 +261,7 @@ Umax = repmat(U_max, Np, 1);
 Y_min = [];
 Y_max = [];
 
-Ymin = repmat(Y_min, Np, 1); 
+Ymin = repmat(Y_min, Np, 1);
 Ymax = repmat(Y_max, Np, 1);
 
 % Constraints on deltaU
@@ -269,7 +291,7 @@ gnssInputFile = gnssCovarianceFile;
 %% Override GNSS noise with raw .dat file values
 % prepare_gnss_sensor_workspace uses running averages that hide degradation
 % events. We replace ts_gnss_pos_noise_eci with the actual epoch-by-epoch
-% position errors from the .dat file so NIS sees the real spikes.
+% position errors from the .dat file, preserving the recorded excursions.
 
 fid  = fopen(gnssCovarianceFile, 'r');
 if fid < 0
@@ -284,7 +306,7 @@ epe   = raw{12};         % East  position error [m]
 upe   = raw{14};         % Up    position error [m]
 
 % Use raw NPE/EPE/UPE as position noise (approximate ECI)
-% Magnitude is correct: 19.2m at t=850s will fire NIS
+% This componentwise reuse is not an ENU-to-ECI rotation.
 pos_noise_raw = [npe, epe, upe];
 
 % Build velocity noise as finite difference of position noise
@@ -318,12 +340,6 @@ for k = 1:length(t_dat)
     R_flat(k,:) = R_nominal_flat;
 end
 
-% Diagnostic NIS value for a representative GNSS-noise sample.
-nu_850 = [pos_noise_raw(86,:), 0, 0, 0]';
-NIS_check = nu_850' * (R_nominal \ nu_850);
-fprintf('NIS check at t=850s with fixed R: %.1f  (threshold=16.81)\n', NIS_check);
-fprintf('NIS threshold exceeded: %d\n', NIS_check > 16.81);
-
 % Override the smoothed timeseries
 ts_gnss_pos_noise_eci    = timeseries(pos_noise_raw, t_dat);
 ts_gnss_vel_noise_eci    = timeseries(vel_noise_raw, t_dat);
@@ -340,6 +356,19 @@ fprintf('  trace(R) at t=850s: %.4f m^2\n', ...
 gnssMeta = gnssProfile.meta;
 gnss_sensor_mode = gnssSensor.mode;
 gnss_sample_time = gnssSensor.sample_time;
+
+% Modificaciones acquisition/tracking
+gnss_min_cfg = inoasMinimalGnssConfig(Ts, gnss_sample_time);
+gnss_min_cfg.acquisitionTime = inoasRunConfig.AcquisitionTime;
+gnss_min_cfg.fixedOnDuration = 96;
+switch inoasRunConfig.ReceiverPolicy
+    case 'full', gnss_min_cfg.policy = uint8(0);
+    case 'fixed', gnss_min_cfg.policy = uint8(1);
+    case 'reactive', gnss_min_cfg.policy = uint8(2);
+end
+% Keep the paper's 135 s control-start inhibition independent of receiver sweeps.
+acquisitionTime = 35;
+
 lamda_init = 1;
 %ts_gnss_pos_noise_eci = gnssSensor.ts_pos_noise_eci;
 %ts_gnss_vel_noise_eci = gnssSensor.ts_vel_noise_eci;
@@ -396,6 +425,9 @@ v_ini = x_ref_hist(4:6,1);
 
 x0_ref = [x_ini; v_ini];
 kalman_initial_error = [1000; -750; 500; 0.75; -0.50; 0.25];
+if ~isempty(inoasRunConfig.InitialError)
+    kalman_initial_error = inoasRunConfig.InitialError(:);
+end
 x0_kalman = x0_ref + kalman_initial_error;
 X0 = x0_ref;
 x_estim = x0_kalman;
@@ -480,7 +512,7 @@ u = U0;
 delta_u = zeros(m, 1);
 
 delta_Ulast = zeros(m*Np,1);
- 
+
 %% Debris
 debrisConfig = struct();
 if ispref("inoas", "debrisConfig")
@@ -488,9 +520,9 @@ if ispref("inoas", "debrisConfig")
     rmpref("inoas", "debrisConfig");
 end
 
-t_debris = 800;              % [s]
-rel_pos_debris_lvlh = [50; 0; 0];   % [m] closest-approach offset in LVLH
-rel_vel_debris_lvlh = [0; 10; 0];   % [m/s] tangential fly-by velocity in LVLH
+t_debris = 1500;              % [s]
+rel_pos_debris_lvlh = [50; 0; 0];   % [m] offset at the design epoch, not closest approach
+rel_vel_debris_lvlh = [300; 100; 0];   % [m/s] tangential fly-by velocity in LVLH
 
 if isfield(debrisConfig, "t_debris")
     t_debris = debrisConfig.t_debris;
@@ -513,8 +545,7 @@ load(debrisTrajectoryFile, "x_debris_hist", "r_debris_full", ...
 rk_debris = rk_debris_encounter;
 
 dsafe0 = 150;
-% Three-sigma covariance margin applied to sqrt(lambda_max(P_pos)).
-safetyCost = 3.0;
+safetyCost = 3;
 
 if isfield(mpcTuneConfig, "dsafe0")
     dsafe0 = mpcTuneConfig.dsafe0;
@@ -523,15 +554,35 @@ end
 if isfield(mpcTuneConfig, "safetyCost")
     safetyCost = mpcTuneConfig.safetyCost;
 end
+if strcmp(inoasRunConfig.RadiusMode, 'constant295')
+    dsafe0 = 295;
+    safetyCost = 0;
+end
 
 %% MPC covariance inflation for debris avoidance
+% This extends the keep-out radius with the propagated navigation covariance
+% used by the MPC over the prediction horizon.
 % The default forecast runs the navigation model at Ts, with auxiliary
 % corrections and no assumed future GNSS fixes. Q_cov_mpc is legacy-only.
 covariancePredictionModeMpc = "navigation_aux_only";
 Q_cov_mpc = cwnaProcessNoise(sigma_a, h);
+
 covarianceFrameMpc = "eci";
 covarianceMetricMpc = "sqrt_lambda_max_pos";
+
 logDsafeMpc = true;
+
+% Detailed MPC debris-constraint snapshots
+dsafeSnapshotTimesMpc = [ ...
+    780, ...  % debris first enters the 720 s MPC horizon
+    900, ...
+    1020, ...
+    1140, ...
+    1260, ...
+    1380, ...
+    1500, ...  % design encounter epoch
+    1620];     % post-CA
+
 logNavigationPredictionMpc = true;
 gnssFixEpoch = 0; % [s], phase of the periodic fresh-fix enable signal
 
@@ -542,6 +593,7 @@ end
 if isfield(mpcTuneConfig, "logNavigationPredictionMpc")
     logNavigationPredictionMpc = logical(mpcTuneConfig.logNavigationPredictionMpc);
 end
+
 
 if isfield(mpcTuneConfig, "Q_cov_mpc")
     Q_cov_mpc = mpcTuneConfig.Q_cov_mpc;
@@ -638,7 +690,7 @@ fprintf("norm v0 = %.6f km/s\n", norm(x_ref_hist(4:6,1))/1000);
 fprintf("==================================================\n\n");
 clear mpc_dsafe_log_time mpc_dsafe_log_first mpc_dsafe_log_max
 
-clear MPC_INOAS;
+clear MPC_INOAS predictNavigationCovarianceProfile inoasMinimalGnssStep inoasFixedGnssStep;
 
 %%
 function stopTimeSeconds = getModelStopTimeSeconds(modelName)
@@ -770,5 +822,5 @@ function Qd = cwnaProcessNoise(sigma_a, dt)
 q = sigma_a^2;
 I3 = eye(3);
 Qd = [q * dt^3 / 3 * I3, q * dt^2 / 2 * I3;
-      q * dt^2 / 2 * I3, q * dt     * I3];
+    q * dt^2 / 2 * I3, q * dt     * I3];
 end

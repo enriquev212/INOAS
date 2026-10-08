@@ -1,18 +1,11 @@
-%OPEN_INOAS_DEBRIS_DEMO Open INOAS in reduced-horizon debris-demo mode.
+%OPEN_INOAS_DEBRIS_DEMO Open the paper model through the encounter.
 %
-% The configured debris encounter occurs at t = 800 s. This mode keeps the
-% reduced MPC horizon used by open_inoas_fast.m, but runs long enough to inspect
-% the avoidance maneuver around the encounter.
+% Retains the 60-step / 720 s horizon and the design encounter epoch at 1500 s.
 
-demoMpcConfig = struct();
-demoMpcConfig.Np = 25;
-simulationStopTime = 950;
-
-setpref("inoas", "mpcTuneConfig", demoMpcConfig);
+simulationStopTime = 1800;
 
 open_inoas_model;
 
-set_param("inoas_model", "StopTime", "950");
+set_param("inoas_model", "StopTime", "1800");
 
-fprintf("\nDebris-demo mode enabled: Np = %d, StopTime = 950 s, debris encounter at t = 800 s\n", ...
-    25);
+fprintf("\nDebris demo: Np = 60, StopTime = 1800 s, encounter design epoch = 1500 s\n");

@@ -6,7 +6,7 @@ function [gnssSensor, profile] = prepare_gnss_sensor_workspace(varargin)
 % gnss_sample_time seconds and adds these noise signals.
 
     p = inputParser;
-    p.addParameter("Filename", "cov_perturb_POS_s6a_Y24D011_fixed.dat");
+    p.addParameter("Filename", "full_perturb_POS_s6a_Y24D011_fixed.dat");
     p.addParameter("StartDateJulian", juliandate(datetime(2024, 1, 11)));
     p.addParameter("Seed", 42);
     p.addParameter("StopTime", []);

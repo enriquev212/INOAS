@@ -1,17 +1,12 @@
-%OPEN_INOAS_FAST Open INOAS with a reduced MPC horizon for quick validation.
+%OPEN_INOAS_FAST Open a short run without changing the paper MPC horizon.
 %
 % This mode is intended for smoke tests and setup checks. Use
 % open_inoas_model.m for final scenario runs.
 
-fastMpcConfig = struct();
-fastMpcConfig.Np = 25;
 simulationStopTime = 120;
-
-setpref("inoas", "mpcTuneConfig", fastMpcConfig);
 
 open_inoas_model;
 
 set_param("inoas_model", "StopTime", "120");
 
-fprintf("\nFast validation mode enabled: Np = %d, StopTime = 120 s\n", ...
-    25);
+fprintf("\nShort setup check: Np = 60, StopTime = 120 s\n");

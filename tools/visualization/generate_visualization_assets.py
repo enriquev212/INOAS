@@ -71,8 +71,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--gnss-power-w",
         type=float,
-        default=8.0,
-        help="Nominal GNSS receiver power used for energy plots [W]",
+        default=1.8,
+        help="Continuous-tracking reference power [W]; exported state energy is not rescaled",
     )
     return parser.parse_args()
 
@@ -249,43 +249,53 @@ def save_debris_distance(outdir: Path, data: dict) -> Path:
     return path
 
 
+def receiver_energy_profile(data: dict) -> tuple[np.ndarray, float]:
+    time = data["time"]
+    rt = data["receiver_time"]
+    mode = data["receiver_mode"]
+    energy = data["receiver_energy_wh"]
+    if rt.size < 2 or mode.size != rt.size or energy.size != rt.size:
+        return np.full_like(time, np.nan), math.nan
+    powered = float(np.sum(np.diff(rt) * (mode[:-1] != 0)) / (rt[-1] - rt[0]))
+    return np.interp(time, rt, energy) * 3600.0, powered
+
+
+def maneuver_delta_v(data: dict) -> tuple[np.ndarray, np.ndarray, str]:
+    if data["applied_time"].size and data["applied_control"].size:
+        time, control, label = data["applied_time"], data["applied_control"], "Applied"
+    else:
+        time, control, label = data["control_time"], data["control"], "Commanded"
+    return time, cumulative_trapezoid(np.linalg.norm(control, axis=1), time), label
+
+
 def save_control_energy_summary(outdir: Path, data: dict, gnss_power_w: float) -> Path:
     time = data["time"]
-    control_time = data["control_time"]
-    control_norm = np.linalg.norm(data["control"], axis=1)
-    delta_v = cumulative_trapezoid(control_norm, control_time)
-
-    lambda_time = data["lambda_time"]
-    lambda_raw = data["lambda"]
-    has_lambda = lambda_time.size > 0 and lambda_raw.size > 0
-    lambda_on = zoh_sample(lambda_time, lambda_raw, time)
-    lambda_on = np.where(lambda_on > 0.5, 1.0, 0.0)
-
-    on_time = cumulative_trapezoid(lambda_on, time)
+    control_time, delta_v, dv_label = maneuver_delta_v(data)
+    duty_energy, _ = receiver_energy_profile(data)
     always_energy = gnss_power_w * (time - time[0])
-    duty_energy = gnss_power_w * on_time
-    saved_energy = always_energy - duty_energy
+    has_receiver = data["receiver_time"].size > 0
 
     path = outdir / "inoas_control_energy_summary.png"
     fig, axes = plt.subplots(3, 1, figsize=(12.5, 9.4), dpi=160, sharex=False)
 
     axes[0].plot(control_time, delta_v, color=GREEN, lw=2.4)
-    axes[0].set_title("Cumulative maneuver Delta-V", color=NAVY, fontweight="bold")
+    axes[0].set_title(f"Cumulative {dv_label.lower()} maneuver Delta-V", color=NAVY, fontweight="bold")
     axes[0].set_xlabel("Time [s]")
     axes[0].set_ylabel("Delta-V [m/s]")
     axes[0].grid(True, alpha=0.35)
 
-    axes[1].step(time, lambda_on, where="post", color=MAGENTA if has_lambda else GREY, lw=2.0)
-    axes[1].set_ylim(-0.08, 1.08)
-    axes[1].set_yticks([0, 1], ["Kalman", "GNSS"])
-    axes[1].set_title("Navigation mode selector", color=NAVY, fontweight="bold")
+    if has_receiver:
+        axes[1].step(data["receiver_time"], data["receiver_mode"], where="post", color=MAGENTA, lw=2.0)
+    axes[1].set_ylim(-0.15, 2.15)
+    axes[1].set_yticks([0, 1, 2], ["OFF", "ACQUIRING", "TRACKING"])
+    axes[1].set_title("GNSS receiver state", color=NAVY, fontweight="bold")
     axes[1].set_xlabel("Time [s]")
     axes[1].grid(True, alpha=0.35)
-    if not has_lambda:
-        axes[1].text(0.02, 0.15, "No logged selector found; always-on GNSS shown as fallback.", transform=axes[1].transAxes, color=GREY)
+    if not has_receiver:
+        axes[1].text(0.02, 0.15, "Receiver state not logged; state energy is unavailable.", transform=axes[1].transAxes, color=GREY)
 
-    axes[2].plot(time, always_energy, "--", color=GREY, lw=2.0, label="GNSS always on")
-    axes[2].plot(time, duty_energy, color=GREEN, lw=2.4, label="Duty-cycled GNSS")
+    axes[2].plot(time, always_energy, "--", color=GREY, lw=2.0, label="Continuous tracking reference")
+    axes[2].plot(time, duty_energy, color=GREEN, lw=2.4, label="Receiver-state energy")
     axes[2].fill_between(time, duty_energy, always_energy, color=GREEN, alpha=0.13, label="Energy saved")
     axes[2].set_title("GNSS receiver energy estimate", color=NAVY, fontweight="bold")
     axes[2].set_xlabel("Time [s]")
@@ -390,6 +400,15 @@ def load_data(path: Path) -> dict:
     time = mat_1d(mat, "time_s")
     truth = mat_2d(mat, "truth_eci_m", 3)
     estimate = mat_2d(mat, "estimated_eci_m", 3)
+    estimate_time = mat_1d(mat, "estimate_time_s")
+    if estimate_time.size:
+        if estimate.shape[0] != estimate_time.size:
+            raise ValueError("Estimate samples do not match estimate_time_s")
+        estimate = np.column_stack([
+            np.interp(time, estimate_time, estimate[:, axis]) for axis in range(3)
+        ])
+    elif estimate.shape[0] != time.size:
+        raise ValueError("Estimate has a different sample grid but no estimate_time_s")
     reference = mat_2d(mat, "reference_eci_m", 3)
     reference_velocity = mat_2d(mat, "reference_velocity_eci_mps", 3)
     debris = mat_2d(mat, "debris_eci_m_at_time", 3)
@@ -431,7 +450,7 @@ def load_data(path: Path) -> dict:
         "position_error": position_error,
         "distance": distance,
         "nominal_distance": nominal_distance,
-        "safe_radius": mat_scalar(mat, "safe_radius_m"),
+        "safe_radius": mat_scalar(mat, "keepout_distance_m", mat_scalar(mat, "safe_radius_m")),
         "t_debris": mat_scalar(mat, "t_debris_s"),
         "u_max": mat_scalar(mat, "u_max_mps2"),
         "mpc_horizon": mat_scalar(mat, "mpc_horizon"),
@@ -441,24 +460,22 @@ def load_data(path: Path) -> dict:
         "dynamic_safe_horizon": mat_1d(mat, "dynamic_safe_horizon_m"),
         "lambda_time": mat_1d(mat, "lambda_time_s"),
         "lambda": mat_1d(mat, "lambda"),
+        "receiver_time": mat_1d(mat, "receiver_time_s"),
+        "receiver_mode": mat_1d(mat, "receiver_mode"),
+        "receiver_energy_wh": mat_1d(mat, "receiver_energy_Wh"),
+        "applied_time": mat_1d(mat, "applied_time_s"),
+        "applied_control": mat_2d(mat, "applied_eci_mps2", 3),
     }
 
 
 def write_summary(outdir: Path, data: dict, assets: list[Path], gnss_power_w: float) -> Path:
-    control_norm = np.linalg.norm(data["control"], axis=1)
-    delta_v = cumulative_trapezoid(control_norm, data["control_time"])
+    _, delta_v, dv_label = maneuver_delta_v(data)
     final_delta_v = float(delta_v[-1]) if delta_v.size else math.nan
 
-    lambda_time = data["lambda_time"]
-    lambda_raw = data["lambda"]
-    has_lambda = lambda_time.size > 0 and lambda_raw.size > 0
-    lambda_on = zoh_sample(lambda_time, lambda_raw, data["time"])
-    lambda_on = np.where(lambda_on > 0.5, 1.0, 0.0)
-    on_time = cumulative_trapezoid(lambda_on, data["time"])
+    state_energy, powered_fraction = receiver_energy_profile(data)
     duration = max(float(data["time"][-1] - data["time"][0]), 1e-9)
-    duty_ratio = float(on_time[-1] / duration) if on_time.size else math.nan
     energy_always = gnss_power_w * duration
-    energy_duty = gnss_power_w * float(on_time[-1]) if on_time.size else math.nan
+    energy_duty = float(state_energy[-1])
     energy_saved = energy_always - energy_duty if np.isfinite(energy_duty) else math.nan
 
     min_distance = float(np.nanmin(data["distance"])) if data["distance"].size else math.nan
@@ -475,11 +492,10 @@ def write_summary(outdir: Path, data: dict, assets: list[Path], gnss_power_w: fl
         f"safe_radius_m = {data['safe_radius']:.3f}",
         f"minimum_debris_distance_m = {min_distance:.3f}",
         f"minimum_debris_distance_time_s = {min_distance_time:.3f}",
-        f"final_position_error_m = {data['position_error'][-1]:.3f}",
-        f"maximum_position_error_m = {np.nanmax(data['position_error']):.3f}",
-        f"final_delta_v_mps = {final_delta_v:.6f}",
-        f"gnss_selector_logged = {str(has_lambda).lower()}",
-        f"gnss_duty_ratio = {duty_ratio:.6f}",
+        f"final_reference_tracking_error_m = {data['position_error'][-1]:.3f}",
+        f"maximum_reference_tracking_error_m = {np.nanmax(data['position_error']):.3f}",
+        f"final_{dv_label.lower()}_delta_v_mps = {final_delta_v:.6f}",
+        f"receiver_powered_fraction = {powered_fraction:.6f}",
         f"gnss_power_w = {gnss_power_w:.3f}",
         f"gnss_energy_always_on_j = {energy_always:.3f}",
         f"gnss_energy_duty_cycle_j = {energy_duty:.3f}",

@@ -1,7 +1,7 @@
 function get_debris_trajectory(Ts, x_ref_hist, t_ref, t_encounter, rel_pos_lvlh, rel_vel_lvlh, filename)
 
     if nargin < 7 || isempty(filename)
-        filename = inoas_data_path("debrisTrajectory.mat");
+        filename = inoas_runtime_path("debrisTrajectory.mat");
     end
 
     rel_pos_lvlh = rel_pos_lvlh(:);
@@ -113,7 +113,7 @@ function x_dot = debrisStateDerivative(x)
         end
 
         scale = (mu_earth / r^2) * (R_earth / r)^n * Jn;
-        bracket = (n + 1) * Pn * (r_vec / r) - dPn * ((z / r^2) * r_vec - z_hat);
+        bracket = (n + 1) * Pn * (r_vec / r) + dPn * ((z / r^2) * r_vec - z_hat);
         a_zonales = a_zonales + scale * bracket;
     end
 

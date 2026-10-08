@@ -137,30 +137,30 @@ def save_figure(fig: plt.Figure, outdir: Path, name: str) -> list[Path]:
 def plot_navigation(case: Path, outdir: Path, wide: bool) -> list[Path]:
     nav = read_csv(case / "navigation.csv")
     time = col(nav, "time_s")
-    lam = col(nav, "lambda")
+    mode = col(nav, "receiver_mode")
     nis = col(nav, "nis")
     err = col(nav, "estimation_error_m")
 
     width = 7.15 if wide else 3.48
     fig, axes = plt.subplots(3, 1, figsize=(width, 4.55), sharex=True)
 
-    if np.any(np.isfinite(lam)):
-        axes[0].step(time, np.where(lam > 0.5, 1.0, 0.0), where="post", color=GREEN, lw=1.55)
-    axes[0].set_yticks([0, 1], ["Prop.", "GNSS"])
-    axes[0].set_ylim(-0.12, 1.12)
+    if np.any(np.isfinite(mode)):
+        axes[0].step(time, mode, where="post", color=GREEN, lw=1.55)
+    axes[0].set_yticks([0, 1, 2], ["OFF", "ACQ", "TRK"])
+    axes[0].set_ylim(-0.15, 2.15)
     axes[0].set_ylabel("Mode")
-    axes[0].set_title("Navigation mode and estimator consistency", color=NAVY, weight="bold")
+    axes[0].set_title("Receiver state and navigation diagnostics", color=NAVY, weight="bold")
 
     axes[1].plot(time, err, color=BLUE, lw=1.55)
     axes[1].set_ylabel("Est. error [m]")
 
     if np.any(np.isfinite(nis)):
-        axes[2].plot(time, nis, color=MAGENTA, lw=1.55, label="NIS")
-        axes[2].axhline(12, color=RED, ls="--", lw=1.0, label="Threshold")
+        axes[2].plot(time, nis, color=MAGENTA, lw=1.55, label="Pseudo-NIS")
+        axes[2].axhline(10.3, color=RED, ls="--", lw=1.0, label="Threshold")
         axes[2].legend(loc="upper right", frameon=False)
     else:
-        axes[2].text(0.02, 0.55, "NIS signal not logged", transform=axes[2].transAxes, color=GREY)
-    axes[2].set_ylabel("NIS [-]")
+        axes[2].text(0.02, 0.55, "Auxiliary score not logged", transform=axes[2].transAxes, color=GREY)
+    axes[2].set_ylabel("Pseudo-NIS [-]")
     axes[2].set_xlabel("Time [s]")
 
     fig.tight_layout()
@@ -173,7 +173,7 @@ def plot_collision(case: Path, outdir: Path, wide: bool) -> list[Path]:
     distance = col(ts, "debris_distance_m")
     nominal = col(ts, "nominal_debris_distance_m")
     safe = col(ts, "dynamic_safe_first_m")
-    d0 = col(ts, "safe_radius_m")
+    d0 = col(ts, "keepout_distance_m", 150.0)
     margin = col(ts, "robust_margin_m")
 
     width = 7.15 if wide else 3.48
@@ -184,7 +184,7 @@ def plot_collision(case: Path, outdir: Path, wide: bool) -> list[Path]:
     if np.any(np.isfinite(d0)):
         axes[0].axhline(float(np.nanmedian(d0)), color=ORANGE, ls="--", lw=1.0, label="$d_0$")
     axes[0].set_ylabel("Distance [m]")
-    axes[0].set_title("Debris separation and robust margin", color=NAVY, weight="bold")
+    axes[0].set_title("Separation and forecast-radius diagnostic", color=NAVY, weight="bold")
     axes[0].legend(loc="upper right", frameon=False, ncol=2)
 
     axes[1].plot(time, safe, color=BLUE, lw=1.6)
@@ -221,7 +221,7 @@ def plot_control(case: Path, outdir: Path, wide: bool) -> list[Path]:
         axes[0].axhline(limit, color=RED, ls="--", lw=0.95)
         axes[0].axhline(-limit, color=RED, ls="--", lw=0.95)
     axes[0].set_ylabel("Accel. [m/s$^2$]")
-    axes[0].set_title("Control authority and manoeuvre cost", color=NAVY, weight="bold")
+    axes[0].set_title("Control authority and maneuver cost", color=NAVY, weight="bold")
     axes[0].legend(loc="upper right", frameon=False, ncol=3)
 
     axes[1].plot(time, sat, color=MAGENTA, lw=1.55)
@@ -229,7 +229,13 @@ def plot_control(case: Path, outdir: Path, wide: bool) -> list[Path]:
     axes[1].set_ylim(0, max(1.12, np.nanmax(sat) * 1.08 if np.any(np.isfinite(sat)) else 1.12))
     axes[1].set_ylabel("Sat. ratio [-]")
 
-    axes[2].plot(time, dv, color=GREEN, lw=1.8)
+    axes[2].plot(time, dv, color=GREY, ls="--", lw=1.2, label="Commanded")
+    applied_path = case / "applied_control.csv"
+    if applied_path.exists():
+        applied = read_csv(applied_path)
+        axes[2].plot(col(applied, "time_s"), col(applied, "applied_delta_v_mps"),
+                     color=GREEN, lw=1.6, label="Applied")
+    axes[2].legend(loc="best", frameon=False)
     axes[2].set_ylabel("$\\Delta v$ [m/s]")
     axes[2].set_xlabel("Time [s]")
 
@@ -247,7 +253,7 @@ def plot_3d_overview(case: Path, outdir: Path) -> list[Path]:
     ref_r = col(ts, "ref_debris_R_m")
     ref_i = col(ts, "ref_debris_I_m")
     ref_n = col(ts, "ref_debris_N_m")
-    d0 = col(ts, "safe_radius_m")
+    d0 = col(ts, "keepout_distance_m", 150.0)
 
     ctime = col(control, "time_s")
     u1 = col(control, "u_1_mps2")

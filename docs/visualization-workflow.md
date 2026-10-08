@@ -1,83 +1,36 @@
 # Visualization Workflow
 
-The repository includes an optional export-and-render workflow for
-presentation-style assets. This is useful when the scenario, `StopTime`, or MPC
-horizon has changed and the GIF/figures should match the current simulation.
-
-## MATLAB Export
-
-After running Simulink, export a compact MATLAB data file:
+Use the reproducible batch runner first, then render separately in Python:
 
 ```matlab
-out = sim("inoas_model");
-export_visualization_data
+caseDir = run_inoas_case('reactive', 'adaptive', 'Seed', 42);
 ```
-
-The default export is:
-
-```text
-results/visualization/inoas_visualization_data.mat
-```
-
-## Python Rendering
-
-Install the optional Python dependencies:
 
 ```powershell
-python -m pip install -r tools\visualization\requirements.txt
+python -m pip install -r tools/visualization/requirements.txt
+python tools/visualization/render_campaign_figures.py --case results/reactive_adaptive_seed42_6743s
+python tools/visualization/generate_visualization_assets.py --mat results/reactive_adaptive_seed42_6743s/raw_visualization_data.mat --out results/reactive_adaptive_seed42_6743s/animation
 ```
 
-Then generate the assets from the repository root:
+Paper-style PDF/PNG diagnostics go into `<case>/figures/`; animation assets
+go into the requested `animation/` folder. MATLAB is not needed for re-rendering
+an already exported compact MAT/CSV case. The dependencies are NumPy, SciPy,
+Matplotlib and Pillow.
 
-```powershell
-python tools\visualization\generate_visualization_assets.py
-```
+The renderer uses actual receiver-state energy when available. A correction
+enable flag alone cannot distinguish powered acquisition from sleep. Applied
+and commanded Delta-v are different quantities; see
+[metric definitions](../tools/visualization/README.md#metrics).
 
-By default, the workflow writes to `results/visualization/`, which is ignored by
-Git because these files are generated from the selected simulation setup.
-
-The Python script creates:
-
-- `inoas_orbit_context.png`
-- `inoas_debris_distance.png`
-- `inoas_control_energy_summary.png`
-- `inoas_debris_avoidance.gif`
-- `inoas_visualization_summary.txt`
-
-## CSV Campaign Figures
-
-For paper-quality figures, use the CSV campaign workflow. This is the preferred
-route when running the Simulink model in MATLAB Online and rendering figures
-locally with Python.
-
-In MATLAB or MATLAB Online:
+For a manual GUI simulation, keep the initializer workspace and run:
 
 ```matlab
-run_baseline_campaign
+out = sim('inoas_model');
+export_campaign_csv('results/manual_case');
+export_visualization_data('results/manual_case/raw_visualization_data.mat');
 ```
 
-This writes:
-
-```text
-results/campaign/baseline/
-  raw_visualization_data.mat
-  timeseries.csv
-  control.csv
-  navigation.csv
-  metrics.csv
-```
-
-Then, from the repository root in Python:
-
-```powershell
-python tools\visualization\render_campaign_figures.py --case results\campaign\baseline
-```
-
-The generated PDF/PNG figures are written to:
-
-```text
-results/campaign/baseline/figures/
-```
-
-The lower-level tool documentation is available in
-[`tools/visualization/README.md`](../tools/visualization/README.md).
+The runner is preferred because it records seeds/options and adds the required
+receiver-state and applied-acceleration logs without saving model edits.
+The historical GIF under `docs/assets/` is preserved; new default-run assets
+must not be presented as the original 50-run campaign or the challenge-final run.

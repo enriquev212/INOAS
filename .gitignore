@@ -12,6 +12,10 @@ slx-inspect-*/
 .MATLABDriveTag
 results/
 __pycache__/
+*.pyc
+tmp/
+.pytest_cache/
+*.log
 
 # OS/editor noise
 .DS_Store

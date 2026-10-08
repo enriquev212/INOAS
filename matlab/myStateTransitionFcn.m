@@ -66,7 +66,7 @@ function x_dot = get_state_derivative(x, u)
         end
 
         scale = (mu_earth / r^2) * (R_earth / r)^n * Jn;
-        direction = (n + 1) * Pn * (r_vec / r) - ...
+        direction = (n + 1) * Pn * (r_vec / r) + ...
             dPn * ((z / r^2) * r_vec - z_hat);
 
         zonal_accel = zonal_accel + scale * direction;

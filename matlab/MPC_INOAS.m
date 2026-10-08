@@ -6,7 +6,6 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
 %   covariance_estim Estimated state covariance, either 6x6, 3x3, or vectorized.
 %   t_sim            Current simulation time [s]. If omitted, an internal clock is
 %                    advanced using the model sample time.
-%   varargin{1}      Effective navigation status [lambda; mode age; healthy].
 %
 % Outputs:
 %   u                Commanded absolute acceleration in ECI [3x1].
@@ -15,10 +14,6 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
 
     %% Configuration and persistent controller state
     cfg = getMpcConfig(varargin{:});
-    navStatus = [];
-    if ~isempty(varargin)
-        navStatus = varargin{1};
-    end
     hasExternalTime = (nargin >= 3) && ~isempty(t_sim);
 
     x_estim = x_estim(:);
@@ -61,7 +56,9 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
     persistent dsafe_snapshot_time_log dsafe_snapshot_profile_log
     persistent dsafe_snapshot_distance_log dsafe_snapshot_margin_log dsafe_snapshot_slack_log
     persistent t_internal
-    persistent navigation_prediction_log
+
+    persistent dsafe_snapshot_nominal_distance_log
+    persistent dsafe_snapshot_target_times_log
 
     if isempty(u_abs_current)
         u_abs_current = cfg.u0(:);
@@ -81,7 +78,7 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
         t_sim = double(t_sim);
     end
 
-    if t_sim <= 1e-9 || isempty(navigation_prediction_log)
+    if t_sim <= 1e-9
         u_abs_current = cfg.u0(:);
         delta_Ulast_internal = zeros(m*Np,1);
         last_solved_step = [];
@@ -95,10 +92,9 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
         dsafe_snapshot_margin_log = [];
         dsafe_snapshot_slack_log = [];
         t_internal = 0;
-        navigation_prediction_log = struct('origin_time', [], 'target_time', [], ...
-            'P_eci', [], 'gnss_updates', [], 'nominal_input_eci', [], ...
-            'mode', cfg.covariancePredictionMode);
-        assignin('base', 'mpc_navigation_prediction_log', navigation_prediction_log);
+
+        dsafe_snapshot_nominal_distance_log = [];
+        dsafe_snapshot_target_times_log = [];
     end
 
     if numel(delta_Ulast_internal) ~= m*Np
@@ -239,9 +235,9 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
     %% Warm-start the optimization
     Ndu = m*Np;
     Nslack = Np;
-    
+
     delta_U0 = zeros(Ndu,1);
-    
+
     for i = 1:Np-1
         idx_now_du  = (i-1)*m + (1:m);
         idx_next_du = i*m + (1:m);
@@ -274,65 +270,153 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
 
     if dsafe0 > 0
         dsafe_profile = zeros(Np,1);
-        predictionMode = validatestring(cfg.covariancePredictionMode, ...
-            {'navigation_aux_only', 'navigation_scheduled', 'legacy_open_loop'});
-        useNavigationPrediction = ~strcmp(predictionMode, 'legacy_open_loop');
-        if useNavigationPrediction
-            assert(strcmpi(covarianceFrame, 'eci'), 'INOAS:NavigationFrame', ...
-                'The navigation forecast requires UKF covariance in ECI.');
-            cfg.navigation.mode = 'aux_only';
-            if strcmp(predictionMode, 'navigation_scheduled')
-                cfg.navigation.mode = 'scheduled';
-            end
-            targetTimes = t_sim + (1:Np).' * h;
-            [P_nav, navForecast] = predictNavigationCovarianceProfile( ...
-                x_estim, covariance_estim, double(t_sim), targetTimes, ...
-                u_abs_current, navStatus, cfg.navigation);
-            if cfg.logNavigationPrediction
-                nLog = numel(navigation_prediction_log.origin_time) + 1;
-                navigation_prediction_log.origin_time(nLog,1) = t_sim;
-                navigation_prediction_log.target_time(:,nLog) = targetTimes;
-                navigation_prediction_log.P_eci(:,:,:,nLog) = P_nav;
-                counts = cumsum(navForecast.gnss_update);
-                navigation_prediction_log.gnss_updates(:,nLog) = counts(navForecast.node_steps);
-                navigation_prediction_log.nominal_input_eci(:,nLog) = u_abs_current;
-                assignin('base', 'mpc_navigation_prediction_log', navigation_prediction_log);
-            end
-        end
-        P_k = P_mpc;
+
+        targetTimes = t_sim + (1:Np).' * h;
+
+        [P_nav, P_nav_ticks] = predictNavigationCovarianceProfile( ...
+            x_estim, covariance_estim, t_sim, targetTimes, ...
+            u_abs_current, cfg.navigation);
+
         for i = 1:Np
-            if useNavigationPrediction
-                % Use the same axes as the current relative prediction.
-                % lambda_max and trace of P_pos are rotation-invariant.
-                P_k = T_cov * P_nav(:,:,i) * T_cov.';
-            else
-                P_k = Phi * P_k * Phi.' + Q_cov;
-            end
+
+            % New navigation covariance prediction
+            P_k = T_cov * P_nav(:,:,i) * T_cov.';
             P_k = symmetrizeCovariance(P_k);
 
-            dsafe_k = dsafe0 + safetyCost * covarianceRadiusFromPosition(P_k(1:3,1:3), covarianceMetric);
+            % Position uncertainty
+            sigma_pos = covarianceRadiusFromPosition( ...
+                P_k(1:3,1:3), covarianceMetric);
+
+            % Dynamic safety radius
+            dsafe_k = dsafe0 + safetyCost * sigma_pos;
             dsafe_profile(i) = dsafe_k;
 
+            % Debris constraint
             idx_state_i = (i-1)*nx + (1:nx);
             idx_pos     = (i-1)*nx + (1:3);
+
             refStep = min(timeStep + i, Ntimesteps);
 
             x_ref_i = r_p(idx_state_i);
             r_ref_i = x_ref_i(1:3);
-            r_debris_i = getDebrisPositionAtStep(x_debris_hist, refStep, nx, rk_debris);
 
-            d_nom = T_abs_to_ref * (r_ref_i - r_debris_i);
+            r_debris_i = getDebrisPositionAtStep( ...
+                x_debris_hist, refStep, nx, rk_debris);
+
+            [T_future,~] = referenceFrameTransform(r_ref_i, x_ref_i(4:6));
+            d_nom = T_future * (r_ref_i - r_debris_i);
 
             Gamma_k = Gamma_extend(idx_pos,:);
             Y0_k = Y0(idx_pos);
 
-            scaleDebris = max([norm(d_nom)^2, dsafe_k^2, 1]);
 
-            LeftHandDebris(i,1:m*Np) = (-2*d_nom' * Gamma_k) / scaleDebris;
-            LeftHandDebris(i,m*Np+i) = -1 / scaleDebris;
+            %% New linearization point
+            % Instead of linearizing around d_nom, project d_nom onto
+            % the safety boundary and linearize there.
 
-            RightHandDebris(i) = (norm(d_nom)^2 - dsafe_k^2 + ...
-                2*d_nom'*Y0_k) / scaleDebris;
+            d_nom_norm = norm(d_nom);
+
+            if d_nom_norm > 1e-9
+                d_lin = dsafe_k * d_nom / d_nom_norm;
+            else
+                % Numerical fallback
+                d_lin = dsafe_k * [1; 0; 0];
+            end
+
+            %% Linearized squared-distance constraint
+            %
+            % True constraint:
+            %
+            %       ||d||^2 >= dsafe_k^2
+            %
+            % with:
+            %
+            %       d = d_nom + Y0_k + Gamma_k*delta_U
+            %
+            % First-order Taylor approximation around d_lin:
+            %
+            %       ||d||^2 ≈ ||d_lin||^2
+            %                   + 2*d_lin'*(d - d_lin)
+            %
+            % which gives:
+            %
+            %       2*d_lin'*d - ||d_lin||^2 >= dsafe_k^2
+
+            scaleDebris = max([norm(d_lin)^2, dsafe_k^2, 1]);
+
+            LeftHandDebris(i,1:m*Np) = ...
+                (-2*d_lin' * Gamma_k) / scaleDebris;
+
+            LeftHandDebris(i,m*Np+i) = ...
+                -1 / scaleDebris;
+
+            RightHandDebris(i) = ...
+                (2*d_lin'*(d_nom + Y0_k) ...
+                 - norm(d_lin)^2 ...
+                 - dsafe_k^2) ...
+                / scaleDebris;
+%            d_nom = T_abs_to_ref * (r_ref_i - r_debris_i);
+%
+%            Gamma_k = Gamma_extend(idx_pos,:);
+%            Y0_k = Y0(idx_pos);
+%
+%            scaleDebris = max([norm(d_nom)^2, dsafe_k^2, 1]);
+%
+%            LeftHandDebris(i,1:m*Np) = ...
+%                (-2*d_nom' * Gamma_k) / scaleDebris;
+%
+%            LeftHandDebris(i,m*Np+i) = ...
+%                -1 / scaleDebris;
+%
+%            RightHandDebris(i) = ...
+%                (norm(d_nom)^2 - dsafe_k^2 + 2*d_nom'*Y0_k) ...
+%                / scaleDebris;
+        end
+
+        %% Log uncertainty and safety radius at closest approach
+
+        i_CA = round((1500 - t_sim)/h);
+
+        if i_CA >= 1 && i_CA <= Np
+
+            P_CA = T_cov * P_nav(:,:,i_CA) * T_cov.';
+            P_CA = symmetrizeCovariance(P_CA);
+
+            sigma_CA = covarianceRadiusFromPosition( ...
+                P_CA(1:3,1:3), covarianceMetric);
+
+            dsafe_CA = dsafe_profile(i_CA);
+
+            if evalin('base','exist(''t_CA_log'',''var'')')
+                t_CA_log     = evalin('base','t_CA_log');
+                sigma_CA_log = evalin('base','sigma_CA_log');
+                dsafe_CA_log = evalin('base','dsafe_CA_log');
+            else
+                t_CA_log     = [];
+                sigma_CA_log = [];
+                dsafe_CA_log = [];
+            end
+
+            t_CA_log(end+1,1)     = t_sim;
+            sigma_CA_log(end+1,1) = sigma_CA;
+            dsafe_CA_log(end+1,1) = dsafe_CA;
+
+            assignin('base','t_CA_log',t_CA_log);
+            assignin('base','sigma_CA_log',sigma_CA_log);
+            assignin('base','dsafe_CA_log',dsafe_CA_log);
+
+        end
+
+        %% Save dynamic safety-radius profile when debris first enters horizon
+
+        t_CA = 1500;                      % [s]
+        t_entry = t_CA - Np*h;            % first instant CA enters prediction horizon
+
+        if abs(t_sim - t_entry) < 1e-6
+            assignin('base', 'dsafe_profile_entry', dsafe_profile);
+            assignin('base', 'dsafe_profile_entry_nodes', (1:Np).');
+            assignin('base', 'dsafe_profile_entry_times', targetTimes);
+            assignin('base', 'dsafe_profile_entry_tsim', t_sim);
         end
 
         if logDsafe
@@ -344,7 +428,6 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
             assignin('base', 'mpc_dsafe_log_first', dsafe_log_first);
             assignin('base', 'mpc_dsafe_log_max', dsafe_log_max);
         end
-
     end
 
     %% Decision-variable bounds
@@ -375,33 +458,33 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
 
     %% Scale decision variables for numerical conditioning
     du_scale = deltaUmax(:);
-    
+
     if isempty(du_scale)
         du_scale = 0.005*ones(Ndu,1);
     end
-    
+
     du_scale(du_scale <= 0) = 0.005;
-    
+
     Ddu = diag(du_scale);
-    
+
     w0 = Ddu \ delta_U0;
-    
+
     slack0 = zeros(Nslack,1);
     z0 = [w0; slack0];
-    
+
     lb_w = lb_deltaU ./ du_scale;
     ub_w = ub_deltaU ./ du_scale;
-    
+
     lb = [lb_w; lb_slack];
     ub = [ub_w; ub_slack];
-    
+
     A_scaled = A;
     A_scaled(:,1:Ndu) = A(:,1:Ndu) * Ddu;
 
     %% Solve constrained MPC problem
     fun = @(z) MPCObjectiveScaled(Y0, Gamma_extend, Q, R, z, H, u, S, ...
                                   slackWeight, m, Np, Ddu);
-    
+
     options = optimoptions('fmincon', ...
         'Display','none', ...
         'Algorithm','sqp', ...
@@ -411,16 +494,82 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
         'ConstraintTolerance',1e-5, ...
         'OptimalityTolerance',1e-2, ...
         'StepTolerance',1e-5);
-    
-    [z_opt,fval,exitflag,output] = fmincon(fun,z0,A_scaled,b,[],[],lb,ub,[],options);
-    
+
+    %[z_opt,fval,exitflag,output] = fmincon(fun,z0,A_scaled,b,[],[],lb,ub,[],options);
+    %% Intermodal debris avoidance
+    % Check swept cubic relative trajectories and add exact fractional-CW
+    % supporting planes where their minima violate the safety envelope.
+    % This is a numerical collocation check, not a continuous-time proof.
+    refinement = 0;
+    worstSweptViolation = 0;
+    if dsafe0 > 0
+        refHistory = reshape(r_p_full,nx,[]);
+        horizonIndices = min(timeStep+(0:Np),Ntimesteps);
+        refEndpoints = refHistory(:,horizonIndices);
+        debrisEndpoints = x_debris_hist(:,horizonIndices);
+        radiusTicks = zeros(size(P_nav_ticks,3)+1,1);
+        radiusTicks(1) = dsafe0+safetyCost*covarianceRadiusFromPosition( ...
+            covariance_estim(1:3,1:3),covarianceMetric);
+        for k = 1:size(P_nav_ticks,3)
+            radiusTicks(k+1) = dsafe0+safetyCost*covarianceRadiusFromPosition( ...
+                P_nav_ticks(1:3,1:3,k),covarianceMetric);
+        end
+        intervalRadii = zeros(Np,1);
+        for i = 1:Np
+            ticks = round((i-1)*h/cfg.navigation.sampleTime): ...
+                round(i*h/cfg.navigation.sampleTime);
+            intervalRadii(i) = max(radiusTicks(ticks+1));
+        end
+    end
+    while true
+        [z_opt,fval,exitflag,output] = fmincon(fun,z0,A_scaled,b,[],[],lb,ub,[],options);
+        assert(all(isfinite(z_opt)), 'INOAS:InvalidMpcSolution', ...
+            'Nonfinite MPC decision at t=%g.',t_sim);
+        if dsafe0 <= 0, break; end
+        candidateDelta = Ddu*z_opt(1:Ndu);
+        [offsets,distances] = inoasIntersampleMinima(x_rel_estim, ...
+            Y0+Gamma_extend*candidateDelta,refEndpoints,debrisEndpoints,h);
+        worstSweptViolation = max(intervalRadii-distances);
+        bad = find(intervalRadii-distances > 0.01);
+        if isempty(bad), break; end
+        assert(refinement < 12, 'INOAS:IntersampleAvoidance', ...
+            'Intersample refinement failed at t=%g: violation %.3f m.', ...
+            t_sim,worstSweptViolation);
+        refinement = refinement+1;
+        for k = bad(:).'
+            offset = offsets(k);
+            [free,forced,interval] = inoasFractionalPrediction( ...
+                offset,h,A_c,B_c,x_rel_estim,u,Y0,Gamma_extend,H);
+            xRef = inoasHermiteState(cfg.t_ref,refHistory,t_sim+offset);
+            xDebris = inoasHermiteState(cfg.t_ref,x_debris_hist,t_sim+offset);
+            [futureFrame,~] = referenceFrameTransform(xRef(1:3),xRef(4:6));
+            nominal = futureFrame*(xRef(1:3)-xDebris(1:3));
+            anchor = nominal+free(1:3)+forced(1:3,:)*candidateDelta;
+            if norm(anchor) < 1e-9, anchor = [1;0;0]; end
+            radius = intervalRadii(k);
+            tangent = radius*anchor/norm(anchor);
+            scale = max(radius^2,1);
+            row = zeros(1,Ndu+Np);
+            row(1:Ndu) = -2*tangent.'*forced(1:3,:)/scale;
+            row(Ndu+interval) = -1/scale;
+            rhs = (2*tangent.'*(nominal+free(1:3))-2*radius^2)/scale;
+            A(end+1,:) = row;
+            b(end+1,1) = rhs;
+            row(1:Ndu) = row(1:Ndu)*Ddu;
+            A_scaled(end+1,:) = row;
+        end
+        z0 = z_opt;
+    end
+    %% Recovery of the result
+
+
     w_opt = z_opt(1:Ndu);
     delta_U = Ddu*w_opt;
 
     z_unscaled = [delta_U; z_opt(Ndu+1:end)];
-    
+
     viol = max(A*z_unscaled - b);
-    
+
     delta_U_check = delta_U;
     U_check = ff_horizon_ref + E*u + H*delta_U_check;
 
@@ -430,10 +579,10 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
     end
     %% Apply first optimized control move
     delta_u = delta_U(1:m);
-    
+
     u_correction_ref = u_current + delta_u;
     u_ref = u_ff_ref + u_correction_ref;
-    
+
     slack_opt_internal = z_opt(Ndu+1:end);
 
     if dsafe0 > 0 && ~isempty(dsafeSnapshotTimes)
@@ -442,7 +591,9 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
 
         if ~isempty(matchIdx) && ~alreadyLoggedPred
             Y_pred = Y0 + Gamma_extend * delta_U;
+
             distance_profile = zeros(Np,1);
+            nominal_distance_profile = zeros(Np,1);
             margin_profile = zeros(Np,1);
 
             for i = 1:Np
@@ -453,10 +604,18 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
                 x_ref_i = r_p(idx_state_i);
                 r_ref_i = x_ref_i(1:3);
                 r_debris_i = getDebrisPositionAtStep(x_debris_hist, refStep, nx, rk_debris);
-                d_nom = T_abs_to_ref * (r_ref_i - r_debris_i);
 
+                [T_future, ~] = referenceFrameTransform(r_ref_i, x_ref_i(4:6));
+                d_nom = T_future * (r_ref_i - r_debris_i);
+
+                % Nominal reference-to-debris distance
+                nominal_distance_profile(i) = norm(d_nom);
+
+                % MPC predicted spacecraft-to-debris distance
                 rel_vec_to_debris = Y_pred(idx_pos) + d_nom;
                 distance_profile(i) = norm(rel_vec_to_debris);
+
+                % Robust safety margin
                 margin_profile(i) = distance_profile(i) - dsafe_profile(i);
             end
 
@@ -466,11 +625,25 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
             dsafe_snapshot_margin_log(:,end+1) = margin_profile;
             dsafe_snapshot_slack_log(:,end+1) = slack_opt_internal(:);
 
+            dsafe_snapshot_nominal_distance_log(:,end+1) = ...
+                nominal_distance_profile;
+
+            dsafe_snapshot_target_times_log(:,end+1) = ...
+                targetTimes;
+
             assignin('base', 'mpc_dsafe_snapshot_time', dsafe_snapshot_time_log);
             assignin('base', 'mpc_dsafe_snapshot_profile', dsafe_snapshot_profile_log);
             assignin('base', 'mpc_dsafe_snapshot_distance', dsafe_snapshot_distance_log);
             assignin('base', 'mpc_dsafe_snapshot_margin', dsafe_snapshot_margin_log);
             assignin('base', 'mpc_dsafe_snapshot_slack', dsafe_snapshot_slack_log);
+
+            assignin('base', ...
+                'mpc_dsafe_snapshot_nominal_distance', ...
+                dsafe_snapshot_nominal_distance_log);
+
+            assignin('base', ...
+                'mpc_dsafe_snapshot_target_times', ...
+                dsafe_snapshot_target_times_log);
         end
     end
 
@@ -481,9 +654,6 @@ function [u, delta_Ulast, slack_opt] = MPC_INOAS(x_estim, covariance_estim, t_si
     slack_opt = padColumnVector(slack_opt_internal, cfg.outputNp);
 
     u_abs = T_ref_to_abs * u_ref;
-
-    u_abs_max = cfg.Umax(1);
-    u_abs = max(min(u_abs, u_abs_max), -u_abs_max);
 
     u_abs_current = u_abs;
     u = u_abs;
@@ -528,7 +698,7 @@ function cfg = getMpcConfig(varargin)
     cfg.x_debris_hist = coerceStateHistory(getBaseWorkspaceVar('x_debris_hist', []), n);
 
 
-    cfg.u0 = getBaseWorkspaceVar('u', zeros(m, 1));    
+    cfg.u0 = getBaseWorkspaceVar('u', zeros(m, 1));
 
     q_default = [10 * ones(1, min(3, n)), 0.1 * ones(1, max(n - 3, 0))];
     r_default = 10 * ones(1, m);
@@ -548,25 +718,23 @@ function cfg = getMpcConfig(varargin)
     cfg.safetyCost = getBaseWorkspaceVar('safetyCost', 0);
     cfg.Q_cov = resolveCovarianceMatrix({'Q_cov_mpc', 'Q_process_mpc', 'Q_covariance_mpc'}, n, zeros(n));
     cfg.covarianceFrame = getBaseWorkspaceVar('covarianceFrameMpc', 'eci');
-    cfg.covarianceMetric = getBaseWorkspaceVar('covarianceMetricMpc', 'sqrt_lambda_max_pos');
-    cfg.covariancePredictionMode = getBaseWorkspaceVar('covariancePredictionModeMpc', 'navigation_aux_only');
-    cfg.logNavigationPrediction = getBaseWorkspaceVar('logNavigationPredictionMpc', true);
-    if ~strcmpi(cfg.covariancePredictionMode, 'legacy_open_loop')
-        cfg.navigation.sampleTime = getBaseWorkspaceVar('Ts');
-        cfg.navigation.Q = getBaseWorkspaceVar('Q_matrix');
-        cfg.navigation.Raux = getBaseWorkspaceVar('R_matrix');
-        cfg.navigation.Rgnss = getBaseWorkspaceVar('R_gnss');
-        cfg.navigation.alpha = getBaseWorkspaceVar('ukfAlpha');
-        cfg.navigation.beta = getBaseWorkspaceVar('ukfBeta');
-        cfg.navigation.kappa = getBaseWorkspaceVar('ukfKappa');
-        cfg.navigation.stateTransitionFcn = @myStateTransitionFcn;
-        cfg.navigation.measurementFcn = @myMeasurementFcn;
-        cfg.navigation.gnssSampleTime = getBaseWorkspaceVar('gnss_sample_time');
-        cfg.navigation.gnssEpoch = getBaseWorkspaceVar('gnssFixEpoch');
-        cfg.navigation.onDuration = getBaseWorkspaceVar('gnssOnDuration');
-        cfg.navigation.offDuration = getBaseWorkspaceVar('gnssOffDuration');
-        cfg.navigation.scoreThreshold = getBaseWorkspaceVar('pseudoNisThreshold');
-    end
+    cfg.covarianceMetric = getBaseWorkspaceVar('covarianceMetricMpc', 'sqrt_trace_pos');
+
+    cfg.navigation.sampleTime = getBaseWorkspaceVar('Ts');
+
+    cfg.navigation.Qexternal = getBaseWorkspaceVar('Q_external');
+    cfg.navigation.errorCmd  = getBaseWorkspaceVar('error_cmd');
+    cfg.navigation.Gcmd      = getBaseWorkspaceVar('G_cmd');
+
+    cfg.navigation.Raux = getBaseWorkspaceVar('R_matrix');
+
+    cfg.navigation.alpha = getBaseWorkspaceVar('ukfAlpha');
+    cfg.navigation.beta = getBaseWorkspaceVar('ukfBeta');
+    cfg.navigation.kappa = getBaseWorkspaceVar('ukfKappa');
+
+    cfg.navigation.stateTransitionFcn = @myStateTransitionFcn;
+    cfg.navigation.measurementFcn = @myMeasurementFcn;
+
     cfg.logDsafe = getBaseWorkspaceVar('logDsafeMpc', false);
     cfg.dsafeSnapshotTimes = getBaseWorkspaceVar('dsafeSnapshotTimesMpc', []);
     cfg.useReferenceFeedforward = getBaseWorkspaceVar('useReferenceFeedforward', false);
@@ -898,4 +1066,70 @@ function S = skewSymmetric(v)
     S = [0,    -v(3),  v(2);
          v(3),  0,    -v(1);
         -v(2),  v(1),  0];
+end
+
+%% Internodal debris avoidance
+function [offsets, distances] = inoasIntersampleMinima(x0, predicted, ref, debris, h)
+states = [x0,reshape(predicted,6,[])];
+count = size(states,2); relative = zeros(6,count);
+for k = 1:count
+    [~,toEci] = referenceFrameTransform(ref(1:3,k),ref(4:6,k));
+    omega = [0;0;norm(cross(ref(1:3,k),ref(4:6,k)))/norm(ref(1:3,k))^2];
+    relative(:,k) = ref(:,k)-debris(:,k) + ...
+        [toEci*states(1:3,k);toEci*(states(4:6,k)+cross(omega,states(1:3,k)))];
+end
+offsets = zeros(count-1,1); distances = offsets;
+for k = 1:count-1
+    [fraction,distances(k)] = inoasHermiteClosestFraction(relative(:,k),relative(:,k+1),h);
+    offsets(k) = (k-1+fraction)*h;
+end
+end
+function [fraction, distance] = inoasHermiteClosestFraction(x0, x1, dt)
+a = 2*x0(1:3)-2*x1(1:3)+dt*(x0(4:6)+x1(4:6));
+b = -3*x0(1:3)+3*x1(1:3)-dt*(2*x0(4:6)+x1(4:6));
+c = dt*x0(4:6); d = x0(1:3);
+coeff = [a,b,c,d].';
+derivative = zeros(1,6);
+for axis = 1:3
+    derivative = derivative + conv(coeff(:,axis).', [3*a(axis),2*b(axis),c(axis)]);
+end
+scale = max(abs(derivative));
+if scale == 0, candidates = [0;1];
+else
+    first = find(abs(derivative)>1e-13*scale,1);
+    stationary = roots(derivative(first:end)/scale);
+    stationary = real(stationary(abs(imag(stationary))<1e-8));
+    candidates = [0;1;stationary(stationary>0 & stationary<1)];
+end
+positions = ((a*candidates.'+b).*candidates.'+c).*candidates.'+d;
+[distance,index] = min(vecnorm(positions));
+fraction = candidates(index);
+end
+function x = inoasHermiteState(times, states, t)
+assert(t >= times(1)-1e-8 && t <= times(end)+1e-8, ...
+    'INOAS:TrajectoryTime', 'Requested time is outside the stored trajectory.');
+k = find(times <= t, 1, 'last');
+k = min(k, numel(times)-1);
+dt = times(k+1)-times(k);
+s = (t-times(k))/dt;
+x0 = states(:,k); x1 = states(:,k+1);
+a = 2*x0(1:3)-2*x1(1:3)+dt*(x0(4:6)+x1(4:6));
+b = -3*x0(1:3)+3*x1(1:3)-dt*(2*x0(4:6)+x1(4:6));
+c = dt*x0(4:6);
+x = [((a*s+b)*s+c)*s+x0(1:3); (3*a*s^2+2*b*s+c)/dt];
+end
+function [free, forced, interval] = inoasFractionalPrediction(offset, h, A, B, x0, u, Y0, Gamma, H)
+nx = numel(x0); m = numel(u); Np = size(H,1)/m;
+interval = max(1,min(Np,ceil(offset/h-1e-10)));
+tau = offset-(interval-1)*h;
+if interval == 1
+    prior = x0; priorGamma = zeros(nx,m*Np);
+else
+    rows = (interval-2)*nx+(1:nx);
+    prior = Y0(rows); priorGamma = Gamma(rows,:);
+end
+transition = expm([A,B;zeros(m,nx+m)]*tau);
+F = transition(1:nx,1:nx); G = transition(1:nx,nx+1:end);
+free = F*prior+G*u;
+forced = F*priorGamma+G*H((interval-1)*m+(1:m),:);
 end

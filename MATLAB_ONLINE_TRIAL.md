@@ -1,55 +1,32 @@
-# Prueba de navegacion en MATLAB Online
+# MATLAB Online Quick Trial
 
-El ZIP contiene una carpeta `INOAS`. Entrar en esa carpeta, donde estan
-`run_navigation_trial.m`, `initialize_inoas_simulation.m` y `models/`.
-
-En la Command Window:
-
-```matlab
-run_navigation_trial
-```
-
-El comando inicializa todo, ejecuta `inoas_model` hasta **1000 s** y exporta
-los CSV y MAT a una carpeta nueva dentro de `results/campaign/`.
-No requiere modificar ni guardar bloques manualmente.
-
-Configuracion de esta prueba:
-
-- Estado y covarianza procedentes del UKF.
-- Predictor a `Ts = 1 s`, con correcciones auxiliares y sin futuras fijas GNSS.
-- MPC: `h = 3 s`, `Np = 125`, horizonte de 375 s.
-- `sigma_pos = sigma_alt = 2000 m`, `gamma = 3`, radio nominal de 150 m.
-- El filtro real sigue recibiendo GNSS cuando lo habilita el supervisor.
-
-Para probar despues la hipotesis de futuras fijas programadas:
+Upload/extract the repository and enter the root `INOAS` folder. MATLAB Online
+needs the same licensed toolboxes and ephemeris data as the desktop version;
+see [requirements](docs/how-to-run.md#requirements).
 
 ```matlab
-run_navigation_trial("navigation_scheduled")
+caseDir = run_inoas_case('reactive', 'adaptive', 'StopTime', 120, 'Seed', 7);
 ```
 
-Cada ejecucion utiliza un directorio con fecha y hora. Conservar toda la
-carpeta de resultados, incluidos `navigation_prediction.csv`,
-`navigation_uncertainty.csv` y los MAT. No basta con `metrics.csv` para
-comprobar las conmutaciones y la incertidumbre.
+This checks setup and exports CSV/MAT files into a fresh `results/` subfolder.
+For an encounter demo, use `StopTime = 1800`; for the default full run, omit
+`StopTime` (6743 s). The 12 s MPC step and 60-step horizon are unchanged in
+short tests. No manual block editing or model save is required.
 
-Estas pruebas no demuestran por si solas ventajas del disparo por eventos.
-El Pseudo NIS utiliza las sigmas actuales; los pulsos de 500 m no tienen
-garantizada su deteccion. Todavia no se ha validado el encuentro completo
-con esta version ni se ha realizado Monte Carlo. Las semillas siguen el
-comportamiento de la inicializacion existente; estas dos ejecuciones no son
-automaticamente un experimento con ruido emparejado.
+`run_navigation_trial` is a compatibility script for a 1000 s Reactive/adaptive
+run. It no longer supports the removed scheduled-GNSS forecast option.
 
-## Version anterior y vuelta atras
+Download the **complete case folder**, including configuration, simulation and
+completion files, before interpreting figures. The runner does not overwrite
+previous results. Paired cases use the same seed and initial error; a new
+seed alone does not reconstruct the original 50-realization paper campaign.
 
-La version anterior a este conjunto de cambios es el commit **0555bf8**.
-Se conserva en el historial y se entrega un ZIP independiente de respaldo.
-Para deshacer el nuevo cambio se utilizara `git revert` sobre el commit de
-la prueba, generando un commit inverso. No hace falta borrar el historial
-ni los resultados. Si se usa el ZIP anterior, extraerlo en otra carpeta;
-no mezclar sus archivos con los de la prueba nueva.
+Render PDF/PNG figures locally:
 
-`legacy_open_loop` solo cambia el metodo de propagacion de covarianza:
-**no equivale a volver a la version anterior** del proyecto.
+```powershell
+python -m pip install -r tools/visualization/requirements.txt
+python tools/visualization/render_campaign_figures.py --case results/reactive_adaptive_seed7_120s
+```
 
-El detalle de archivos, conexiones, hipotesis y pruebas esta en
-[navigation-covariance-prediction.md](docs/navigation-covariance-prediction.md).
+For receiver assumptions and reproducibility limits, see
+[architecture](docs/model-architecture.md) and [provenance](docs/model-provenance.md).
