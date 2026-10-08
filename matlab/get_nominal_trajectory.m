@@ -1,7 +1,7 @@
 function get_nominal_trajectory(Ts, Nsteps, filename, varargin)
 
     if nargin < 3
-        filename = inoas_data_path("referenceTrajectory.mat");
+        filename = inoas_runtime_path("referenceTrajectory.mat");
     end
 
     p = inputParser;

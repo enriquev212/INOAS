@@ -58,6 +58,7 @@ reference_velocity_eci_mps = interp1(time_ref, reference_velocity_eci_mps, time_
 
 t_debris_s = scalarBase("t_debris", NaN);
 safe_radius_m = scalarBase("dsafe0", NaN);
+keepout_distance_m = 150;
 u_max_mps2 = scalarBase("u_max", NaN);
 mpc_horizon = scalarBase("Np", NaN);
 sample_time_s = scalarBase("h", NaN);
@@ -67,6 +68,17 @@ sample_time_s = scalarBase("h", NaN);
 [lambda_time_s, lambda] = optionalSignal(logsout, ...
     ["lambda", "lamda", "instrument_lambda", "gnss_lambda", "GNSS_selector", ...
      "InstrumentDecision", "instrument_decision", "lambda_decision"]);
+[receiver_time_s, receiver_mode] = optionalSignal(logsout, "receiver_mode");
+receiver_energy_Wh = [];
+if ~isempty(receiver_time_s)
+    receiver_energy_Wh = inoasReceiverEnergy(receiver_time_s, receiver_mode);
+end
+applied_time_s = [];
+applied_eci_mps2 = [];
+appliedSignal = getOptionalLogSignal(logsout, "applied_acceleration_eci");
+if ~isempty(appliedSignal)
+    [applied_time_s, applied_eci_mps2] = signalToMatrix(appliedSignal, 3, "applied_acceleration_eci");
+end
 
 [gnss_quality_time_s, gnss_nsv, gnss_pdop, gnss_hpe_m, gnss_vpe_m, gnss_solution_flag] = gnssQualitySignals();
 
@@ -80,9 +92,11 @@ save(outputFile, ...
     "reference_eci_m", "reference_velocity_eci_mps", ...
     "control_time_s", "control_eci_mps2", ...
     "debris_time_s", "debris_eci_m", "debris_eci_m_at_time", ...
-    "t_debris_s", "safe_radius_m", "u_max_mps2", "mpc_horizon", "sample_time_s", ...
+    "t_debris_s", "safe_radius_m", "keepout_distance_m", "u_max_mps2", "mpc_horizon", "sample_time_s", ...
     "dynamic_safe_time_s", "dynamic_safe_first_m", "dynamic_safe_horizon_m", ...
     "lambda_time_s", "lambda", ...
+    "receiver_time_s", "receiver_mode", "receiver_energy_Wh", ...
+    "applied_time_s", "applied_eci_mps2", ...
     "gnss_quality_time_s", "gnss_nsv", "gnss_pdop", "gnss_hpe_m", "gnss_vpe_m", ...
     "gnss_solution_flag", "metadata", "-v7");
 
@@ -135,7 +149,11 @@ availableNames = string(logsout.getElementNames);
 for k = 1:numel(candidateNames)
     name = string(candidateNames(k));
     if any(availableNames == name)
-        signal = logsout.get(char(name)).Values;
+        indices = find(availableNames == name);
+        if numel(indices) ~= 1
+            error('INOAS:AmbiguousLogSignal', 'Multiple logged signals are named %s; use a unique logging name.', name);
+        end
+        signal = logsout.getElement(indices).Values;
         return
     end
 end

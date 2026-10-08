@@ -1,0 +1,6 @@
+*.m text eol=lf
+*.md text eol=lf
+*.py text eol=lf
+# Preserve the archived default input byte-for-byte, including native padding.
+data/full_perturb_POS_s6a_Y24D011_fixed.dat -text whitespace=-blank-at-eol
+data/cov_perturb_POS_s6a_Y24D011_fixed.dat whitespace=-blank-at-eol

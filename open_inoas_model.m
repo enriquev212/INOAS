@@ -38,6 +38,9 @@ addpath(genpath(fullfile(projectRoot, 'tools')));
 addpath(fullfile(projectRoot, 'models'));
 
 if bdIsLoaded(modelName)
+    if strcmp(get_param(modelName, 'Dirty'), 'on')
+        error('INOAS:UnsavedModel', 'Save or close inoas_model before reopening it; unsaved edits are preserved.');
+    end
     close_system(modelName, 0);
 end
 

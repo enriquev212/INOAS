@@ -1,100 +1,55 @@
 # Visualization Tools
 
-These tools regenerate presentation-style figures from a completed INOAS
-Simulink simulation.
+## Run and Export
 
-## Workflow
-
-From MATLAB, run a simulation first:
+From the repository root in MATLAB, with the model closed:
 
 ```matlab
-open_inoas_debris_demo
-out = sim("inoas_model");
-export_visualization_data
+caseDir = run_inoas_case('reactive', 'adaptive', 'Seed', 42);
 ```
 
-Then generate the PNG/GIF assets from the repository root:
+The runner writes complete simulation/configuration files, a compact MAT and
+five CSVs to `results/reactive_adaptive_seed42_6743s/`.
+`run_baseline_campaign` is a no-argument alias for the same default case.
+Generated files are ignored by Git, not committed as new paper results.
+
+## Python Figures
 
 ```powershell
-python tools\visualization\generate_visualization_assets.py
+python -m pip install -r tools/visualization/requirements.txt
+python tools/visualization/render_campaign_figures.py --case results/reactive_adaptive_seed42_6743s
 ```
 
-The default MATLAB export is:
+PDF/PNG files are written to `<case>/figures/`. Use PDF for LaTeX inclusion.
+These are single-run diagnostic figures, not automatic reconstructions of
+the submitted ensemble figures. The CSV minimum separation is sampled; it
+does not replace a continuous closest-approach analysis.
 
-```text
-results/visualization/inoas_visualization_data.mat
-```
-
-The Python script writes:
-
-- `inoas_orbit_context.png`
-- `inoas_debris_distance.png`
-- `inoas_control_energy_summary.png`
-- `inoas_debris_avoidance.gif`
-- `inoas_visualization_summary.txt`
-
-The generated `results/` folder is ignored by Git because these files depend on
-the selected scenario, `StopTime`, MPC horizon, and logged Simulink signals.
-
-## CSV Campaign Workflow for Paper Figures
-
-For the conference paper, prefer the CSV campaign workflow. It separates the
-expensive Simulink run from figure rendering:
-
-1. Run the baseline case in MATLAB or MATLAB Online:
-
-```matlab
-run_baseline_campaign
-```
-
-By default this runs the model to `StopTime = 1000 s` and writes:
-
-```text
-results/campaign/baseline/
-  raw_visualization_data.mat
-  timeseries.csv
-  control.csv
-  navigation.csv
-  metrics.csv
-```
-
-Use an explicit output folder or stop time if needed:
-
-```matlab
-run_baseline_campaign("results/campaign/baseline_1000s", 1000)
-```
-
-2. Download the `results/campaign/baseline/` folder from MATLAB Online.
-
-3. Render paper-style figures with Python:
+## Animation
 
 ```powershell
-python tools\visualization\render_campaign_figures.py --case results\campaign\baseline
+python tools/visualization/generate_visualization_assets.py --mat results/reactive_adaptive_seed42_6743s/raw_visualization_data.mat --out results/reactive_adaptive_seed42_6743s/animation
 ```
 
-The script writes PDF and PNG figures to:
+This creates orbit, distance, control/energy PNGs and a debris-avoidance GIF.
+An encounter-length run is needed for a meaningful encounter animation. The
+README's existing challenge GIF remains unchanged and labeled as historical.
 
-```text
-results/campaign/baseline/figures/
-```
+## Metrics
 
-These figures are intended for LaTeX inclusion, for example:
+- `lambda` is correction enable; `receiver_on` is power and `receiver_mode`
+  is OFF/ACQUIRING/TRACKING (0/1/2).
+- Energy uses left-held receiver states: 0.025/2.34/1.8 W, divided by 3600 for Wh.
+- `control.csv` contains commanded acceleration and commanded Delta-v.
+- `applied_control.csv` contains actuator-imperfect acceleration and applied Delta-v.
+- `metrics.csv` distinguishes `final_commanded_delta_v_mps` from the applied
+  `final_delta_v_mps` (after startup command inhibition and including actuator
+  imperfections). The native model inhibits applied control through 135 s.
+  Commanded Delta-v is a trapezoidal diagnostic on the MPC sample grid. Missing applied
+  logs produce NaN, not a silently relabeled commanded value.
+- Position errors in the generic exporter include startup; the paper table
+  excludes the first 135 s. Do not compare them without matching the window.
 
-```latex
-\includegraphics[width=\columnwidth]{figures/fig6_collision_margin.pdf}
-```
-
-## Python Requirements
-
-The generator uses:
-
-- `numpy`
-- `scipy`
-- `matplotlib`
-- `Pillow`
-
-Install them with:
-
-```powershell
-python -m pip install -r tools\visualization\requirements.txt
-```
+For manual simulations, `export_campaign_csv` and `export_visualization_data`
+can export the base-workspace `out`. Receiver energy requires the receiver
+state log; it is not inferred from lambda.

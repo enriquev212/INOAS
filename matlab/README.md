@@ -1,64 +1,38 @@
-# MATLAB Files
+# MATLAB Function Index
 
-This folder contains the MATLAB functions used by the INOAS Simulink model,
-initialization script, and result post-processing.
+The active model is `../models/inoas_model.slx`. The top-level runner
+`../run_inoas_case.m` initializes, simulates and exports it; see
+[How To Run](../docs/how-to-run.md).
 
-## Main Execution Flow
+| Function | Role |
+| --- | --- |
+| `inoasPaperConfig` | Validated public run options; Reactive/adaptive by default. |
+| `inoasMinimalGnssConfig` | Shared 35/60/300 s Reactive timing and quality thresholds. |
+| `inoasMinimalGnssStep` | Three-state Reactive supervisor and Full GNSS dispatch. |
+| `inoasFixedGnssStep` | Fixed 96 s ON / 300 s OFF comparator. |
+| `inoasMinimalGnssTick` | Fresh 3 s measurement-epoch test. |
+| `inoasMinimalAuxScore` | Normalized post-update auxiliary residual score. |
+| `inoasReceiverEnergy` | Left-held state occupancy and receiver-module energy. |
+| `MPC_INOAS` | CW guidance, actuator bounds and node/between-node avoidance constraints. |
+| `predictNavigationCovarianceProfile` | Auxiliary-only nonlinear UKF forecast. |
+| `myStateTransitionFcn` | Six-state central-gravity/J2 propagation. |
+| `myMeasurementFcn` | Three-component auxiliary ECI position observation. |
+| `gnss_measurement_fcn` | Six-component GNSS position/velocity observation. |
+| `get_nominal_trajectory` | J2 reference generation. |
+| `get_debris_trajectory` | J2 debris trajectory constructed for the design encounter. |
+| `referenceFrameTransform` | ECI/RTN frame transformation. |
+| `prepare_gnss_sensor_workspace` | Simulink input preparation. |
+| `load_gnss_sensor_profile` | Reads processed GNSS profiles; initialization overrides smoothing with raw errors. |
+| `load_gnss_quality_signals` | Quality-input preparation for the model callback. |
+| `inoas_data_file`, `inoas_data_path` | Resolve versioned inputs under `../data/`. |
+| `inoas_runtime_path` | Resolve generated files under `../results/cache/`. |
+| `plot_MPC_results`, `get_logsout_signal` | MATLAB diagnostic plots and signal lookup. |
 
-1. `initialize_inoas_simulation.m` prepares the base workspace: input file
-   paths, physical scenario, Kalman/UKF tuning, GNSS sensor profile, nominal
-   reference trajectory, debris encounter, and MPC parameters.
-2. The Simulink model reads those workspace variables and calls the estimator,
-   instrument-decision logic, and MPC controller during simulation.
-3. `plot_MPC_results.m` can be run after simulation to regenerate plots for the
-   selected scenario setup.
-4. `tools/visualization/export_visualization_data.m` can be run after simulation
-   to export a compact `.mat` file for the optional Python visualization
-   workflow.
+`instrument_decision.m` is a historical two-state implementation retained for
+legacy regression tests. It is **not** the function executed by the present
+Simulink receiver block; its block label alone does not identify the algorithm.
 
-## Model Core
-
-- `MPC_INOAS.m` - Model Predictive Control law for reference tracking and
-  debris-avoidance guidance. It builds the prediction model, applies actuator and
-  safety constraints, and returns the commanded control acceleration.
-- `instrument_decision.m` - GNSS supervisor using shared on/off durations,
-  a heuristic residual score, satellite visibility, and GNSS quality. Exposes
-  a status snapshot for the optional scheduled navigation forecast.
-- `navigationDutyCycleStep.m` - Pure supervisor transition shared by the real
-  state machine and the nominal forecast.
-- `predictNavigationCovarianceProfile.m` - UKF posterior covariance forecast
-  at the estimator rate, including auxiliary and optional scheduled GNSS updates.
-- `myStateTransitionFcn.m` - State-transition model used by the Unscented Kalman
-  Filter. It propagates the spacecraft state between measurement updates.
-- `myMeasurementFcn.m` - Measurement function for the Kalman/UKF position
-  observation model.
-- `gnss_measurement_fcn.m` - GNSS measurement function used by the Simulink sensor
-  chain.
-
-## Scenario Generation
-
-- `get_nominal_trajectory.m` - Generates the J2-propagated nominal orbital
-  reference trajectory used by the MPC.
-- `get_debris_trajectory.m` - Builds the debris encounter trajectory relative to
-  the reference orbit.
-- `referenceFrameTransform.m` - Computes ECI-to-RTN/LVLH frame transformations
-  used for relative tracking and collision-avoidance geometry.
-
-## GNSS Data Preparation
-
-- `prepare_gnss_sensor_workspace.m` - Prepares time-varying GNSS noise,
-  covariance, validity, and quality signals for Simulink.
-- `load_gnss_sensor_profile.m` - Reads the Sentinel-6A-derived `.dat` file and
-  constructs the GNSS sensor profile.
-- `load_gnss_quality_signals.m` - Loads GNSS quality indicators into the MATLAB
-  base workspace before simulation.
-- `inoas_data_file.m` - Resolves versioned input files stored under `../data/`.
-- `inoas_data_path.m` - Returns the preferred `../data/` path for generated
-  MATLAB data files.
-
-## Post-Processing
-
-- `plot_MPC_results.m` - Generates the main validation plots for trajectory
-  tracking, debris separation, control effort, and navigation mode selection.
-- `get_logsout_signal.m` - Helper used by `plot_MPC_results.m` to retrieve logged
-  Simulink signals with compatible alternative names.
+Some estimator and sensor functions are embedded in the Simulink file. Their
+settings and limitations are documented in [architecture](../docs/model-architecture.md)
+and [data](../data/README.md). Do not treat unused legacy workspace variables
+as evidence of the active measurement dimension or forecast method.

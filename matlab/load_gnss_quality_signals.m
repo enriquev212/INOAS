@@ -9,7 +9,7 @@ function load_gnss_quality_signals(datFile)
 %     10=HPE 11=VPE 12=EPE 13=NPE 14=UPE 15=HDOP 16=VDOP 17=PDOP
 
 if nargin < 1 || isempty(datFile)
-    datFile = 'cov_perturb_POS_s6a_Y24D011_fixed.dat';
+    datFile = 'full_perturb_POS_s6a_Y24D011_fixed.dat';
 end
 
 datFile = inoas_data_file(datFile);
@@ -36,7 +36,7 @@ pdop = double(raw{17});
 % in Kalman mode for the whole run. For simulation starts that assume an
 % already available navigation solution, hold the first valid quality sample
 % backward over the initial placeholder interval.
-valid_idx = find(sol >= 0.5 & nsv >= 4 & pdop > 0, 1, 'first');
+valid_idx = find(sol >= 0.5 & nsv >= 5 & pdop > 0, 1, 'first');
 if ~isempty(valid_idx) && valid_idx > 1
     sol(1:valid_idx-1)  = sol(valid_idx);
     nsv(1:valid_idx-1)  = nsv(valid_idx);

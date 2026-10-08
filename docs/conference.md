@@ -11,6 +11,7 @@
   Big Sky, Montana, March 6-13, 2027
 - **Session:** 12.01 Orbital, Surface and Payload/Instrument Mission Operations
 - **Paper number:** 2437 (abstract accepted on July 6, 2026)
+- **Status:** Full paper submitted; review decision pending.
 
 The paper is the CubeSat adaptation of the INOAS architecture developed for the
 Student Aerospace Challenge, evaluated in a paired Monte Carlo campaign under
@@ -62,34 +63,26 @@ MPC collision avoidance coupled with safe duty-cycled GNSS/UKF navigation.
 | GNSS rejection intervals | [700, 980), [2000, 2260) and [3500, 3550) s |
 | Receiver timing | 35 s minimum acquisition delay for every policy, 60 s nominal tracking, 300 s nominal OFF |
 | Receiver policies | Full GNSS (always powered); Fixed-Time (fixed 96 s ON / 300 s OFF calendar); Reactive (nominal timing, reacquisition on poor tracking, and a pseudo-NIS alarm with threshold 10.3) |
-| Auxiliary faults | +5000 m per axis over [600, 620) s; +3500 m per axis over [2000, 2020) s |
+| Auxiliary bias pulses | +5000 m per axis over [600, 620) s; +3500 m per axis over [2000, 2020) s |
 | Receiver power model | OFF 0.025 W, TRACKING 1.8 W, ACQUIRING 1.3 × TRACKING |
 | Monte Carlo campaign | 50 paired replicates × 5 configurations (250 runs) |
 
 Debris position uncertainty is neglected in the paper to isolate the behavior of
 the controller.
 
-### Differences from the Code on `main`
+### Public Model and Reproducibility
 
-The September 2026 model on `main` predates this configuration. The main
-differences, among others, are:
+`main` now uses the AUX3 model from `feat/aux3-on-alberto` at `721c0eb`.
+The default runner selects Reactive/adaptive operation, 6743 s, and seed 42.
+Full GNSS, Fixed-Time and the constant 295 m radius are explicit run options.
+The Simulink file itself is unchanged from the AUX3 source revision.
 
-- encounter at 800 s with relative velocity `[0, 10, 0] m/s`, instead of 1500 s
-  with `[300, 100, 0] m/s`;
-- 3 s MPC step with a 125-step horizon, instead of 12 s and 60 steps;
-- 4000 s runs instead of 6743 s;
-- a two-state ON/OFF supervisor without an acquisition phase, in which the
-  pseudo-NIS score can bring the switch-on forward but cannot extend the ON
-  window;
-- GNSS health check with `Nsat ≥ 4`, `PDOP ≤ 6` and HPE/VPE ≤ 5 m, instead of
-  `Nsat ≥ 5` and `0 < PDOP ≤ 6`, and pseudo-NIS threshold 12 instead of 10.3;
-- four auxiliary measurements (ECI position and altitude) instead of three
-  position measurements;
-- larger UKF process noise and a fixed initial estimation error, instead of the
-  paper's process-noise envelope and random initial errors;
-- no atmospheric drag in the plant;
-- no Full GNSS / Fixed-Time / Reactive comparison and no paired Monte Carlo
-  campaign.
+The original 50-run seeds, randomized initial errors and complete campaign
+outputs have not been supplied with this public update. The default single
+run retains the AUX3 demonstration's initial estimation error, which can be
+overridden through `InitialError`. Running this repository therefore does not
+by itself reproduce the reported ensemble medians. See
+[model provenance](model-provenance.md) and [run instructions](how-to-run.md).
 
 ## Acknowledgements
 
@@ -107,7 +100,7 @@ If you refer to this project or the paper, please use:
   booktitle = {Proceedings of the 2027 IEEE Aerospace Conference},
   address = {Big Sky, Montana, USA},
   year = {2027},
-  note = {To appear; abstract accepted July 6, 2026, paper no. 2437}
+  note = {Submitted; review decision pending. Abstract accepted July 6, 2026, paper no. 2437}
 }
 ```
 

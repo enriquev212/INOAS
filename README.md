@@ -12,8 +12,7 @@ INOAS studies how a LEO servicing spacecraft can reduce GNSS receiver duty cycle
 while keeping enough navigation accuracy and collision-avoidance authority for
 rendezvous and debris-avoidance operations. The implementation combines a
 Simulink orbital plant, simulated GNSS measurements, UKF/Kalman state estimation,
-instrument decision logic, and an MPC controller with covariance-aware safety
-margins.
+receiver management, and an MPC controller with covariance-aware safety radii.
 
 ![Debris-avoidance playback from the challenge-final model](docs/assets/debris-avoidance-playback.gif)
 
@@ -32,12 +31,12 @@ with degraded GNSS):
   minimum separation is 194.2 m and the applied Δv is 32% lower than with a
   constant 295 m radius. Every run stays outside the 150 m keep-out distance.
 
-> **Code status.** `main` contains the September 2026 conference-adaptation
-> model. The final paper uses a later configuration (encounter, MPC horizon,
-> receiver supervisor, auxiliary sensors, noise settings, atmospheric drag and
-> the Monte Carlo campaign, among others) that has not been merged into `main`
-> yet, so the default runs in this repository do not reproduce the paper
-> results.
+> **Code status.** The default is now the AUX3 model from
+> `feat/aux3-on-alberto` at `721c0eb`, identified by the team as the paper-model
+> base. The public runner adds explicit policy/radius selection and deterministic
+> seeds. The original 50-run seed list and campaign outputs are not included;
+> the figures above are reported paper results, not a claim that the default
+> single run reproduces their medians. See [model provenance](docs/model-provenance.md).
 
 ## Project Materials
 
@@ -72,18 +71,16 @@ guidance becomes more conservative only when state knowledge is less certain.
 
 ## CubeSat Physical Model
 
-The default setup on `main` keeps the existing Sentinel-6A-inspired INOAS
-reference orbit and Sentinel-6A-derived GNSS-quality timing/profile data, while
-replacing the original large-spacecraft physical assumptions with a
-representative 3U CubeSat-class bus. The CubeSat bus and receiver assumptions
-are inspired by the STF-1 duty-cycled GPS case from Lantto's CubeSat POD study:
+The default setup keeps a Sentinel-6A-inspired reference orbit and
+Sentinel-6A-derived GNSS error/quality profiles, with a representative 3U
+CubeSat-class bus. Platform assumptions are inspired by the STF-1 duty-cycled
+GPS case from Lantto's CubeSat POD study:
 
 - approximate 3U mass: `3 * 1.33 kg`;
-- cross-sectional area: `0.03 m^2`, used by the propagated SRP model;
-- drag coefficient: `2.2`, documented for completeness because atmospheric
-  drag is not currently propagated;
+- cross-sectional area: `0.03 m^2`, used for SRP and drag;
+- drag coefficient: `2.2`, with constant density `1.35e-13 kg/m^3`;
 - reflectivity coefficient: `1.0`, used by the propagated SRP model;
-- representative dual-frequency receiver: NovAtel OEM615.
+- receiver-module power reference: Pumpkin GPSRM 1 / NovAtel OEM719.
 
 The translational actuation reference is kept separate from STF-1. For the
 conference setup, the per-axis acceleration bound is derived from a
@@ -94,15 +91,14 @@ Seeker-class individual cold-gas thruster scale:
 
 Seeker 1.0 is used as the actuator-architecture reference class: a NASA Johnson
 Space Center 3U cold-gas free-flyer inspection demonstrator. The `0.10 N`
-number is an acceleration-box reference, not a claim that the manoeuvre uses the
+number is an acceleration-box reference, not a claim that the maneuver uses the
 full box-limit thrust. CPOD is the flight-demonstrated 3U RPO reference: two
 autonomous CubeSats with 3-DOF translational control that demonstrated
 rendezvous and proximity operations on orbit.
 
-The final paper keeps this platform, but takes the Pumpkin GPSRM 1 (NovAtel
-OEM719) as GNSS module reference for its receiver power model and also
-propagates atmospheric drag; see
-[IEEE Aerospace 2027 paper](docs/conference.md#paper-configuration).
+The plant includes Earth gravity to degree 2, Sun/Moon gravity, SRP and drag.
+The UKF and the reference/debris propagators use central gravity and J2; the
+MPC uses CW dynamics. See [paper configuration](docs/conference.md#paper-configuration).
 
 ## Documentation
 
@@ -110,35 +106,41 @@ propagates atmospheric drag; see
 |---|---|
 | [How to run](docs/how-to-run.md) | Simulink setup, simulation modes, dependencies and common MATLAB notes. |
 | [Model architecture](docs/model-architecture.md) | System layers, navigation decision logic and covariance-aware safety equations. |
-| [Navigation covariance prediction](docs/navigation-covariance-prediction.md) | UKF/MPC wiring changes, forecast assumptions, MATLAB tests, and CSV validation. |
-| [Results](docs/results.md) | Paper results, superseded challenge-final figures, default parameters and generated plots. |
+| [Navigation covariance prediction](docs/navigation-covariance-prediction.md) | Forecast assumptions, supporting-plane constraints and verification. |
+| [Results](docs/results.md) | Reported paper results, superseded challenge-final figures and metric definitions. |
 | [Visualization workflow](docs/visualization-workflow.md) | MATLAB-to-Python pipeline for regenerating PNG and GIF assets. |
-| [IEEE Aerospace 2027 paper](docs/conference.md) | Paper configuration, how it differs from the code on `main`, and citation. |
+| [IEEE Aerospace 2027 paper](docs/conference.md) | Paper configuration and submission/citation information. |
+| [Model provenance](docs/model-provenance.md) | AUX3 source revision, public-runner changes and reproducibility limits. |
 | [MATLAB function index](matlab/README.md) | File-by-file guide to the MATLAB scripts and model helpers. |
 | [References](docs/references.md) | Bibliography and external technical sources. |
 
 ## Quick Start
 
-For the navigation-covariance trial in MATLAB Online, see
-[MATLAB Online trial](MATLAB_ONLINE_TRIAL.md). From the extracted `INOAS`
-folder, `run_navigation_trial` runs the 1000 s case and exports CSV/MAT files.
-
-From the repository root in MATLAB:
+From the repository root in MATLAB, with `inoas_model` closed:
 
 ```matlab
-open_inoas_debris_demo
-out = sim("inoas_model");
-run("matlab/plot_MPC_results.m");
+caseDir = run_inoas_case('reactive', 'adaptive');
 ```
 
-Use `open_inoas_fast` for a short setup check and `open_inoas_model` for the
-full validation setup. See [How To Run](docs/how-to-run.md) for requirements,
-simulation modes, and common MATLAB notes.
+This runs 6743 s and exports configuration, simulation data and CSVs under
+ignored `results/`. Start with `'StopTime', 120` for an installation check.
+Use the same `Seed` and `InitialError` for paired comparisons:
+
+```matlab
+run_inoas_case('full',     'adaptive',    'Seed', 42);
+run_inoas_case('fixed',    'constant295', 'Seed', 42);
+run_inoas_case('reactive', 'constant295', 'Seed', 42);
+```
+
+For the graphical workflow, `open_inoas_model` opens the default model and
+`open_inoas_debris_demo` selects an 1800 s encounter run. See
+[How To Run](docs/how-to-run.md) and [MATLAB Online](MATLAB_ONLINE_TRIAL.md).
 
 ## Repository Layout
 
 ```text
 .
+|-- run_inoas_case.m
 |-- open_inoas_model.m
 |-- open_inoas_fast.m
 |-- open_inoas_debris_demo.m
@@ -154,7 +156,9 @@ Key files:
 
 - `models/inoas_model.slx` - final integrated Simulink model.
 - `matlab/MPC_INOAS.m` - MPC tracking and debris-avoidance controller.
-- `matlab/instrument_decision.m` - GNSS/Kalman mode-selection logic.
+- `matlab/inoasMinimalGnssStep.m` - active three-state Reactive supervisor.
+- `matlab/inoasFixedGnssStep.m` - fixed 96 s ON / 300 s OFF comparator.
+- `matlab/inoasPaperConfig.m` - public run options.
 - `tools/visualization/` - optional workflow for regenerating PNG/GIF assets
   from a completed simulation.
 - `docs/assets/` - architecture figure, poster preview, final poster PDF, and
@@ -182,6 +186,7 @@ The project was extended into the paper *Robust MPC-Based Collision Avoidance
 Guidance and Safe Duty-Cycled GNSS Navigation for LEO CubeSats* for the **2027
 IEEE Aerospace Conference** (Big Sky, Montana, March 6-13, 2027; session 12.01,
 paper 2437). The abstract was accepted on **July 6, 2026**.
+The full paper has been submitted; the review decision is pending.
 
 Citation details are available in [docs/conference.md](docs/conference.md) and
 [`CITATION.cff`](CITATION.cff).

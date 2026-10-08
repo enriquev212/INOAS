@@ -10,7 +10,7 @@ function outputDir = export_campaign_csv(outputDir)
 %
 %   timeseries.csv  - trajectory, estimation, debris, safety, and RTN geometry
 %   control.csv     - commanded accelerations, saturation ratio, and delta-v
-%   navigation.csv  - GNSS/Kalman selector, NIS, and GNSS quality indicators
+%   navigation.csv  - correction enable, receiver state/energy, auxiliary score
 %   metrics.csv     - scalar summary metrics for tables and captions
 
 if nargin < 1 || isempty(outputDir)
@@ -71,6 +71,7 @@ debris_distance_m = vecnorm(truth_eci_m - debris_eci_m_at_time, 2, 2);
 nominal_debris_distance_m = vecnorm(reference_eci_m - debris_eci_m_at_time, 2, 2);
 
 safe_radius_m = scalarBase("dsafe0", NaN);
+keepout_distance_m = 150;
 u_max_mps2 = scalarBase("u_max", NaN);
 t_debris_s = scalarBase("t_debris", NaN);
 mpc_horizon = scalarBase("Np", NaN);
@@ -94,6 +95,17 @@ lambda = resamplePrevious(lambda_time_s, lambda_raw, time_s, NaN);
 [nis_time_s, nis_raw] = optionalSignal(logsout, ...
     ["NIS", "NIS_smooth", "PseudoNIS", "Pseudo_NIS", "pseudo_NIS", "nis"]);
 nis = resamplePrevious(nis_time_s, nis_raw, time_s, NaN);
+[receiver_time_s, receiver_raw] = optionalSignal(logsout, "receiver_on");
+receiver_on = resamplePrevious(receiver_time_s, receiver_raw, time_s, NaN);
+[mode_time_s, mode_raw] = optionalSignal(logsout, ["receiver_mode", "mode"]);
+receiver_mode = resamplePrevious(mode_time_s, mode_raw, time_s, NaN);
+receiver_energy_Wh = NaN(size(time_s));
+poweredFraction = NaN;
+energySavingFraction = NaN;
+if ~isempty(mode_time_s)
+    [energyWh, poweredFraction, energySavingFraction] = inoasReceiverEnergy(mode_time_s, mode_raw);
+    receiver_energy_Wh = interp1(mode_time_s, energyWh, time_s, "linear", "extrap");
+end
 
 [gnss_quality_time_s, gnss_nsv_raw, gnss_pdop_raw, gnss_hpe_raw, gnss_vpe_raw, gnss_solution_raw] = gnssQualitySignals();
 gnss_nsv = resamplePrevious(gnss_quality_time_s, gnss_nsv_raw, time_s, NaN);
@@ -110,7 +122,8 @@ timeseriesTable = table( ...
     reference_velocity_eci_mps(:,1), reference_velocity_eci_mps(:,2), reference_velocity_eci_mps(:,3), ...
     debris_eci_m_at_time(:,1), debris_eci_m_at_time(:,2), debris_eci_m_at_time(:,3), ...
     tracking_error_m, estimation_error_m, debris_distance_m, nominal_debris_distance_m, ...
-    safe_radius_m * ones(size(time_s)), dynamic_safe_first_m, dynamic_safe_horizon_m, robust_margin_m, ...
+    safe_radius_m * ones(size(time_s)), keepout_distance_m * ones(size(time_s)), ...
+    dynamic_safe_first_m, dynamic_safe_horizon_m, robust_margin_m, ...
     sc_debris_rtn_m(:,1), sc_debris_rtn_m(:,2), sc_debris_rtn_m(:,3), ...
     ref_debris_rtn_m(:,1), ref_debris_rtn_m(:,2), ref_debris_rtn_m(:,3), ...
     'VariableNames', { ...
@@ -121,7 +134,7 @@ timeseriesTable = table( ...
         'reference_vx_mps', 'reference_vy_mps', 'reference_vz_mps', ...
         'debris_x_m', 'debris_y_m', 'debris_z_m', ...
         'tracking_error_m', 'estimation_error_m', 'debris_distance_m', 'nominal_debris_distance_m', ...
-        'safe_radius_m', 'dynamic_safe_first_m', 'dynamic_safe_horizon_m', 'robust_margin_m', ...
+        'safe_radius_m', 'keepout_distance_m', 'dynamic_safe_first_m', 'dynamic_safe_horizon_m', 'robust_margin_m', ...
         'sc_debris_R_m', 'sc_debris_I_m', 'sc_debris_N_m', ...
         'ref_debris_R_m', 'ref_debris_I_m', 'ref_debris_N_m'});
 
@@ -132,6 +145,17 @@ else
     axis_saturation_ratio = NaN(size(control_time_s));
 end
 delta_v_mps = cumtrapz(control_time_s, u_norm_mps2);
+appliedSignal = getOptionalLogSignal(logsout, ["applied_acceleration_eci", "u_applied", "applied_command_eci"]);
+appliedDeltaV = NaN;
+if ~isempty(appliedSignal)
+    [appliedTime, appliedControl] = signalToMatrix(appliedSignal, 3, "u_applied");
+    appliedDeltaV = trapz(appliedTime, vecnorm(appliedControl, 2, 2));
+    appliedDeltaVSeries = cumtrapz(appliedTime, vecnorm(appliedControl, 2, 2));
+    appliedTable = table(appliedTime, appliedControl(:,1), appliedControl(:,2), ...
+        appliedControl(:,3), appliedDeltaVSeries, 'VariableNames', ...
+        {'time_s', 'applied_x_mps2', 'applied_y_mps2', 'applied_z_mps2', 'applied_delta_v_mps'});
+    writetable(appliedTable, fullfile(outputDir, 'applied_control.csv'));
+end
 
 controlTable = table( ...
     control_time_s, control_mps2(:,1), control_mps2(:,2), control_mps2(:,3), ...
@@ -140,8 +164,8 @@ controlTable = table( ...
                       'u_norm_mps2', 'u_max_mps2', 'axis_saturation_ratio', 'delta_v_mps'});
 
 navigationTable = table( ...
-    time_s, lambda, nis, estimation_error_m, gnss_nsv, gnss_pdop, gnss_hpe_m, gnss_vpe_m, gnss_solution_flag, ...
-    'VariableNames', {'time_s', 'lambda', 'nis', 'estimation_error_m', ...
+    time_s, lambda, receiver_on, receiver_mode, receiver_energy_Wh, nis, estimation_error_m, gnss_nsv, gnss_pdop, gnss_hpe_m, gnss_vpe_m, gnss_solution_flag, ...
+    'VariableNames', {'time_s', 'lambda', 'receiver_on', 'receiver_mode', 'receiver_energy_Wh', 'nis', 'estimation_error_m', ...
                       'gnss_nsv', 'gnss_pdop', 'gnss_hpe_m', 'gnss_vpe_m', 'gnss_solution_flag'});
 
 metricNames = strings(0, 1);
@@ -161,7 +185,8 @@ metricValues = zeros(0, 1);
 [metricNames, metricValues] = addMetric(metricNames, metricValues, "final_estimation_error_m", estimation_error_m(end));
 [metricNames, metricValues] = addMetric(metricNames, metricValues, "peak_control_norm_mps2", max(u_norm_mps2, [], "omitnan"));
 [metricNames, metricValues] = addMetric(metricNames, metricValues, "peak_axis_acceleration_mps2", max(max(abs(control_mps2), [], 2), [], "omitnan"));
-[metricNames, metricValues] = addMetric(metricNames, metricValues, "final_delta_v_mps", delta_v_mps(end));
+[metricNames, metricValues] = addMetric(metricNames, metricValues, "final_commanded_delta_v_mps", delta_v_mps(end));
+[metricNames, metricValues] = addMetric(metricNames, metricValues, "final_delta_v_mps", appliedDeltaV);
 [metricNames, metricValues] = addMetric(metricNames, metricValues, "saturation_fraction", mean(axis_saturation_ratio >= 0.999, "omitnan"));
 if all(isnan(lambda))
     dutyRatio = NaN;
@@ -169,8 +194,11 @@ else
     lambdaOn = double(lambda > 0.5);
     dutyRatio = trapz(time_s, lambdaOn) / max(time_s(end) - time_s(1), eps);
 end
-[metricNames, metricValues] = addMetric(metricNames, metricValues, "gnss_active_fraction", dutyRatio);
-[metricNames, metricValues] = addMetric(metricNames, metricValues, "gnss_energy_saving_fraction", 1 - dutyRatio);
+[metricNames, metricValues] = addMetric(metricNames, metricValues, "gnss_correction_enabled_fraction", dutyRatio);
+[metricNames, metricValues] = addMetric(metricNames, metricValues, "gnss_active_fraction", poweredFraction);
+[metricNames, metricValues] = addMetric(metricNames, metricValues, "receiver_powered_fraction", poweredFraction);
+[metricNames, metricValues] = addMetric(metricNames, metricValues, "receiver_energy_Wh", receiver_energy_Wh(end));
+[metricNames, metricValues] = addMetric(metricNames, metricValues, "gnss_energy_saving_fraction", energySavingFraction);
 
 metricsTable = table(metricNames, metricValues, 'VariableNames', {'metric', 'value'});
 
@@ -229,7 +257,11 @@ availableNames = string(logsout.getElementNames);
 for k = 1:numel(candidateNames)
     name = string(candidateNames(k));
     if any(availableNames == name)
-        signal = logsout.get(char(name)).Values;
+        indices = find(availableNames == name);
+        if numel(indices) ~= 1
+            error('INOAS:AmbiguousLogSignal', 'Multiple logged signals are named %s; use a unique logging name.', name);
+        end
+        signal = logsout.getElement(indices).Values;
         return
     end
 end
