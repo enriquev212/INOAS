@@ -27,8 +27,9 @@ physical magnetometer/sun-sensor measurement model.
 
 ## Receiver Supervisor
 
-The active implementation is `inoasMinimalGnssStep.m`; the similarly named
-legacy `instrument_decision.m` is not called by the current Simulink model.
+The active implementation is `inoasMinimalGnssStep.m`; the historical
+[`tests/legacy/instrument_decision.m`](../tests/legacy/instrument_decision.m)
+is not called by the current Simulink model or included in the simulation path.
 `lambda` means **GNSS corrections enabled**, not receiver powered.
 
 | State (`receiver_mode`) | `receiver_on` | `lambda` |

@@ -72,7 +72,8 @@ the controller.
 
 ### Public Model and Reproducibility
 
-`main` now uses the AUX3 model from `feat/aux3-on-alberto` at `721c0eb`.
+`main` uses the AUX3 model from former branch `feat/aux3-on-alberto` at `721c0eb`,
+preserved under the `archive/aux3-on-alberto-20261009` tag.
 The default runner selects Reactive/adaptive operation, 6743 s, and seed 42.
 Full GNSS, Fixed-Time and the constant 295 m radius are explicit run options.
 The Simulink file itself is unchanged from the AUX3 source revision.

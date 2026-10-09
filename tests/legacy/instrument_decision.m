@@ -1,5 +1,7 @@
 function lambda = instrument_decision(J, n_sat, PDOP, HPE, VPE, gnss_sol)
-% INSTRUMENT_DECISION  State machine: GNSS vs Kalman selector
+% INSTRUMENT_DECISION  Historical GNSS/Kalman selector, for regression only.
+%   The active model uses inoasMinimalGnssStep; do not add this fixture to
+%   the simulation path.
 %   Outputs lambda = 1 (GNSS active)  or  0 (Kalman propagation only).
 %
 % INPUTS

@@ -7,6 +7,8 @@ function setupOnce(testCase)
 root = fileparts(fileparts(mfilename('fullpath')));
 testCase.TestData.oldPath = path;
 addpath(fullfile(root, 'matlab'));
+addpath(fullfile(root, 'tests', 'legacy'));
+testCase.TestData.root = root;
 end
 
 function teardownOnce(testCase)
@@ -66,6 +68,15 @@ clear instrument_decision
 verifyEqual(testCase, instrument_decision(0, 4, 2, 0, 0, 1), 0);
 clear instrument_decision
 verifyEqual(testCase, instrument_decision(0, NaN, 2, 0, 0, 1), 0);
+end
+
+function testSupervisorLocations(testCase)
+root = testCase.TestData.root;
+verifyEqual(testCase, exist(fullfile(root, 'matlab', 'instrument_decision.m'), 'file'), 0);
+verifyEqual(testCase, which('instrument_decision'), ...
+    fullfile(root, 'tests', 'legacy', 'instrument_decision.m'));
+verifyEqual(testCase, which('inoasMinimalGnssStep'), ...
+    fullfile(root, 'matlab', 'inoasMinimalGnssStep.m'));
 end
 
 function testFourSatellitesCannotCompleteAcquisition(testCase)

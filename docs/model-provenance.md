@@ -2,16 +2,48 @@
 
 ## Source Revisions
 
-The public refresh uses `feat/aux3-on-alberto` at
+The public refresh uses former branch `feat/aux3-on-alberto` at
 `721c0eb19e7e5edced4424ad8dbb538ce946125f` as its scientific base. The team
 identified this branch as the likely source used for the submitted paper.
+That revision is preserved under the `archive/aux3-on-alberto-20261009` tag.
 `models/inoas_model.slx` is byte-identical to that revision. The MPC, forecast
 and measurement/dynamics core were imported from the same branch.
 
 The previous default and the recently updated paper documentation remain in
 Git history at `196af19df1c364af2c4fb94581ebd3645e0bb9fb`. The update preserves
 the challenge GIF/poster assets and the reported paper results rather than
-replacing them with a new demo. Remote historical branches are not deleted.
+replacing them with a new demo. Superseded remote branches are preserved by
+archive tags as described below; their history is not discarded.
+
+## Archived Development Branches
+
+`main` is the only active remote branch after the 9 October 2026 cleanup.
+The following annotated tags preserve the exact former branch tips, including
+their ancestors and historical model files. These are historical references,
+not alternative supported defaults.
+
+| Former branch | Archive tag | Commit |
+| --- | --- | --- |
+| `feat/aux3-on-alberto` | [`archive/aux3-on-alberto-20261009`](https://github.com/enriquev212/INOAS/tree/archive/aux3-on-alberto-20261009) | `721c0eb19e7e5edced4424ad8dbb538ce946125f` |
+| `fix/alberto-debris-j2-20260917` | [`archive/alberto-debris-j2-20260917`](https://github.com/enriquev212/INOAS/tree/archive/alberto-debris-j2-20260917) | `1a558b558141e29b7b49de8753de4ecea91cd79f` |
+| `fix/mpc-open-points` | [`archive/mpc-open-points-20261009`](https://github.com/enriquev212/INOAS/tree/archive/mpc-open-points-20261009) | `81496d47d396adb0628782da91073a4fbdd4ad20` |
+| `recover-domingo` | [`archive/recover-domingo-20261009`](https://github.com/enriquev212/INOAS/tree/archive/recover-domingo-20261009) | `48d567844fc5b21df14c346346707fdbf1b841df` |
+| `recover-domingo-altimetro` | [`archive/recover-domingo-altimetro-20261009`](https://github.com/enriquev212/INOAS/tree/archive/recover-domingo-altimetro-20261009) | `cdbb9e5b44eeae0d6348ded838eb6c1b431c6dc7` |
+
+The already merged `docs/final-paper-results` and
+`maintenance/github-paper-refresh` branches are also removed; their commits
+remain in `main`. The `inoas-project-materials-v1` release tag is unchanged.
+Local working copies and uncommitted experiments are not removed or reset.
+
+To inspect an old version without changing the active checkout:
+
+```shell
+git fetch origin --tags
+git worktree add --detach ../INOAS-historical archive/aux3-on-alberto-20261009
+```
+
+Do not use an archive tag as evidence that its full configuration reproduces
+the submitted 50-run campaign; the limits below still apply.
 
 ## Public-Runner Changes
 
@@ -26,7 +58,8 @@ replacing them with a new demo. Remote historical branches are not deleted.
 - Outputs distinguish receiver power from GNSS correction enable and applied
   acceleration from commanded acceleration.
 - Obsolete two-state rewiring scripts and their old tests/instructions are
-  removed. `instrument_decision.m` remains only as a legacy regression reference,
+  removed. [`tests/legacy/instrument_decision.m`](../tests/legacy/instrument_decision.m)
+  remains only as a legacy regression reference outside the active MATLAB path,
   not the active supervisor.
 - Diagnostics/comments are corrected; the GNSS frame approximation, gravity,
   force models, noise assumptions, MPC weights and auxiliary biases are retained.
@@ -75,3 +108,13 @@ challenge GIF matches the previous main (`0f5bcaca...`).
 
 This verification did not rerun a complete 6743 s case or the original 50-run
 campaign. It checks the public migration and workflow, not the paper statistics.
+
+### Branch and Legacy Cleanup
+
+After relocating the historical supervisor to `tests/legacy/`, all 32 MATLAB
+tests and five Python tests passed. The added test checks that the historical
+file is absent from `matlab/` and that both supervisor functions resolve to
+their intended locations. The model's embedded wrapper still calls
+`inoasMinimalGnssStep`; the Simulink file, MPC, active supervisor and visual
+assets are unchanged by this cleanup. Archive tags were verified on GitHub
+against the full former branch-tip SHAs before deleting any branch.

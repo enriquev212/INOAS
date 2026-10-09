@@ -31,8 +31,10 @@ with degraded GNSS):
   minimum separation is 194.2 m and the applied Δv is 32% lower than with a
   constant 295 m radius. Every run stays outside the 150 m keep-out distance.
 
-> **Code status.** The default is now the AUX3 model from
-> `feat/aux3-on-alberto` at `721c0eb`, identified by the team as the paper-model
+> **Code status.** The default is now the AUX3 model from former branch
+> `feat/aux3-on-alberto` at `721c0eb`, preserved as
+> [an archive tag](https://github.com/enriquev212/INOAS/tree/archive/aux3-on-alberto-20261009)
+> and identified by the team as the paper-model
 > base. The public runner adds explicit policy/radius selection and deterministic
 > seeds. The original 50-run seed list and campaign outputs are not included;
 > the figures above are reported paper results, not a claim that the default
@@ -137,6 +139,10 @@ For the graphical workflow, `open_inoas_model` opens the default model and
 [How To Run](docs/how-to-run.md) and [MATLAB Online](MATLAB_ONLINE_TRIAL.md).
 
 ## Repository Layout
+
+`main` is the active version. Superseded development branches are preserved as
+`archive/*` tags rather than alternative defaults; see
+[version history](docs/model-provenance.md#archived-development-branches).
 
 ```text
 .

@@ -28,9 +28,11 @@ The active model is `../models/inoas_model.slx`. The top-level runner
 | `inoas_runtime_path` | Resolve generated files under `../results/cache/`. |
 | `plot_MPC_results`, `get_logsout_signal` | MATLAB diagnostic plots and signal lookup. |
 
-`instrument_decision.m` is a historical two-state implementation retained for
-legacy regression tests. It is **not** the function executed by the present
-Simulink receiver block; its block label alone does not identify the algorithm.
+The historical two-state implementation is kept only in
+[`tests/legacy/instrument_decision.m`](../tests/legacy/instrument_decision.m),
+outside the active MATLAB directory. It is **not** the function executed by the
+present Simulink receiver block; its block label alone does not identify the
+algorithm. The regression tests add its directory temporarily.
 
 Some estimator and sensor functions are embedded in the Simulink file. Their
 settings and limitations are documented in [architecture](../docs/model-architecture.md)
