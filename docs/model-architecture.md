@@ -29,6 +29,10 @@ is 3.99 kg and area is 0.03 m^2. The UKF and the nominal reference/debris
 propagators use central gravity and J2. The estimator supplies a continuous
 six-state ECI estimate and covariance to the MPC, including during GNSS-OFF.
 See [configuration](conference.md#paper-configuration).
+Orbital propagation background is given by Montenbruck and Gill
+[40](references.md#orbital-dynamics-and-mpc-guidance); UKF background and
+implementation documentation are listed in
+[39, 41, 42](references.md#estimation-and-residual-monitoring).
 
 The simulated GNSS observation contains truth position/velocity plus replayed
 disturbances. The dataset's `[NPE,EPE,UPE]` errors are reused componentwise as
@@ -42,7 +46,17 @@ with nominal covariance `(2000 m)^2 I_3`. Bias pulses of 5000 m per axis over
 [600,620) s and 3500 m per axis over [2000,2020) s are injected. It is not a
 physical magnetometer/sun-sensor measurement model.
 
+The paper's auxiliary-navigation motivation is supported by
+[25-29](references.md#estimation-and-residual-monitoring). These studies are
+background references, not physical sensor models implemented in this simulation.
+
 ## Receiver Supervisor
+
+![Paper Fig. 2: Reactive receiver state machine](assets/paper/receiver-supervisor.png)
+
+[Vector PDF](assets/paper/receiver-supervisor.pdf). This diagram shows the
+nominal Reactive policy. `GNSS_healthy`, `fresh` and `alarm` are defined below;
+`t_X` is elapsed time since the latest entry into state X.
 
 The active implementation is `inoasMinimalGnssStep.m`; the historical
 [`tests/legacy/instrument_decision.m`](../tests/legacy/instrument_decision.m)
@@ -73,16 +87,22 @@ The alarm is the post-update auxiliary residual quadratic score normalized
 by the nominal auxiliary covariance, averaged over ten samples and delayed
 one estimator step. Its threshold is 10.3. This empirical **pseudo-NIS** is
 not the standard pre-update NIS and has no asserted chi-square calibration.
+The distinction between innovations and posterior residuals is discussed in
+[32-34](references.md#estimation-and-residual-monitoring).
 
 Full GNSS remains powered but retains acquisition and quality screening.
 Fixed-Time follows a 96 s ON / 300 s OFF calendar independent of quality and
 the alarm; it can power off while still acquiring. Both use the same minimum
 acquisition delay and quality conditions for accepting corrections.
+GNSS duty-cycling background is listed in
+[37, 38](references.md#gnss-processing-and-receiver-operation).
 
 ## Guidance and Safety Radius
 
 The MPC uses CW relative dynamics in RTN axes, executes every 12 s and predicts
-60 steps (720 s). It always uses the UKF estimate, not a GNSS/UKF state selector.
+60 steps (720 s); the CW model is referenced in
+[43](references.md#orbital-dynamics-and-mpc-guidance). It always uses the UKF
+estimate, not a GNSS/UKF state selector.
 Acceleration and increment limits are imposed per axis; state-box bounds are
 empty. The inherited startup switch inhibits applied control through 135 s;
 commands before that time are not applied thrust. The 150 m physical keep-out
@@ -125,5 +145,8 @@ constitute an unconditional physical safety guarantee.
 Receiver-module energy is integrated from **receiver state**, not from lambda:
 OFF 0.025 W, TRACKING 1.8 W and ACQUIRING 2.34 W. This model does not include
 the power of all spacecraft subsystems or characterize receiver hardware in flight.
+Receiver hardware references are
+[35, 36](references.md#gnss-processing-and-receiver-operation); the acquisition
+power ratio is a study assumption, not a measured hardware characterization.
 For source traceability and reproducibility limits, see
 [model provenance](model-provenance.md).

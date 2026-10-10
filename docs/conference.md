@@ -27,15 +27,18 @@ material is kept separately in [project history](history.md).
 - **Platform.** The reference orbit is inspired by Sentinel-6A, and the
   spacecraft is a 3U CubeSat-class platform. Its cross-sectional area, drag
   coefficient and reflectivity coefficient follow the STF-1 assumptions; its
-  mass and GNSS module reference are assumptions of the study.
+  mass and GNSS module reference are assumptions of the study. See Lantto
+  [13](references.md#gnss-processing-and-receiver-operation).
 - **GNSS receiver.** The receiver power model takes the Pumpkin GPSRM 1, which
   integrates a NovAtel OEM719, as reference. The dual-frequency GPS/Galileo
   processing assumed in the paper would need one of the optional
   multi-frequency OEM719 variants.
+  Product references: [35, 36](references.md#gnss-processing-and-receiver-operation).
 - **Actuation.** The per-axis acceleration bound
   `u_max = F_max / m = 0.10 N / 3.99 kg ≈ 0.02506 m/s^2` is motivated by
   Seeker-class cold-gas propulsion. It is a feasibility envelope, not the
   reported effective maneuvering thrust.
+  Seeker references: [46, 47](references.md#actuator-reference-class).
 - **GNSS data.** GNSS error and availability profiles are derived from
   Sentinel-6A positioning data over a 24-hour arc, with controlled degradations
   in the number of tracked satellites and in satellite geometry. Raw PPP

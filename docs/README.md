@@ -22,7 +22,7 @@
 
 - [Paper configuration and citation](conference.md)
 - [Model provenance and reproducibility limits](model-provenance.md)
-- [Selected paper references](references.md)
+- [Complete paper bibliography](references.md)
 - [Project history and preserved challenge materials](history.md)
 
 The active model is under `models/`. Older assets are retained as history,
