@@ -44,6 +44,7 @@ sampled diagnostic, not the optimizer's continuous-time minimum calculation.
 addpath(pwd, genpath('matlab'), genpath('tools'));
 results = runtests('tests/test_navigation_prediction.m');
 assertSuccess(results);
+addpath('tests/integration');
 run_navigation_smoke_test;
 ```
 

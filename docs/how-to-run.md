@@ -113,10 +113,13 @@ Reinitialization restores the selected run configuration.
 addpath(pwd, genpath('matlab'), genpath('tools'));
 results = runtests('tests');
 assertSuccess(results);
+addpath('tests/integration');
 run_navigation_smoke_test;
 ```
 
-The smoke test runs 120 s and checks acquisition, tracking, OFF and exports.
+The [integration smoke test](../tests/integration/run_navigation_smoke_test.m)
+runs 120 s and checks acquisition, tracking, OFF and exports. It is invoked
+explicitly and is not part of the default `runtests('tests')` suite.
 It does not certify encounter safety or reproduce ensemble results. Simulink's
 existing inferred-dimension warnings for Ground/Demux are documented; they do
 not prevent the locally tested run. Nonlinear MPC and repeated UKF forecasts
