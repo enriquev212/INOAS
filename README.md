@@ -26,6 +26,24 @@ nominal timing, GNSS quality checks and an auxiliary-residual alarm
 recovery. Corrections remain gated by acquisition, measurement freshness
 and quality, separately from receiver power.
 
+![Reactive receiver supervisor from the paper](docs/assets/paper/receiver-supervisor.png)
+
+*Reactive receiver supervisor: acquisition and quality screening separate
+powered operation from accepted GNSS corrections. An auxiliary alarm can
+request earlier activation; loss of GNSS quality keeps the receiver powered
+while it reacquires a valid solution.*
+
+<details>
+<summary>Timing and transition details</summary>
+
+OFF saves power; ACQUIRING is powered without accepted corrections;
+TRACKING enables quality-screened corrections. Quality loss returns TRACKING
+to ACQUIRING without powering off. The 35 s minimum acquisition delay restarts
+at each entry into ACQUIRING. Nominal tracking and OFF durations are 60 s and
+300 s, respectively; the alarm can override the nominal power schedule.
+
+</details>
+
 **2. Continuous state estimation.** We integrated an Unscented Kalman Filter
 (UKF) combining intermittent GNSS and synthetic auxiliary observations. It
 estimates position, velocity and covariance during GNSS outages and always
@@ -42,19 +60,6 @@ the maneuver; improved navigation confidence can reduce the added margin.
 *Paper architecture: receiver management changes navigation availability;
 UKF state and covariance feed MPC guidance. Online raw PPP processing is
 emulated with processed GNSS profiles in the simulation.*
-
-<details>
-<summary>Reactive receiver state diagram</summary>
-
-![Reactive receiver supervisor from the paper](docs/assets/paper/receiver-supervisor.png)
-
-OFF saves power; ACQUIRING is powered without accepted corrections;
-TRACKING enables quality-screened corrections. Quality loss returns TRACKING
-to ACQUIRING without powering off. Nominal timings are 35 s minimum
-acquisition, 60 s tracking and 300 s OFF; the alarm can override the nominal
-power schedule.
-
-</details>
 
 ## What the Evaluation Showed
 
