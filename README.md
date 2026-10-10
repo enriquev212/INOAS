@@ -98,6 +98,22 @@ This runs a single Reactive/adaptive demonstration and exports results under
 `results/`. It does not reproduce the paper's ensemble medians: the original
 campaign seeds and complete outputs are not bundled.
 
+## Quick Links
+
+| Explore | What you will find |
+| --- | --- |
+| [Architecture](docs/model-architecture.md) and [Simulink model](models/) | System layers, receiver state diagram and active model. |
+| [MATLAB functions](matlab/README.md) | File-by-file guide to navigation and guidance code. |
+| [Run guide](docs/how-to-run.md) and [examples](examples/README.md) | Setup, configuration options and short demonstrations. |
+| [GNSS data](data/README.md) | Input profiles, columns and provenance. |
+| [Results](docs/results.md) and [paper](docs/conference.md) | Reported comparisons, study configuration and citation. |
+| [Visualization tools](tools/visualization/README.md) | Plot generation from exported simulation results. |
+| [Development guide](docs/development.md) and [tests](tests/) | Resume research, change settings and run checks. |
+| [References](docs/references.md) | Full technical bibliography from the paper. |
+| [Project history](docs/history.md#preserved-playback) | Original GIF and earlier challenge material. |
+
+[Full documentation index](docs/README.md).
+
 ## Scope and Team
 
 This is a simulation study of one encounter geometry and degradation profile,
@@ -111,12 +127,5 @@ Guzmán Grande González, Júlia Soler i Pla and Changxiang Xu. The full paper
 was submitted to **IEEE Aerospace 2027**.
 Maintainer: [Enrique Valverde](https://github.com/enriquev212).
 
-[Architecture and functions](docs/model-architecture.md) |
-[MATLAB index](matlab/README.md) | [Run guide](docs/how-to-run.md) |
-[Continue development](docs/development.md) |
-[Paper and full results](docs/conference.md) |
-[Documentation and references](docs/README.md)
-
-[Project history and original GIF](docs/history.md#preserved-playback) |
 [Citation](CITATION.cff) | Code: [MIT](LICENSE).
 Visual assets remain project-team materials unless separately authorized.
