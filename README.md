@@ -1,42 +1,102 @@
 # INOAS | Integrated Navigation and Orbital Awareness System
 
-Autonomous collision-avoidance guidance and energy-aware GNSS navigation for
-a 3U CubeSat-class spacecraft. INOAS combines UKF state estimation, receiver
-duty cycling and covariance-aware MPC in a closed-loop orbital simulation.
+**Autonomous satellite collision avoidance with energy-aware navigation.**
+Our team developed a MATLAB/Simulink architecture linking receiver power
+management, orbital state estimation and maneuver planning for a 3U CubeSat.
 
-**Stack:** MATLAB / Simulink, Aerospace Blockset, UKF, constrained MPC and Python.
+**Reported simulation outcomes:** 66% less receiver energy than continuous
+GNSS, lower navigation-error peaks than fixed-time switching, and 32% less
+applied velocity increment with an uncertainty-adaptive safety radius.
+The comparisons and assumptions are explained below.
 
-## Key Results
+## The Engineering Problem
 
-Medians reported in the submitted paper, over 50 paired runs with degraded GNSS:
+Collision avoidance needs accurate navigation, but a continuously powered
+Global Navigation Satellite Systems (GNSS) receiver uses energy. Fixed-time
+receiver switching can allow errors to grow under
+degraded measurements, while a fixed large avoidance margin increases
+maneuvering effort. We investigated the decisions together: **when to use
+GNSS, and how to adapt the avoidance margin to navigation uncertainty.**
 
-- **66.0% receiver-module energy saving** with Reactive management compared
-  with continuous GNSS operation.
-- **8.0 m vs 21.1 m maximum position error:** Reactive vs Fixed-Time receiver
-  management, both using a constant 295 m safety radius.
-- **32% lower applied Delta-v** with Reactive/adaptive guidance compared with
-  Reactive/constant radius; adaptive median minimum separation: **194.2 m**.
+## What Our Team Built
 
-All reported runs remained above the 150 m keep-out distance. The original
-campaign seeds and complete outputs are not bundled; see
-[results and reproducibility limits](docs/results.md).
+**1. Navigation-aware receiver management.** A Reactive supervisor combines
+nominal timing, GNSS quality checks and an auxiliary-residual alarm
+(pseudo-NIS). It can wake the receiver earlier or keep it powered during
+recovery. Corrections remain gated by acquisition, measurement freshness
+and quality, separately from receiver power.
 
-## Architecture
+**2. Continuous state estimation.** We integrated an Unscented Kalman Filter
+(UKF) combining intermittent GNSS and synthetic auxiliary observations. It
+estimates position, velocity and covariance during GNSS outages and always
+feeds guidance, giving the controller both a state estimate and its uncertainty.
+
+**3. Uncertainty-aware avoidance guidance.** We coupled UKF covariance
+forecasts to Model Predictive Control (MPC) with Clohessy-Wiltshire dynamics.
+A 720 s horizon, updated every 12 s, adapts the safety radius above a 150 m
+keep-out distance. Command limits and between-node avoidance checks constrain
+the maneuver; improved navigation confidence can reduce the added margin.
 
 ![Paper architecture: navigation, receiver management and MPC guidance](docs/assets/paper/architecture.png)
 
-*Functional architecture from the paper. The simulation replays processed
-GNSS errors and uses synthetic auxiliary observations.
-[Implementation details](docs/model-architecture.md).*
+*Paper architecture: receiver management changes navigation availability;
+UKF state and covariance feed MPC guidance. Online raw PPP processing is
+emulated with processed GNSS profiles in the simulation.*
 
 <details>
 <summary>Reactive receiver state diagram</summary>
 
 ![Reactive receiver supervisor from the paper](docs/assets/paper/receiver-supervisor.png)
 
-*Paper Fig. 2. [State and transition definitions](docs/model-architecture.md#receiver-supervisor).*
+OFF saves power; ACQUIRING is powered without accepted corrections;
+TRACKING enables quality-screened corrections. Quality loss returns TRACKING
+to ACQUIRING without powering off. Nominal timings are 35 s minimum
+acquisition, 60 s tracking and 300 s OFF; the alarm can override the nominal
+power schedule.
 
 </details>
+
+## What the Evaluation Showed
+
+The submitted paper reports **50 paired realizations across five
+configurations (250 simulations)** of one 6743 s close-encounter scenario.
+Comparisons share the geometry, degradation profile and paired initial errors
+and noise seeds. Full GNSS stays powered; Fixed-Time follows an ON/OFF
+calendar; Reactive uses the supervisor above. Values below are medians.
+
+| Contribution tested | Comparison | Reported outcome |
+| --- | --- | --- |
+| Receiver energy management | Reactive vs continuous GNSS | **66.0% receiver-module energy saving** |
+| Recovery under degraded GNSS | Reactive vs Fixed-Time, both with a constant 295 m radius | Maximum position error: **8.0 m vs 21.1 m** |
+| Covariance-adaptive guidance | Reactive/adaptive vs Reactive/constant 295 m radius | Applied velocity increment: **2.48 vs 3.66 m/s**, a **32% reduction** |
+
+Reactive/adaptive operation achieves a median minimum separation of
+**194.2 m**. Every reported run remains above the **150 m** keep-out distance.
+
+![Paper results: adaptive safety radius, encounter separation and maneuver cost across the paired runs](docs/assets/paper/encounter-results.png)
+
+*Paper Fig. 5: (a) adaptive safety radius; (b) encounter separation;
+(c) applied velocity increment versus minimum separation. Small points show
+runs, large symbols medians; arrows go from constant to adaptive radius.
+Bands in (a) span the 10th--90th percentiles.
+Without avoidance, the reference passes 15.8 m from the debris.*
+
+**The trade-off:** Reactive uses about 22% more receiver energy than Fixed-Time
+for lower navigation errors. Better navigation alone barely changes maneuver
+cost with the constant radius; coupling it to the adaptive radius produces
+the guidance benefit in this scenario.
+
+## Engineering Implementation
+
+- **Integrated simulation:** perturbed orbital dynamics, estimation,
+  receiver supervision and constrained guidance in MATLAB/Simulink.
+- **Configurable experiments:** policy/radius comparisons and seeded runs,
+  recorded configurations and CSV/MAT exports.
+- **Analysis and checks:** MATLAB diagnostics, Python visualization and
+  regression tests for receiver logic, configuration and exported metrics.
+
+**Tools:** MATLAB, Simulink, Aerospace Blockset/Toolbox, Optimization Toolbox,
+Control System Toolbox and Python.
 
 ## Quick Start
 
@@ -47,22 +107,28 @@ From the repository root in MATLAB, with the model closed:
 caseDir = run_inoas_case('reactive', 'adaptive');
 ```
 
-This runs the default 6743 s encounter and exports CSV/MAT results under
-`results/`. Short checks, interactive use and policy comparisons are covered
-in the run guide below.
+This runs a single Reactive/adaptive demonstration and exports results under
+`results/`. It does not reproduce the paper's ensemble medians: the original
+campaign seeds and complete outputs are not bundled.
 
-## Explore
+## Scope and Team
 
-- **Understand the model:** [architecture](docs/model-architecture.md) and
-  [MATLAB function index](matlab/README.md).
-- **Run or continue the work:** [run guide](docs/how-to-run.md) and
-  [development guide](docs/development.md).
-- **Research context:** [paper and team](docs/conference.md),
-  [results](docs/results.md) and [full documentation](docs/README.md).
+This is a simulation study of one encounter geometry and degradation profile,
+with synthetic auxiliary observations and an assumed receiver power model.
+Debris-state uncertainty is omitted. The results are not a flight validation
+or an unconditional collision-safety guarantee.
 
-Developed by the Supaero Astra Iberian Team at **ISAE-SUPAERO**; full paper
-submitted to **IEEE Aerospace 2027**.
+Developed by the **Supaero Astra Iberian Team at ISAE-SUPAERO**: Alberto
+Fernández-Acero Campoamor, Enrique Valverde Sacristán, Álvaro Yuste Pubill,
+Guzmán Grande González, Júlia Soler i Pla and Changxiang Xu. The full paper
+was submitted to **IEEE Aerospace 2027**.
 Maintainer: [Enrique Valverde](https://github.com/enriquev212).
+
+[Architecture and functions](docs/model-architecture.md) |
+[MATLAB index](matlab/README.md) | [Run guide](docs/how-to-run.md) |
+[Continue development](docs/development.md) |
+[Paper and full results](docs/conference.md) |
+[Documentation and references](docs/README.md)
 
 [Project history and original GIF](docs/history.md#preserved-playback) |
 [Citation](CITATION.cff) | Code: [MIT](LICENSE).
