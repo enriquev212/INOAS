@@ -142,3 +142,18 @@ the five Python visualization tests pass. The supplied PDFs match their
 source-file hashes, both PNG previews were visually inspected, and the moved
 historical assets and preserved GIF match their previous Git blobs. No MATLAB,
 Simulink, Python or dataset source files were changed by this update.
+
+## Project Organization (10 October 2026)
+
+The root now keeps the initializer and two main entry points. The three
+convenience launchers moved to `examples/` with repository-relative path
+resolution; MATLAB Online instructions moved to `docs/matlab-online.md`.
+The README is shorter and the unchanged challenge GIF is prominent again,
+with its historical configuration identified. A documentation index and
+development guide retain the detail needed to continue the work.
+
+All 35 MATLAB tests and five Python tests pass. Three added launcher tests
+use isolated stubs to check durations and paths from outside the repository;
+they do not run new Simulink simulations. The active model, dynamics,
+receiver algorithms, initializer, batch runner, data and visual assets are
+unchanged. This organization update does not reproduce a new paper campaign.

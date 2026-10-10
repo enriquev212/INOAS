@@ -90,12 +90,12 @@ replaces simulation variables in the MATLAB base workspace.
 
 | Script | Stop time | Purpose |
 | --- | ---: | --- |
-| `open_inoas_fast` | 120 s | Installation check. |
-| `open_inoas_debris_demo` | 1800 s | Includes the encounter designed at 1500 s. |
+| `examples/open_inoas_fast.m` | 120 s | Installation check. |
+| `examples/open_inoas_debris_demo.m` | 1800 s | Includes the encounter designed at 1500 s. |
 | `open_inoas_model` | 6743 s by default | Full default run. |
 
 ```matlab
-open_inoas_debris_demo
+run('examples/open_inoas_debris_demo.m');
 out = sim('inoas_model');
 run('matlab/plot_MPC_results.m');
 ```
@@ -106,6 +106,10 @@ For explicit GUI options, create `inoasRunConfig = inoasPaperConfig(...)` before
 initialization. For acquisition-only experiments after initialization, set
 `gnss_min_cfg.acquisitionTime = 50` before starting a fresh simulation at zero.
 Reinitialization restores the selected run configuration.
+
+The [examples](../examples/README.md) are optional convenience launchers, not
+alternative models. For MATLAB Online, see [the online guide](matlab-online.md);
+for future changes, see [development](development.md).
 
 ## Tests and Notes
 

@@ -2,7 +2,7 @@
 
 Upload/extract the repository and enter the root `INOAS` folder. MATLAB Online
 needs the same licensed toolboxes and ephemeris data as the desktop version;
-see [requirements](docs/how-to-run.md#requirements).
+see [requirements](how-to-run.md#requirements).
 
 ```matlab
 caseDir = run_inoas_case('reactive', 'adaptive', 'StopTime', 120, 'Seed', 7);
@@ -13,8 +13,11 @@ For an encounter demo, use `StopTime = 1800`; for the default full run, omit
 `StopTime` (6743 s). The 12 s MPC step and 60-step horizon are unchanged in
 short tests. No manual block editing or model save is required.
 
-`run_navigation_trial` is a compatibility script for a 1000 s Reactive/adaptive
-run. It no longer supports the removed scheduled-GNSS forecast option.
+For a 1000 s Reactive/adaptive navigation trial:
+
+```matlab
+run('examples/run_navigation_trial.m');
+```
 
 Download the **complete case folder**, including configuration, simulation and
 completion files, before interpreting figures. The runner does not overwrite
@@ -29,4 +32,4 @@ python tools/visualization/render_campaign_figures.py --case results/reactive_ad
 ```
 
 For receiver assumptions and reproducibility limits, see
-[architecture](docs/model-architecture.md) and [provenance](docs/model-provenance.md).
+[architecture](model-architecture.md) and [provenance](model-provenance.md).
