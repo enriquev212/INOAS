@@ -2,9 +2,10 @@
 
 Team-supplied figures from the submitted IEEE Aerospace 2027 paper, added on
 10 October 2026. The standalone PDFs are unchanged originals; PNGs are rendered
-previews for GitHub, not redrawn or regenerated scientific results. The Fig. 5
-preview is a clipped rendering of the final manuscript, with its legend and
-all three panels intact; its explanation is supplied in the main README.
+previews for GitHub, not redrawn or regenerated scientific results. The README
+overview combines the original data panels from Figs. 4(d) and 5(c), with short
+headings and a compact legend. Axes, points, medians and percentile bars are
+unchanged. The full three-panel Fig. 5 preview is also retained below.
 
 | Paper figure | Vector source | GitHub preview |
 | --- | --- | --- |
@@ -12,6 +13,7 @@ all three panels intact; its explanation is supplied in the main README.
 | Fig. 2: Reactive receiver supervisor | [receiver-supervisor.pdf](receiver-supervisor.pdf) | [receiver-supervisor.png](receiver-supervisor.png) |
 | Fig. 3: supporting-plane avoidance geometry | [avoidance-geometry.pdf](avoidance-geometry.pdf) | [avoidance-geometry.png](avoidance-geometry.png) |
 | Fig. 5: safety-radius, separation and maneuver-cost results | Final manuscript, page 15 (not redistributed) | [encounter-results.png](encounter-results.png) |
+| README overview: navigation precision and maneuver efficiency | [evaluation-overview.pdf](evaluation-overview.pdf) | [evaluation-overview.png](evaluation-overview.png) |
 
 Supplied source names:
 
@@ -20,6 +22,9 @@ Supplied source names:
 - `fig3_koz_linealizacion_letra_grande_v2 (1).pdf`
 - Fig. 5: `IEEE_Aerospace_Conference_Paper (1).pdf`, downloaded on
   10 October 2026; page 15 of the 20-page final manuscript.
+- README overview: Figs. 4(d) and 5(c) on pages 14 and 15 of that same
+  manuscript. The source panel letters are omitted in favor of descriptive
+  headings; the source figure numbers and comparisons are stated in the README.
 
 To re-render from the repository root with Poppler:
 
@@ -36,6 +41,19 @@ table and surrounding prose but preserves the plot labels and legend:
 ```shell
 pdftoppm -f 15 -l 15 -singlefile -r 300 -x 208 -y 720 -W 2125 -H 771 -png "IEEE_Aerospace_Conference_Paper (1).pdf" docs/assets/paper/encounter-results
 ```
+
+To compose and render the focused README overview from the same manuscript,
+install `pypdf` and `reportlab`, then run:
+
+```shell
+python docs/assets/paper/render_evaluation_overview.py "IEEE_Aerospace_Conference_Paper (1).pdf"
+pdftoppm -png -singlefile -scale-to-x 2400 -scale-to-y -1 docs/assets/paper/evaluation-overview.pdf docs/assets/paper/evaluation-overview
+```
+
+The overview preserves the different comparison sets: the navigation panel
+shows Full GNSS/adaptive and the two constant-radius duty-cycled cases; the
+guidance panel shows all five configurations. These panels report the paper's
+50 paired realizations, not new simulations. [Composition script](render_evaluation_overview.py).
 
 The architecture is a functional diagram. For the exact closed-loop observation
 emulation, UKF input and distinction between correction enable and receiver
