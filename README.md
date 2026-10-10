@@ -67,8 +67,8 @@ calendar; Reactive uses the supervisor above. Values below are medians.
 | Contribution tested | Comparison | Reported outcome |
 | --- | --- | --- |
 | Receiver energy management | Reactive vs continuous GNSS | **66.0% receiver-module energy saving** |
-| Recovery under degraded GNSS | Reactive vs Fixed-Time, both with a constant 295 m radius | Maximum position error: **8.0 m vs 21.1 m** |
-| Covariance-adaptive guidance | Reactive/adaptive vs Reactive/constant 295 m radius | Applied velocity increment: **2.48 vs 3.66 m/s**, a **32% reduction** |
+| Recovery under degraded GNSS | Reactive vs Fixed-Time, both with a constant 295 m radius | Maximum position error: **8.0&nbsp;m vs 21.1&nbsp;m** |
+| Covariance-adaptive guidance | Reactive/adaptive vs Reactive/constant 295 m radius | Applied velocity increment: **2.48 vs 3.66&nbsp;m/s**, a **32% reduction** |
 
 Reactive/adaptive operation achieves a median minimum separation of
 **194.2 m**. Every reported run remains above the **150 m** keep-out distance.
