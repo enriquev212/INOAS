@@ -8,16 +8,17 @@ each simulated in five configurations (250 runs). Within a replicate, the
 initial estimation error and the actuator- and auxiliary-noise seeds are shared
 by all five configurations. The table gives medians over the 50 runs.
 
-| Configuration | Receiver energy [Wh] | Powered [%] | Position RMSE [m] | Max. position error [m] | Min. separation [m] | Applied Δv [m/s] |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Full GNSS, adaptive radius | 3.465 | 100.0 | 0.71 | 3.12 | 162.8 | 2.202 |
-| Fixed-Time, adaptive radius | 0.966 | 24.4 | 4.28 | 20.76 | 239.8 | 3.293 |
-| Fixed-Time, constant 295 m | 0.966 | 24.4 | 4.24 | 21.06 | 295.2 | 3.635 |
-| Reactive, adaptive radius | 1.177 | 29.9 | 2.32 | 7.91 | 194.2 | 2.479 |
-| Reactive, constant 295 m | 1.177 | 29.9 | 2.34 | 7.96 | 294.7 | 3.661 |
+| Configuration | Receiver energy [Wh] | Powered [%] | Power-ons | Position RMSE [m] | Max. position error [m] | Min. separation [m] | Applied Δv [m/s] |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Full GNSS, adaptive radius | 3.465 | 100.0 | 1 | 0.71 | 3.12 | 162.8 | 2.202 |
+| Fixed-Time, adaptive radius | 0.966 | 24.4 | 18 | 4.28 | 20.76 | 239.8 | 3.293 |
+| Fixed-Time, constant 295 m | 0.966 | 24.4 | 18 | 4.24 | 21.06 | 295.2 | 3.635 |
+| Reactive, adaptive radius | 1.177 | 29.9 | 18 | 2.32 | 7.91 | 194.2 | 2.479 |
+| Reactive, constant 295 m | 1.177 | 29.9 | 18 | 2.34 | 7.96 | 294.7 | 3.661 |
 
 Navigation errors are computed for t ≥ 135 s, after the common initialization
-interval; the other metrics cover the complete run.
+interval; the other metrics cover the complete run. Power-on counts include
+the initial power-on. These values match Table 3 of the submitted paper.
 
 Main findings:
 
@@ -43,19 +44,6 @@ The configuration behind these results is summarized in
 model is now the default on `main`, but the original campaign inputs and seed
 list are not included. A new default run is a demonstration, not a reproduction
 of the ensemble medians. See [provenance](model-provenance.md).
-
-## Challenge-Final Figures (Superseded)
-
-The figures presented at the challenge final in June 2026, and shown in the
-poster and presentation (about 82% GNSS energy reduction and 483.2 m minimum
-debris separation), were obtained with the challenge model: a 10 t spacecraft
-with a different encounter and navigation setup, before the CubeSat adaptation
-and the corrections made for the paper. They are superseded by the paper
-results above.
-
-![Debris-avoidance playback](assets/debris-avoidance-playback.gif)
-
-*Debris-avoidance playback from the challenge-final model.*
 
 ## Generated Plots
 
@@ -95,8 +83,11 @@ are exported separately. See [metric definitions](../tools/visualization/README.
   directional realization of commanded thrust.
 - Co-design the GNSS subsystem with the navigation supervisor, using lower-power
   acquisition and tracking, and making receiver activation depend on the
-  navigation accuracy required for upcoming manoeuvres.
+  navigation accuracy required for upcoming maneuvers.
 - Include debris-state uncertainty, further encounter geometries and GNSS
   degradation profiles, and higher-fidelity receiver power models.
 - Assess the onboard computational load and extend the validation with broader
   Monte Carlo studies and hardware-oriented tests.
+
+For superseded challenge-final results and communication material, see
+[project history](history.md). They are not results of the current configuration.

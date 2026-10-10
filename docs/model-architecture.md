@@ -1,8 +1,25 @@
 # Model Architecture
 
-This page describes the AUX3 model used by the current default. The challenge
-poster, GIF and architecture image are retained as historical communication
-assets; they are not configuration evidence for the current receiver logic.
+This page describes the current AUX3-based navigation and guidance model and
+the figures supplied for the submitted IEEE Aerospace 2027 paper. The
+default run is Reactive/adaptive; Full GNSS, Fixed-Time and constant-radius
+comparators use the same plant, input profile and estimator settings.
+
+![Paper Fig. 1: navigation and guidance architecture](assets/paper/architecture.png)
+
+[Vector PDF](assets/paper/architecture.pdf). This is the paper's functional
+architecture, not a literal Simulink block listing. In the public simulation:
+
+- The GNSS/PPP path is emulated with processed error profiles and quality
+  indicators. A raw PPP engine is not executed in the closed loop.
+- The auxiliary path contains synthetic ECI position observations, not physical
+  magnetometer or sun-sensor measurement models.
+- The MPC always uses the UKF posterior estimate and covariance.
+- `lambda` enables GNSS corrections. Receiver power is a separate output,
+  `receiver_on`; the receiver can be powered while acquiring with `lambda = 0`.
+
+The superseded challenge diagram and other communication material are isolated
+in [project history](history.md), not used to describe the active model.
 
 ## Plant and Navigation
 
@@ -87,14 +104,26 @@ if a between-node violation greater than 0.01 m is detected, a supporting plane
 oriented by the candidate debris-to-spacecraft direction is added and the
 problem is re-solved. See [forecast details](navigation-covariance-prediction.md).
 
+![Paper Fig. 3: supporting-plane avoidance geometry](assets/paper/avoidance-geometry.png)
+
+[Vector PDF](assets/paper/avoidance-geometry.pdf). The sphere illustrates the
+MPC safety radius, which may be larger than the fixed 150 m physical keep-out
+distance. For a debris-to-spacecraft vector `d` and unit normal `n`, the
+supporting-plane approximation retains the half-space:
+
+```math
+\mathbf{n}^{\mathsf T}\mathbf{d}\geq d_{\mathrm{safe}}.
+```
+
+At MPC nodes, `n` follows the nominal debris-to-reference direction. Added
+between-node planes instead follow the candidate debris-to-spacecraft direction
+at the detected violation. Soft constraints and numerical refinement do not
+constitute an unconditional physical safety guarantee.
+
 ## Energy and Scope
 
 Receiver-module energy is integrated from **receiver state**, not from lambda:
 OFF 0.025 W, TRACKING 1.8 W and ACQUIRING 2.34 W. This model does not include
 the power of all spacecraft subsystems or characterize receiver hardware in flight.
-The historical visual below predates the AUX3 observation and supervisor changes.
-
-![Historical INOAS architecture](assets/inoas-architecture.png)
-
 For source traceability and reproducibility limits, see
 [model provenance](model-provenance.md).

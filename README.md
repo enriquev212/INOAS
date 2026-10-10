@@ -1,23 +1,20 @@
 # Integrated Navigation and Orbital Awareness System (INOAS)
 
-Shared public repository for the INOAS navigation and collision-avoidance
-project, developed by the Supaero Astra Iberian Team for WP7: Reusable
-Propulsion / Maintenance of the
-[Student Aerospace Challenge 2025/2026](https://www.studentaerospacechallenge.eu/index.php/en).
-The project was presented at the challenge final, Aerospace Challenge Day, at
-Paris-Le Bourget on June 25, 2026, and was then extended into a paper for the
-2027 IEEE Aerospace Conference.
+Public model and technical documentation for *Robust MPC-Based Collision
+Avoidance Guidance and Safe Duty-Cycled GNSS Navigation for LEO CubeSats*,
+submitted to the **2027 IEEE Aerospace Conference**. The work was developed
+by the Supaero Astra Iberian Team at ISAE-SUPAERO; the review decision is pending.
 
-INOAS studies how a LEO servicing spacecraft can reduce GNSS receiver duty cycle
-while keeping enough navigation accuracy and collision-avoidance authority for
-rendezvous and debris-avoidance operations. The implementation combines a
-Simulink orbital plant, simulated GNSS measurements, UKF/Kalman state estimation,
-receiver management, and an MPC controller with covariance-aware safety radii.
+INOAS couples GNSS receiver management, UKF state estimation and
+covariance-aware MPC collision avoidance for a 3U CubeSat-class spacecraft.
+The closed-loop model uses a Simulink orbital plant, replayed GNSS error/quality
+profiles and synthetic auxiliary position observations. Reactive receiver
+management with an adaptive safety radius is the default configuration.
 
-![Debris-avoidance playback from the challenge-final model](docs/assets/debris-avoidance-playback.gif)
+![Navigation and guidance architecture from the paper](docs/assets/paper/architecture.png)
 
-*Debris-avoidance playback from the model presented at the challenge final
-(June 2026).*
+*Paper Fig. 1: functional architecture. [Vector PDF](docs/assets/paper/architecture.pdf)
+and [implementation details](docs/model-architecture.md).*
 
 **Paper results** (IEEE Aerospace 2027; medians over 50 paired Monte Carlo runs
 with degraded GNSS):
@@ -37,39 +34,29 @@ with degraded GNSS):
 > and identified by the team as the paper-model
 > base. The public runner adds explicit policy/radius selection and deterministic
 > seeds. The original 50-run seed list and campaign outputs are not included;
-> the figures above are reported paper results, not a claim that the default
+> the statistics above are reported paper results, not a claim that the default
 > single run reproduces their medians. See [model provenance](docs/model-provenance.md).
-
-## Project Materials
-
-[Final poster PDF](docs/assets/final-poster-supaero-astra-iberian-team.pdf) |
-[Final presentation PPTX](https://github.com/enriquev212/INOAS/releases/download/inoas-project-materials-v1/INOAS_full_quality_final_presentation.pptx)
-
-The poster and presentation are the challenge-final material (June 2026). Their
-figures come from the challenge model, a 10 t spacecraft, before the CubeSat
-adaptation and the corrections made for the paper, and are superseded by the
-paper results; see [Results](docs/results.md).
-
-<details>
-<summary>Poster preview</summary>
-
-![Final INOAS poster](docs/assets/final-poster-preview.png)
-
-</details>
 
 ## Core Idea
 
 INOAS couples GNSS duty cycling with navigation uncertainty. A receiver
-supervisor powers the GNSS receiver on a nominal ON/OFF schedule and accepts
-fixes only after quality checks, while an auxiliary-sensor discrepancy alarm
-(pseudo-NIS) can bring the next activation forward. In the paper's reactive
-policy, poor tracking also triggers reacquisition and the alarm can extend
-powered operation. Between GNSS fixes, the UKF propagates the state and
-covariance and keeps fusing the auxiliary measurements.
+supervisor enables GNSS corrections only after acquisition and quality checks.
+The Reactive policy combines nominal timing rules with reacquisition on poor
+tracking and an auxiliary-residual discrepancy alarm (pseudo-NIS), which can
+advance activation or extend powered operation. The Fixed-Time comparator
+instead follows a fixed 96 s ON / 300 s OFF calendar. The MPC always receives
+the UKF estimate and covariance; between GNSS fixes, the UKF keeps propagating
+the state and fusing the synthetic auxiliary observations.
 
 The control layer uses that navigation confidence directly: the MPC inflates its
-debris safety radius with the forecast navigation covariance, so avoidance
-guidance becomes more conservative only when state knowledge is less certain.
+debris safety radius with the forecast navigation covariance, so navigation
+uncertainty directly affects the required planning margin.
+
+![Supporting-plane collision-avoidance geometry from the paper](docs/assets/paper/avoidance-geometry.png)
+
+*Paper Fig. 3: tangent supporting-plane constraint for the MPC safety radius.
+[Vector PDF](docs/assets/paper/avoidance-geometry.pdf) and
+[constraint interpretation](docs/model-architecture.md#guidance-and-safety-radius).*
 
 ## CubeSat Physical Model
 
@@ -94,9 +81,7 @@ Seeker-class individual cold-gas thruster scale:
 Seeker 1.0 is used as the actuator-architecture reference class: a NASA Johnson
 Space Center 3U cold-gas free-flyer inspection demonstrator. The `0.10 N`
 number is an acceleration-box reference, not a claim that the maneuver uses the
-full box-limit thrust. CPOD is the flight-demonstrated 3U RPO reference: two
-autonomous CubeSats with 3-DOF translational control that demonstrated
-rendezvous and proximity operations on orbit.
+full box-limit thrust.
 
 The plant includes Earth gravity to degree 2, Sun/Moon gravity, SRP and drag.
 The UKF and the reference/debris propagators use central gravity and J2; the
@@ -107,14 +92,15 @@ MPC uses CW dynamics. See [paper configuration](docs/conference.md#paper-configu
 | Document | Why open it |
 |---|---|
 | [How to run](docs/how-to-run.md) | Simulink setup, simulation modes, dependencies and common MATLAB notes. |
-| [Model architecture](docs/model-architecture.md) | System layers, navigation decision logic and covariance-aware safety equations. |
+| [Model architecture](docs/model-architecture.md) | Paper figures, current implementation, receiver logic and covariance-aware safety constraints. |
 | [Navigation covariance prediction](docs/navigation-covariance-prediction.md) | Forecast assumptions, supporting-plane constraints and verification. |
-| [Results](docs/results.md) | Reported paper results, superseded challenge-final figures and metric definitions. |
+| [Results](docs/results.md) | Reported paper results, evaluation windows and metric definitions. |
 | [Visualization workflow](docs/visualization-workflow.md) | MATLAB-to-Python pipeline for regenerating PNG and GIF assets. |
 | [IEEE Aerospace 2027 paper](docs/conference.md) | Paper configuration and submission/citation information. |
 | [Model provenance](docs/model-provenance.md) | AUX3 source revision, public-runner changes and reproducibility limits. |
 | [MATLAB function index](matlab/README.md) | File-by-file guide to the MATLAB scripts and model helpers. |
-| [References](docs/references.md) | Bibliography and external technical sources. |
+| [References](docs/references.md) | Selected references from the submitted paper, with its reference numbers. |
+| [Project history](docs/history.md) | Archived challenge poster, presentation, architecture and historical playback. |
 
 ## Quick Start
 
@@ -154,6 +140,7 @@ For the graphical workflow, `open_inoas_model` opens the default model and
 |-- models/
 |-- matlab/
 |-- tools/visualization/
+|-- tests/
 |-- data/
 |-- docs/
 ```
@@ -165,10 +152,12 @@ Key files:
 - `matlab/inoasMinimalGnssStep.m` - active three-state Reactive supervisor.
 - `matlab/inoasFixedGnssStep.m` - fixed 96 s ON / 300 s OFF comparator.
 - `matlab/inoasPaperConfig.m` - public run options.
-- `tools/visualization/` - optional workflow for regenerating PNG/GIF assets
-  from a completed simulation.
-- `docs/assets/` - architecture figure, poster preview, final poster PDF, and
-  selected visual playback assets.
+- `tools/visualization/` - CSV/MAT exporters used by the runner, plus optional
+  Python figure and animation tools.
+- `tests/` - regression tests; explicit Simulink smoke checks are in `tests/integration/`.
+- `docs/assets/paper/` - the paper's architecture and avoidance-geometry figures,
+  with vector PDFs and PNG previews.
+- `docs/assets/history/` - superseded challenge communication material.
 
 ## Public Scope
 
@@ -177,8 +166,8 @@ collision-avoidance work. It includes:
 
 - the final integrated Simulink model and MATLAB helper scripts;
 - curated scenario data and GNSS-quality inputs required by the runnable demos;
-- technical documentation, selected result assets, poster material and the
-  release-hosted final presentation;
+- paper-aligned technical documentation and figure assets, with the earlier
+  challenge poster and release-hosted presentation isolated as project history;
 - the MATLAB-to-Python visualization workflow used to regenerate selected PNG
   and GIF assets.
 
@@ -209,6 +198,15 @@ Maintainer/contact: Enrique Valverde Sacristán
 
 Alberto Fernández-Acero Campoamor · Enrique Valverde Sacristán · Álvaro Yuste
 Pubill · Guzmán Grande González · Júlia Soler i Pla · Changxiang Xu
+
+## Historical Playback
+
+![Debris-avoidance playback from the challenge-final model](docs/assets/debris-avoidance-playback.gif)
+
+*Preserved animation from the June 2026 Student Aerospace Challenge model,
+not from the paper's CubeSat configuration. The older poster, presentation and
+architecture are collected in [project history](docs/history.md); they do not
+describe the active model or its reported paper results.*
 
 ## License
 
