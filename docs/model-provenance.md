@@ -118,3 +118,27 @@ their intended locations. The model's embedded wrapper still calls
 `inoasMinimalGnssStep`; the Simulink file, MPC, active supervisor and visual
 assets are unchanged by this cleanup. Archive tags were verified on GitHub
 against the full former branch-tip SHAs before deleting any branch.
+
+## Paper Documentation and Figures (10 October 2026)
+
+The team supplied the paper architecture and supporting-plane geometry as
+vector PDFs. Their unchanged originals and rendered PNG previews are under
+[`docs/assets/paper/`](assets/paper/README.md). The current architecture page
+uses these figures and explains how the functional diagram maps to the
+simulated GNSS replay, synthetic auxiliary channel and UKF estimate.
+
+Superseded challenge poster/architecture assets are isolated under
+`docs/assets/history/` and [project history](history.md). The challenge GIF
+remains unchanged at its original path and is explicitly historical. The main
+README, results and reference list now focus on the submitted paper; the
+reported results table also includes its receiver power-on counts.
+
+This documentation update does not change the plant, observation generation,
+receiver policies, MPC, default inputs or any numerical result. It does not
+resolve the missing original campaign seeds/initial errors described above.
+
+Verification: 92 local Markdown targets and 16 heading anchors resolve;
+the five Python visualization tests pass. The supplied PDFs match their
+source-file hashes, both PNG previews were visually inspected, and the moved
+historical assets and preserved GIF match their previous Git blobs. No MATLAB,
+Simulink, Python or dataset source files were changed by this update.

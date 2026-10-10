@@ -18,11 +18,11 @@ Student Aerospace Challenge, evaluated in a paired Monte Carlo campaign under
 degraded GNSS. The results are summarised in
 [Results](results.md#paper-results).
 
-## From the Challenge Model to the Paper
+## Platform and Input Assumptions
 
-The original Student Aerospace Challenge architecture was adapted to a
-CubeSat-class platform while keeping its main contribution: covariance-aware
-MPC collision avoidance coupled with safe duty-cycled GNSS/UKF navigation.
+The paper evaluates covariance-aware MPC collision avoidance coupled with
+duty-cycled GNSS/UKF navigation on a 3U CubeSat-class platform. Earlier challenge
+material is kept separately in [project history](history.md).
 
 - **Platform.** The reference orbit is inspired by Sentinel-6A, and the
   spacecraft is a 3U CubeSat-class platform. Its cross-sectional area, drag
@@ -35,7 +35,7 @@ MPC collision avoidance coupled with safe duty-cycled GNSS/UKF navigation.
 - **Actuation.** The per-axis acceleration bound
   `u_max = F_max / m = 0.10 N / 3.99 kg ≈ 0.02506 m/s^2` is motivated by
   Seeker-class cold-gas propulsion. It is a feasibility envelope, not the
-  reported effective manoeuvring thrust.
+  reported effective maneuvering thrust.
 - **GNSS data.** GNSS error and availability profiles are derived from
   Sentinel-6A positioning data over a 24-hour arc, with controlled degradations
   in the number of tracked satellites and in satellite geometry. Raw PPP
@@ -43,6 +43,10 @@ MPC collision avoidance coupled with safe duty-cycled GNSS/UKF navigation.
 - **Auxiliary sensors.** The auxiliary channel is represented by three synthetic
   Cartesian position measurements with a 2000 m standard deviation. It feeds the
   UKF and the pseudo-NIS discrepancy alarm.
+
+The paper's architecture and supporting-plane geometry are available as
+[PNG previews and vector PDFs](assets/paper/README.md). Their relation to the
+executed simulation is explained in [model architecture](model-architecture.md).
 
 ## Paper Configuration
 
