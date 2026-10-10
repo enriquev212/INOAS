@@ -60,13 +60,16 @@ calendar; Reactive uses the supervisor above. Values below are medians.
 Reactive/adaptive operation achieves a median minimum separation of
 **194.2 m**. Every reported run remains above the **150 m** keep-out distance.
 
-![Paper results: adaptive safety radius, encounter separation and maneuver cost across the paired runs](docs/assets/paper/encounter-results.png)
+![Evaluation summary: lower navigation-error peaks and lower maneuver cost with an adaptive safety radius](docs/assets/paper/evaluation-overview.png)
 
-*Paper Fig. 5: (a) adaptive safety radius; (b) encounter separation;
-(c) applied velocity increment versus minimum separation. Small points show
-runs, large symbols medians; arrows go from constant to adaptive radius.
-Bands in (a) span the 10th--90th percentiles.
-Without avoidance, the reference passes 15.8 m from the debris.*
+*Original panels from paper Figs. 4(d) and 5(c). Left: maximum position error
+over 50 paired runs per policy, with a constant radius for the duty-cycled
+cases; black lines are medians and colored bars span the 10th--90th percentiles.
+Right: applied velocity increment versus minimum separation across all five
+configurations; small symbols are runs and large symbols medians. Filled
+symbols use the adaptive radius, open symbols the constant 295 m radius;
+arrows show the change from constant to adaptive. Full GNSS uses the adaptive
+radius. The shaded region lies below the 150 m keep-out distance.*
 
 **The trade-off:** Reactive uses about 22% more receiver energy than Fixed-Time
 for lower navigation errors. Better navigation alone barely changes maneuver
