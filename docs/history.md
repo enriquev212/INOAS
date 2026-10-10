@@ -38,6 +38,7 @@ documentation.
 This animation is retained unchanged as project history; it is not a rendering
 of the paper's 3U CubeSat configuration or its 50-run campaign.
 
-Old development versions remain available through the
-[archive tags](model-provenance.md#archived-development-branches). Their
-presence does not make them alternative supported defaults.
+Old development versions are preserved in a
+[maintainer-held archive](model-provenance.md#archived-development-branches),
+not as alternative public defaults. The challenge presentation remains in its
+original Release, separate from the IEEE paper-model Release.
