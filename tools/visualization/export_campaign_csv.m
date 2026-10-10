@@ -6,7 +6,7 @@ function outputDir = export_campaign_csv(outputDir)
 %   out = sim("inoas_model");
 %   export_campaign_csv
 %
-% The export is intended for paper-quality Python figures. It writes:
+% The export is intended for diagnostic Python figures. It writes:
 %
 %   timeseries.csv  - trajectory, estimation, debris, safety, and RTN geometry
 %   control.csv     - commanded accelerations, saturation ratio, and delta-v

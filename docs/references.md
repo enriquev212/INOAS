@@ -1,10 +1,9 @@
-# Paper References
+# Technical References
 
-All 47 references from the team's final IEEE Aerospace 2027 manuscript,
-checked against the copy supplied on 10 October 2026. Entries are grouped by
-topic; bracketed numbers retain the paper's numbering. References include
-background and related work, not just algorithms implemented in this repository.
-Third-party papers, books and manuals are cited, not redistributed.
+Background references for navigation, receiver operation and collision-avoidance
+guidance, grouped by topic with stable reference numbers. Related work is
+included alongside implemented methods; a citation does not imply that every
+method is implemented. Third-party publications are cited, not redistributed.
 
 ## Collision Avoidance and Research Context
 
@@ -111,7 +110,7 @@ Third-party papers, books and manuals are cited, not redistributed.
   *NAVIGATION: Journal of the Institute of Navigation*, vol. 63, no. 2,
   pp. 193-204, June 2016.
 
-The simulated power assumptions are given in [paper configuration](conference.md#paper-configuration).
+The simulated power assumptions are given in [model architecture](model-architecture.md#energy-and-scope).
 References to products and processing methods do not establish the software
 provenance of the supplied dataset; see [data limitations](../data/README.md).
 

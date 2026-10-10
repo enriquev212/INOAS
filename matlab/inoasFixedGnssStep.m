@@ -1,7 +1,7 @@
 function [lambda, receiver_on, mode, quality_ok] = ...
     inoasFixedGnssStep(aux_score, n_sat, PDOP, HPE, VPE, gnss_sol, t, cfg)
 %#codegen
-% Fixed 96 s ON / 300 s OFF calendar used by the paper comparisons.
+% Fixed 96 s ON / 300 s OFF calendar for the baseline policy.
 persistent state enteredAt
 OFF = uint8(0); ACQUIRING = uint8(1); TRACKING = uint8(2);
 if isempty(state)

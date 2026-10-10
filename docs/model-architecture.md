@@ -1,14 +1,10 @@
 # Model Architecture
 
-This page describes the current AUX3-based navigation and guidance model and
-the figures supplied for the submitted IEEE Aerospace 2027 paper. The
-default run is Reactive/adaptive; Full GNSS, Fixed-Time and constant-radius
+This page describes the current AUX3-based navigation and guidance model.
+The default run is Reactive/adaptive; Full GNSS, Fixed-Time and constant-radius
 comparators use the same plant, input profile and estimator settings.
 
-![Paper Fig. 1: navigation and guidance architecture](assets/paper/architecture.png)
-
-[Vector PDF](assets/paper/architecture.pdf). This is the paper's functional
-architecture, not a literal Simulink block listing. In the public simulation:
+In the public simulation:
 
 - The GNSS/PPP path is emulated with processed error profiles and quality
   indicators. A raw PPP engine is not executed in the closed loop.
@@ -18,8 +14,8 @@ architecture, not a literal Simulink block listing. In the public simulation:
 - `lambda` enables GNSS corrections. Receiver power is a separate output,
   `receiver_on`; the receiver can be powered while acquiring with `lambda = 0`.
 
-The superseded challenge diagram and other communication material are isolated
-in [project history](history.md), not used to describe the active model.
+The earlier Challenge diagram and communication material are preserved in
+[project history](history.md), separately from this active-model description.
 
 ## Plant and Navigation
 
@@ -28,7 +24,8 @@ point-mass gravity, SRP and drag with a constant atmospheric density. Its mass
 is 3.99 kg and area is 0.03 m^2. The UKF and the nominal reference/debris
 propagators use central gravity and J2. The estimator supplies a continuous
 six-state ECI estimate and covariance to the MPC, including during GNSS-OFF.
-See [configuration](conference.md#paper-configuration).
+Configuration is defined in `initialize_inoas_simulation.m` and the
+[run options](how-to-run.md#batch-runs).
 Orbital propagation background is given by Montenbruck and Gill
 [40](references.md#orbital-dynamics-and-mpc-guidance); UKF background and
 implementation documentation are listed in
@@ -46,17 +43,11 @@ with nominal covariance `(2000 m)^2 I_3`. Bias pulses of 5000 m per axis over
 [600,620) s and 3500 m per axis over [2000,2020) s are injected. It is not a
 physical magnetometer/sun-sensor measurement model.
 
-The paper's auxiliary-navigation motivation is supported by
+Auxiliary-navigation background is given by
 [25-29](references.md#estimation-and-residual-monitoring). These studies are
 background references, not physical sensor models implemented in this simulation.
 
 ## Receiver Supervisor
-
-![Paper Fig. 2: Reactive receiver state machine](assets/paper/receiver-supervisor.png)
-
-[Vector PDF](assets/paper/receiver-supervisor.pdf). This diagram shows the
-nominal Reactive policy. `GNSS_healthy`, `fresh` and `alarm` are defined below;
-`t_X` is elapsed time since the latest entry into state X.
 
 The active implementation is `inoasMinimalGnssStep.m`; the historical
 [`tests/legacy/instrument_decision.m`](../tests/legacy/instrument_decision.m)
@@ -124,11 +115,7 @@ if a between-node violation greater than 0.01 m is detected, a supporting plane
 oriented by the candidate debris-to-spacecraft direction is added and the
 problem is re-solved. See [forecast details](navigation-covariance-prediction.md).
 
-![Paper Fig. 3: supporting-plane avoidance geometry](assets/paper/avoidance-geometry.png)
-
-[Vector PDF](assets/paper/avoidance-geometry.pdf). The sphere illustrates the
-MPC safety radius, which may be larger than the fixed 150 m physical keep-out
-distance. For a debris-to-spacecraft vector `d` and unit normal `n`, the
+For a debris-to-spacecraft vector `d` and unit normal `n`, the
 supporting-plane approximation retains the half-space:
 
 ```math

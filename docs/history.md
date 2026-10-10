@@ -1,44 +1,46 @@
 # Project History
 
-This page archives the Student Aerospace Challenge material. It does not
-describe the current CubeSat model, receiver supervisor or paper results.
-Use [model architecture](model-architecture.md), [paper configuration](conference.md#paper-configuration)
-and [paper results](results.md#paper-results) for the active version.
-
 ## Student Aerospace Challenge 2025/2026
 
 INOAS began as the Supaero Astra Iberian Team project for WP7: Reusable
 Propulsion / Maintenance of the
 [Student Aerospace Challenge](https://www.studentaerospacechallenge.eu/index.php/en).
 The team presented it at Aerospace Challenge Day, Paris-Le Bourget, on
-June 25, 2026, before the CubeSat adaptation for the IEEE Aerospace paper.
+June 25, 2026.
 
-The challenge setup used a 10 t spacecraft and a different encounter and
-navigation configuration. Its reported approximately 82% GNSS energy reduction
-and 483.2 m minimum separation are superseded by the paper results. They must
-not be compared as if they came from the same experimental configuration.
+The Challenge demonstrator used a 10 t spacecraft and different encounter
+and navigation settings. Development subsequently continued with a CubeSat
+configuration. The material below documents the Challenge project; consult
+[model architecture](model-architecture.md) for the active implementation.
 
-## Archived Communication Material
+## Challenge Architecture
 
-[Challenge-final poster PDF](assets/history/challenge-poster.pdf) |
-[Challenge-final presentation PPTX](https://github.com/enriquev212/INOAS/releases/download/inoas-project-materials-v1/INOAS_full_quality_final_presentation.pptx)
+![Original Student Aerospace Challenge architecture](assets/history/challenge-architecture.png)
 
-![Challenge-final poster](assets/history/challenge-poster.png)
+This original diagram shows the Challenge design, including its earlier
+navigation selector and receiver-supervision concept. It is not a literal
+block diagram of the current model: current guidance always uses the UKF
+estimate, GNSS observations are emulated with processed profiles, and receiver
+power is distinct from correction enable.
 
-![Superseded challenge architecture](assets/history/challenge-architecture.png)
+## Presentation Material
 
-The diagram above predates the AUX3 observation and supervisor changes. The
-[paper diagram](assets/paper/architecture.pdf) replaces it in the active
-documentation.
+[Challenge poster PDF](assets/history/challenge-poster.pdf) |
+[Full-quality presentation PPTX](https://github.com/enriquev212/INOAS/releases/download/inoas-project-materials-v1/INOAS_full_quality_final_presentation.pptx)
+
+![Student Aerospace Challenge poster](assets/history/challenge-poster.png)
+
+The poster and presentation are retained in their original form. Their
+figures and performance statements concern the Challenge configuration only.
 
 ## Preserved Playback
 
-![Challenge-final debris-avoidance playback](assets/debris-avoidance-playback.gif)
+![Challenge debris-avoidance playback](assets/debris-avoidance-playback.gif)
 
-This animation is retained unchanged as project history; it is not a rendering
-of the paper's 3U CubeSat configuration or its 50-run campaign.
+This animation is retained unchanged from the earlier demonstrator, not
+regenerated from the current default CubeSat configuration.
 
-Old development versions are preserved in a
+Earlier development states are preserved in a
 [maintainer-held archive](model-provenance.md#archived-development-branches),
-not as alternative public defaults. The challenge presentation remains in its
-original Release, separate from the IEEE paper-model Release.
+not as alternative supported defaults. The presentation remains available in
+the [original project-materials Release](https://github.com/enriquev212/INOAS/releases/tag/inoas-project-materials-v1).

@@ -1,4 +1,4 @@
-"""Render paper-style INOAS figures from campaign CSV exports.
+"""Render INOAS diagnostic figures from campaign CSV exports.
 
 Expected workflow:
 

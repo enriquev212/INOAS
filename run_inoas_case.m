@@ -1,5 +1,5 @@
 function outputDir = run_inoas_case(receiverPolicy, radiusMode, varargin)
-%RUN_INOAS_CASE Run the AUX3 paper model and export a fresh, reproducible case.
+%RUN_INOAS_CASE Run the AUX3 model and export a fresh, reproducible case.
 % run_inoas_case('reactive', 'adaptive', 'Seed', 42, 'StopTime', 6743)
 if nargin < 1, receiverPolicy = 'reactive'; end
 if nargin < 2, radiusMode = 'adaptive'; end
@@ -9,7 +9,7 @@ previousDir = pwd;
 cleanup = onCleanup(@() restoreContext(previousPath, previousDir)); %#ok<NASGU>
 cd(root);
 addpath(root, fullfile(root, 'models'), genpath(fullfile(root, 'matlab')), genpath(fullfile(root, 'tools')));
-cfg = inoasPaperConfig('ReceiverPolicy', receiverPolicy, 'RadiusMode', radiusMode, varargin{:});
+cfg = inoasRunOptions('ReceiverPolicy', receiverPolicy, 'RadiusMode', radiusMode, varargin{:});
 outputDir = fullfile(root, 'results', sprintf('%s_%s_seed%d_%gs', ...
     cfg.ReceiverPolicy, cfg.RadiusMode, cfg.Seed, cfg.StopTime));
 if cfg.AcquisitionTime ~= 35

@@ -6,7 +6,7 @@ The active model is `../models/inoas_model.slx`. The top-level runner
 
 | Function | Role |
 | --- | --- |
-| `inoasPaperConfig` | Validated public run options; Reactive/adaptive by default. |
+| `inoasRunOptions` | Validated public run options; Reactive/adaptive by default. |
 | `inoasMinimalGnssConfig` | Shared 35/60/300 s Reactive timing and quality thresholds. |
 | `inoasMinimalGnssStep` | Three-state Reactive supervisor and Full GNSS dispatch. |
 | `inoasFixedGnssStep` | Fixed 96 s ON / 300 s OFF comparator. |
