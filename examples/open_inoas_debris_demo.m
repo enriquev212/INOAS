@@ -4,7 +4,7 @@
 
 simulationStopTime = 1800;
 
-open_inoas_model;
+run(fullfile(fileparts(fileparts(mfilename('fullpath'))), 'open_inoas_model.m'));
 
 set_param("inoas_model", "StopTime", "1800");
 
