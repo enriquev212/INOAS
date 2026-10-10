@@ -23,6 +23,16 @@ see [project history](docs/history.md) for the animation's original context.*
 **Stack:** MATLAB, Simulink, Aerospace Blockset, UKF, nonlinear MPC and Python
 visualization. [Architecture and paper diagrams](docs/model-architecture.md).
 
+<details>
+<summary>Reactive receiver state diagram</summary>
+
+![Reactive receiver supervisor from the paper](docs/assets/paper/receiver-supervisor.png)
+
+*Paper Fig. 2: OFF, ACQUIRING and TRACKING. [Vector PDF](docs/assets/paper/receiver-supervisor.pdf)
+and [transition definitions](docs/model-architecture.md#receiver-supervisor).*
+
+</details>
+
 ## Reported Paper Results
 
 Medians over 50 paired runs with degraded GNSS, as reported in the submitted paper:
@@ -87,6 +97,11 @@ The team submitted *Robust MPC-Based Collision Avoidance Guidance and Safe
 Duty-Cycled GNSS Navigation for LEO CubeSats* to the **2027 IEEE Aerospace
 Conference**. The abstract was accepted; full-paper review is pending.
 [Paper configuration and citation](docs/conference.md) | [CITATION.cff](CITATION.cff)
+
+Technical background: [GNSS and receiver operation](docs/references.md#gnss-processing-and-receiver-operation),
+[estimation](docs/references.md#estimation-and-residual-monitoring) and
+[orbital dynamics/MPC](docs/references.md#orbital-dynamics-and-mpc-guidance).
+The reference page includes all 47 entries from the final manuscript.
 
 Alberto Fernández-Acero Campoamor, Enrique Valverde Sacristán, Álvaro Yuste
 Pubill, Guzmán Grande González, Júlia Soler i Pla and Changxiang Xu.
