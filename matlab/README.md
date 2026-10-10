@@ -15,6 +15,7 @@ The active model is `../models/inoas_model.slx`. The top-level runner
 | `inoasReceiverEnergy` | Left-held state occupancy and receiver-module energy. |
 | `MPC_INOAS` | CW guidance, actuator bounds and node/between-node avoidance constraints. |
 | `predictNavigationCovarianceProfile` | Auxiliary-only nonlinear UKF forecast. |
+| `dynamicQukf` | Six-state process-noise covariance from unmodeled acceleration and command-dependent actuator uncertainty. |
 | `myStateTransitionFcn` | Six-state central-gravity/J2 propagation. |
 | `myMeasurementFcn` | Three-component auxiliary ECI position observation. |
 | `gnss_measurement_fcn` | Six-component GNSS position/velocity observation. |
