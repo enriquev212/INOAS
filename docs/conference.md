@@ -79,8 +79,13 @@ the controller.
 
 ### Public Model and Reproducibility
 
-`main` uses the AUX3 model from former branch `feat/aux3-on-alberto` at `721c0eb`,
-preserved under the `archive/aux3-on-alberto-20261009` tag.
+The [paper-model Release](https://github.com/enriquev212/INOAS/releases/tag/v1.0-ieee2027-paper-model)
+pins the public code, inputs and documentation associated with the submitted
+paper. It is not a verified snapshot of the original 50-run campaign.
+
+`main` uses the AUX3 scientific base at
+`721c0eb19e7e5edced4424ad8dbb538ce946125f`, preserved in the maintainers'
+non-public development archive.
 The default runner selects Reactive/adaptive operation, 6743 s, and seed 42.
 Full GNSS, Fixed-Time and the constant 295 m radius are explicit run options.
 The Simulink file itself is unchanged from the AUX3 source revision.

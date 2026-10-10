@@ -2,8 +2,11 @@
 
 ## Start From the Active Version
 
-`main` contains the supported model. Create a branch for a new experiment;
-historical models are preserved as [archive tags](model-provenance.md#archived-development-branches).
+`main` contains the supported model. Use the
+[paper-model Release](https://github.com/enriquev212/INOAS/releases/tag/v1.0-ieee2027-paper-model)
+for a fixed public baseline, and create a branch for a new experiment.
+Historical models are preserved in a
+[maintainer-held archive](model-provenance.md#archived-development-branches).
 Keep existing local edits before switching versions. In MATLAB, work from
 the repository root and close the model before batch runs.
 

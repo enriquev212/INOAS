@@ -101,6 +101,9 @@ This runs a single Reactive/adaptive demonstration and exports results under
 `results/`. It does not reproduce the paper's ensemble medians: the original
 campaign seeds and complete outputs are not bundled.
 
+For a pinned public version, use the
+[IEEE 2027 paper-model Release](https://github.com/enriquev212/INOAS/releases/tag/v1.0-ieee2027-paper-model).
+
 ## Quick Links
 
 | Explore | What you will find |
