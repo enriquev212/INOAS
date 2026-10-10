@@ -5,8 +5,8 @@
 | Guide | Contents |
 | --- | --- |
 | [How To Run](how-to-run.md) | Dependencies, configuration, comparisons, outputs and tests |
-| [Model Architecture](model-architecture.md) | Paper diagrams and the active implementation |
-| [Results](results.md) | Reported paper results and metric definitions |
+| [Model Architecture](model-architecture.md) | Active navigation, receiver and guidance implementation |
+| [Simulation Diagnostics](results.md) | Generated plots and metric definitions |
 | [Development](development.md) | Where to make changes and how to check them |
 
 ## Technical Detail
@@ -18,12 +18,12 @@
 - [MATLAB Online](matlab-online.md)
 - [Short examples](../examples/README.md)
 
-## Research Context
+## Project Context
 
-- [Paper configuration and citation](conference.md)
 - [Model provenance and reproducibility limits](model-provenance.md)
-- [Complete paper bibliography](references.md)
-- [Project history and preserved challenge materials](history.md)
+- [Technical references](references.md)
+- [Project history and preserved Challenge materials](history.md)
+- [Software citation](../CITATION.cff)
 
-The active model is under `models/`. Older assets are retained as history,
-not presented as current-model results.
+The active model is under `models/`. Challenge visuals document an earlier
+configuration, not the outputs of the current default simulation.

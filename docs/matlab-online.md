@@ -21,8 +21,8 @@ run('examples/run_navigation_trial.m');
 
 Download the **complete case folder**, including configuration, simulation and
 completion files, before interpreting figures. The runner does not overwrite
-previous results. Paired cases use the same seed and initial error; a new
-seed alone does not reconstruct the original 50-realization paper campaign.
+previous results. Paired cases use the same seed and initial error; vary and
+record both deliberately when designing a broader study.
 
 Render PDF/PNG figures locally:
 

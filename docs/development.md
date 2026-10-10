@@ -2,9 +2,8 @@
 
 ## Start From the Active Version
 
-`main` contains the supported model. Use the
-[paper-model Release](https://github.com/enriquev212/INOAS/releases/tag/v1.0-ieee2027-paper-model)
-for a fixed public baseline, and create a branch for a new experiment.
+`main` contains the supported model. Record its commit as your baseline,
+and create a branch for a new experiment.
 Historical models are preserved in a
 [maintainer-held archive](model-provenance.md#archived-development-branches).
 Keep existing local edits before switching versions. In MATLAB, work from
@@ -28,7 +27,7 @@ For changes beyond those options:
 
 | Area | Starting point |
 | --- | --- |
-| Default run options | [inoasPaperConfig.m](../matlab/inoasPaperConfig.m) |
+| Default run options | [inoasRunOptions.m](../matlab/inoasRunOptions.m) |
 | Physical scenario, UKF/MPC tuning and trajectories | [initialize_inoas_simulation.m](../initialize_inoas_simulation.m) |
 | Receiver timing and quality gates | [inoasMinimalGnssConfig.m](../matlab/inoasMinimalGnssConfig.m) |
 | Reactive / Fixed-Time switching | [inoasMinimalGnssStep.m](../matlab/inoasMinimalGnssStep.m) / [inoasFixedGnssStep.m](../matlab/inoasFixedGnssStep.m) |
@@ -67,6 +66,6 @@ safety; changes to guidance need encounter-length runs and relevant comparisons.
 Commit the reviewed changes before a research campaign. The runner records
 the commit, dirty flag, options and seeds in each output folder. Keep the whole
 case folder for later analysis; `results/` is intentionally not versioned.
-Update affected tests and documentation with behavioral changes. The public
-demo is not a reconstruction of the original 50-run paper campaign; see
+Update affected tests and documentation with behavioral changes. A single
+demo is not a statistical validation; see
 [reproducibility limits](model-provenance.md#reproducibility-limits).

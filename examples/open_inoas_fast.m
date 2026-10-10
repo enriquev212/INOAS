@@ -1,4 +1,4 @@
-%OPEN_INOAS_FAST Open a short run without changing the paper MPC horizon.
+%OPEN_INOAS_FAST Open a short run without changing the MPC horizon.
 %
 % This mode is intended for smoke tests and setup checks. Use
 % open_inoas_model.m for final scenario runs.

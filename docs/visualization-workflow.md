@@ -12,7 +12,7 @@ python tools/visualization/render_campaign_figures.py --case results/reactive_ad
 python tools/visualization/generate_visualization_assets.py --mat results/reactive_adaptive_seed42_6743s/raw_visualization_data.mat --out results/reactive_adaptive_seed42_6743s/animation
 ```
 
-Paper-style PDF/PNG diagnostics go into `<case>/figures/`; animation assets
+PDF/PNG diagnostics go into `<case>/figures/`; animation assets
 go into the requested `animation/` folder. MATLAB is not needed for re-rendering
 an already exported compact MAT/CSV case. The dependencies are NumPy, SciPy,
 Matplotlib and Pillow.
@@ -33,4 +33,4 @@ export_visualization_data('results/manual_case/raw_visualization_data.mat');
 The runner is preferred because it records seeds/options and adds the required
 receiver-state and applied-acceleration logs without saving model edits.
 The historical GIF under `docs/assets/` is preserved; new default-run assets
-must not be presented as the original 50-run campaign or the challenge-final run.
+must not be presented as outputs of the earlier Challenge configuration.

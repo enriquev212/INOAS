@@ -1,4 +1,4 @@
-function tests = test_paper_policies
+function tests = test_receiver_policies
 tests = functiontests(localfunctions);
 end
 
@@ -13,8 +13,8 @@ path(testCase.TestData.oldPath);
 clear inoasMinimalGnssStep inoasFixedGnssStep
 end
 
-function testDefaultPaperConfiguration(testCase)
-cfg = inoasPaperConfig();
+function testDefaultRunConfiguration(testCase)
+cfg = inoasRunOptions();
 verifyEqual(testCase, cfg.ReceiverPolicy, 'reactive');
 verifyEqual(testCase, cfg.RadiusMode, 'adaptive');
 verifyEqual(testCase, cfg.StopTime, 6743);

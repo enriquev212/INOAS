@@ -1,5 +1,5 @@
-function cfg = inoasPaperConfig(varargin)
-%INOASPAPERCONFIG Public run options; physical/filter/MPC tuning stays unchanged.
+function cfg = inoasRunOptions(varargin)
+%INOASRUNOPTIONS Public run options; physical/filter/MPC tuning stays unchanged.
 p = inputParser;
 p.addParameter('ReceiverPolicy', 'reactive');
 p.addParameter('RadiusMode', 'adaptive');

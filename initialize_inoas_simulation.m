@@ -18,7 +18,7 @@ addpath(fullfile(repoRoot, "models"));
 
 preservedModelName = "";
 preservedStopTime = [];
-preservedRunConfig = inoasPaperConfig();
+preservedRunConfig = inoasRunOptions();
 if exist("inoasRunConfig", "var")
     preservedRunConfig = inoasRunConfig;
 end
@@ -60,7 +60,7 @@ if ~isfolder(runtimeDataDir), mkdir(runtimeDataDir); end
 referenceTrajectoryFile = fullfile(runtimeDataDir, "referenceTrajectory.mat");
 debrisTrajectoryFile = fullfile(runtimeDataDir, "debrisTrajectory.mat");
 
-% Sentinel-6A-inspired INOAS reference orbit used by the current conference scenario.
+% Sentinel-6A-inspired INOAS reference orbit used by the current scenario.
 a = 7714.43 * 1000;  % [m]
 ecc = 0.000095;
 inc = 66.04;         % [deg]
@@ -68,7 +68,7 @@ RAAN = 116.6;        % [deg]
 w = 90;              % [deg]
 theta = 131;         % [deg]
 
-% Conference CubeSat physical platform, inspired by the STF-1 duty-cycled GPS
+% CubeSat physical platform, inspired by the STF-1 duty-cycled GPS
 % setup in Lantto (2018). The orbit above intentionally remains the INOAS
 % Sentinel-6A-inspired reference orbit; only the spacecraft bus assumptions are scaled.
 m_sat = 3 * 1.33;    % [kg]
@@ -80,7 +80,7 @@ area = 0.03;         % [m^2], area used by plant drag and SRP
 
 start_date = juliandate(datetime(2024, 1, 11));
 end_date = juliandate(datetime(2024, 2, 11));
-tf = 6743;           % [s] full-orbit paper scenario
+tf = 6743;           % [s] full-orbit scenario
 
 requestedStopTime = [];
 if exist("simulationStopTime", "var") && ~isempty(simulationStopTime)
@@ -366,7 +366,7 @@ switch inoasRunConfig.ReceiverPolicy
     case 'fixed', gnss_min_cfg.policy = uint8(1);
     case 'reactive', gnss_min_cfg.policy = uint8(2);
 end
-% Keep the paper's 135 s control-start inhibition independent of receiver sweeps.
+% Keep the 135 s control-start inhibition independent of receiver sweeps.
 acquisitionTime = 35;
 
 lamda_init = 1;

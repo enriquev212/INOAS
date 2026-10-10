@@ -1,5 +1,5 @@
 function cfg = inoasMinimalGnssConfig(Ts, fixInterval)
-% Receiver timings and quality gate of the AUX3 paper model.
+% Receiver timings and quality gate of the AUX3 model.
 cfg.Ts = Ts;
 cfg.fixInterval = fixInterval;
 cfg.fixEpoch = 0;

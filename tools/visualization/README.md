@@ -11,7 +11,7 @@ caseDir = run_inoas_case('reactive', 'adaptive', 'Seed', 42);
 The runner writes complete simulation/configuration files, a compact MAT and
 five CSVs to `results/reactive_adaptive_seed42_6743s/`.
 `run_baseline_campaign` is a no-argument alias for the same default case.
-Generated files are ignored by Git, not committed as new paper results.
+Generated files are ignored by Git and remain local case outputs.
 
 ## Python Figures
 
@@ -21,8 +21,8 @@ python tools/visualization/render_campaign_figures.py --case results/reactive_ad
 ```
 
 PDF/PNG files are written to `<case>/figures/`. Use PDF for LaTeX inclusion.
-These are single-run diagnostic figures, not automatic reconstructions of
-the submitted ensemble figures. The CSV minimum separation is sampled; it
+These are single-run diagnostic figures, not a statistical validation.
+The CSV minimum separation is sampled; it
 does not replace a continuous closest-approach analysis.
 
 ## Animation
@@ -47,8 +47,8 @@ README's existing challenge GIF remains unchanged and labeled as historical.
   imperfections). The native model inhibits applied control through 135 s.
   Commanded Delta-v is a trapezoidal diagnostic on the MPC sample grid. Missing applied
   logs produce NaN, not a silently relabeled commanded value.
-- Position errors in the generic exporter include startup; the paper table
-  excludes the first 135 s. Do not compare them without matching the window.
+- Position errors in the generic exporter include startup. Match the
+  evaluation window explicitly when comparing cases.
 
 For manual simulations, `export_campaign_csv` and `export_visualization_data`
 can export the base-workspace `out`. Receiver energy requires the receiver

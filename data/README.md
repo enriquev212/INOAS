@@ -28,7 +28,7 @@ the true plant state is sampled at the 3 s GNSS measurement epochs.
 The UKF uses a fixed nominal GNSS covariance with standard deviations 5 m
 and 0.1 m/s, not a covariance fitted at each epoch from HPE/VPE. The auxiliary
 observations are synthetic ECI positions with a 2000 m standard deviation.
-These approximations are preserved from the paper-model base, not calibrated
+These approximations are inherited from the AUX3 development model, not calibrated
 receiver/auxiliary hardware measurements.
 
 ## Paths and Generated Files

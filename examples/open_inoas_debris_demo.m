@@ -1,4 +1,4 @@
-%OPEN_INOAS_DEBRIS_DEMO Open the paper model through the encounter.
+%OPEN_INOAS_DEBRIS_DEMO Open the active model through the encounter.
 %
 % Retains the 60-step / 720 s horizon and the design encounter epoch at 1500 s.
 

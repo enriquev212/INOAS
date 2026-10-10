@@ -22,8 +22,8 @@ caseDir = run_inoas_case('reactive', 'adaptive');
 ```
 
 The defaults are the degraded AUX3 input, 6743 s, a 720 s MPC horizon, seed 42
-and a 35 s minimum acquisition delay. This is a single deterministic demo,
-not the paper's original 50-realization campaign.
+and a 35 s minimum acquisition delay. This is a single seeded demonstration,
+not a statistical validation campaign.
 
 For an installation check:
 
@@ -42,7 +42,7 @@ run_inoas_case('full',     'adaptive',    'Seed', 42);
 run_inoas_case('fixed',    'constant295', 'Seed', 42);
 run_inoas_case('reactive', 'constant295', 'Seed', 42);
 run_inoas_case('reactive', 'adaptive',    'Seed', 42);
-% Additional comparator used in the paper:
+% Optional additional comparator:
 run_inoas_case('fixed',    'adaptive',    'Seed', 42);
 ```
 
@@ -67,7 +67,7 @@ run_inoas_case('reactive', 'adaptive', 'Seed', 43, ...
 Fixed-Time retains its 96 s ON / 300 s OFF calendar when acquisition time is
 varied. Reactive retains 60 s nominal tracking / 300 s nominal OFF. Thus a
 sensitivity comparison changes the acquisition delay, not both schedules.
-The paper's separate 135 s applied-control startup inhibition stays fixed.
+The separate 135 s applied-control startup inhibition stays fixed.
 
 ## Outputs
 
@@ -102,7 +102,7 @@ run('matlab/plot_MPC_results.m');
 
 All modes retain `Np = 60` and `h = 12 s`. The model has fixed-size MPC outputs;
 do not reduce the horizon to speed up the demo without changing its dimensions.
-For explicit GUI options, create `inoasRunConfig = inoasPaperConfig(...)` before
+For explicit GUI options, create `inoasRunConfig = inoasRunOptions(...)` before
 initialization. For acquisition-only experiments after initialization, set
 `gnss_min_cfg.acquisitionTime = 50` before starting a fresh simulation at zero.
 Reinitialization restores the selected run configuration.

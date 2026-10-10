@@ -1,6 +1,6 @@
 function outputDir = run_navigation_smoke_test()
 %RUN_NAVIGATION_SMOKE_TEST Explicit 120 s Simulink integration check.
-% Keep the 60-step paper horizon, and exercise acquisition at 36 s.
+% Keep the 60-step MPC horizon, and exercise acquisition at 36 s.
 outputDir = run_inoas_case('reactive', 'adaptive', 'StopTime', 120, 'Seed', 7);
 navigation = readtable(fullfile(outputDir, 'navigation.csv'));
 assert(any(navigation.receiver_mode == 1));
