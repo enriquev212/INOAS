@@ -5,6 +5,9 @@ A team project developed at ISAE-SUPAERO for the **Student Aerospace
 Challenge**, bringing together orbital simulation, state estimation, GNSS
 receiver management and constrained maneuver planning in MATLAB/Simulink.
 
+A manuscript describing this work has been submitted to the 2027 IEEE
+Aerospace Conference and is under review.
+
 ## What Our Team Built
 
 Collision avoidance needs reliable navigation, while continuous GNSS operation
